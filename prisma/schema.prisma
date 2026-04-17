@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  SALES
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  role         UserRole @default(SALES)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedClients Client[] @relation("ClientAssignedSales")
+
+  authoredRecommendations   ManagementRecommendation[] @relation("RecommendationAuthor")
+  targetedRecommendations ManagementRecommendation[] @relation("RecommendationTarget")
+
+  interactionsCreated Interaction[]        @relation("InteractionCreatedBy")
+  statusChanges       ClientStatusChange[] @relation("StatusChangedBy")
+  alerts              Alert[]
+}
+
+enum ClientStatus {
+  B
+  NOT_B
+  WON
+  LOST
+}
+
+model Client {
+  id              String       @id @default(cuid())
+  name            String
+  phone           String
+  company         String?
+  position        String?
+  address         String?
+  quotePrice      Decimal?     @db.Decimal(14, 2)
+  allowedDiscount Decimal?     @db.Decimal(7, 2)
+  status          ClientStatus @default(NOT_B)
+
+  sourceAdName String?
+
+  initialCallDate DateTime?
+  nextFollowUpAt  DateTime?
+
+  customFields Json @default("{}") @db.Json
+
+  assignedUserId String?
+  assignedUser   User?   @relation("ClientAssignedSales", fields: [assignedUserId], references: [id])
+
+  contractValue Decimal?  @db.Decimal(14, 2)
+  saleDate      DateTime?
+
+  lossReason   String?   @db.Text
+  closedLostAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  interactions    Interaction[]
+  recommendations ManagementRecommendation[]
+  warmingTools    WarmingToolSent[]
+  statusHistory   ClientStatusChange[]
+  alerts          Alert[]
+
+  @@index([status, nextFollowUpAt])
+  @@index([assignedUserId, status])
+  @@index([initialCallDate])
+}
+
+model Interaction {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  interactionAt  DateTime
+  notes            String   @db.Text
+  followUpStatus   String?
+  nextFollowUpAt   DateTime
+  createdById      String?
+  createdBy        User?    @relation("InteractionCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, interactionAt])
+  @@index([nextFollowUpAt])
+}
+
+model ManagementRecommendation {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  body String @db.Text
+
+  authorId String
+  author   User   @relation("RecommendationAuthor", fields: [authorId], references: [id])
+
+  targetUserId String
+  targetUser   User   @relation("RecommendationTarget", fields: [targetUserId], references: [id])
+
+  acknowledgedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  alert Alert?
+
+  @@index([targetUserId, createdAt])
+  @@index([clientId, createdAt])
+}
+
+enum AlertType {
+  MANAGEMENT_RECOMMENDATION
+  OVERDUE_FOLLOWUP
+}
+
+model Alert {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   AlertType
+
+  title   String
+  message String? @db.Text
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  recommendationId String? @unique
+  recommendation   ManagementRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+model WarmingToolSent {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  communicatedAt   DateTime?
+  activitySnapshot String?
+
+  day1Content String? @db.Text
+  day2Content String? @db.Text
+  day3Content String? @db.Text
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, communicatedAt])
+}
+
+model ClientStatusChange {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  fromStatus ClientStatus?
+  toStatus   ClientStatus
+
+  note String? @db.Text
+
+  changedById String?
+  changedBy   User?   @relation("StatusChangedBy", fields: [changedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+}
+
+enum CustomFieldValueType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+}
+
+model CustomFieldDefinition {
+  id    String @id @default(cuid())
+  key   String @unique
+  labelAr String
+
+  valueType CustomFieldValueType @default(TEXT)
+
+  options Json? @db.Json
+
+  isRequired Boolean @default(false)
+  sortOrder  Int     @default(0)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
