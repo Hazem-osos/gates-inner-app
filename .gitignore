@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local spec / binary exports (not app source)
+CRM Req word.docx
+CRM Req.pages

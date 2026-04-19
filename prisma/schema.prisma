@@ -31,6 +31,10 @@ model User {
   interactionsCreated Interaction[]        @relation("InteractionCreatedBy")
   statusChanges       ClientStatusChange[] @relation("StatusChangedBy")
   alerts              Alert[]
+  auditLogs           AuditLog[]
+  transfersFrom       ClientTransfer[]       @relation("TransferFromUser")
+  transfersTo         ClientTransfer[]       @relation("TransferToUser")
+  reportRowStyles     ReportRowStyle[]
 }
 
 enum ClientStatus {
@@ -40,21 +44,84 @@ enum ClientStatus {
   LOST
 }
 
+/// تصنيفات العميل الديناميكية (B، U، C، Z، موزع، …)
+model ClientClassification {
+  id    String @id @default(cuid())
+  /// مفتاح ثابت للبذرة والتمييز — لا يُعرض للمستخدم
+  slug  String @unique
+  label String
+  /// لون عرض (Hex أو مفتاح Tailwind)
+  color String
+  /// ترتيب الظهور
+  sortOrder Int @default(0)
+
+  /// إذا true يُمثل صف «عميل B» ويُضبط عند الاختيار Client.status = B
+  isBRow Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clients Client[]
+
+  @@index([sortOrder])
+}
+
 model Client {
   id              String       @id @default(cuid())
   name            String
   phone           String
+  phone2          String?
   company         String?
   position        String?
   address         String?
   quotePrice      Decimal?     @db.Decimal(14, 2)
+  quoteDetail     String?      @db.Text
   allowedDiscount Decimal?     @db.Decimal(7, 2)
   status          ClientStatus @default(NOT_B)
 
+  /// اسم الإعلان
   sourceAdName String?
+  /// المنصة الإعلانية (منفصل عن اسم الإعلان)
+  adPlatform String?
 
   initialCallDate DateTime?
   nextFollowUpAt  DateTime?
+
+  /// تصنيف فرعي لعملاء Not B — يُفضّل تخزين معرّف ClientClassification الفرعي كنص
+  notBClassification String?
+
+  classificationId String?
+  classification   ClientClassification? @relation(fields: [classificationId], references: [id])
+
+  /// النشاط (تقارير)
+  activity String?
+
+  /// توصيات اجتماع الإدارة + التاريخ (تقرير B)
+  managementRecommendationText String?   @db.Text
+  managementRecommendationDate   DateTime?
+
+  /// الموقف الحالي (يمكن عرضه مع ملخص المكالمة في خلية واحدة)
+  currentSituation String? @db.Text
+
+  /// QQ: نعم = true، لا = false
+  qqAnswer Boolean?
+
+  callSummary String? @db.Text
+  salesNotes  String? @db.Text
+  /// نص أدوات Warming على بطاقة العميل (إضافة عميل)
+  clientWarmingText String? @db.Text
+
+  visitAppointmentScheduled Boolean   @default(false)
+  visitAppointmentDate      DateTime?
+
+  /// موظف العرض — نص يدوي من المستخدم
+  presentingEmployeeName String?
+
+  /// متابعات ديناميكية: مصفوفة JSON [{ "order": number, "note": string, "date": string ISO }]
+  followUpSlots Json @default("[]") @db.Json
+
+  /// الموقف النهائي (تقارير)
+  finalStatusNote String? @db.Text
 
   customFields Json @default("{}") @db.Json
 
@@ -75,6 +142,9 @@ model Client {
   warmingTools    WarmingToolSent[]
   statusHistory   ClientStatusChange[]
   alerts          Alert[]
+  auditLogs       AuditLog[]
+  transfers       ClientTransfer[]
+  reportStyles    ReportRowStyle[]
 
   @@index([status, nextFollowUpAt])
   @@index([assignedUserId, status])
@@ -113,6 +183,14 @@ model ManagementRecommendation {
   targetUser   User   @relation("RecommendationTarget", fields: [targetUserId], references: [id])
 
   acknowledgedAt DateTime?
+
+  /// تاريخ التوصية (قابل للتعديل من التقرير؛ إن وُجد null يُعرض createdAt)
+  recommendationDate DateTime?
+
+  /// تاريخ العمل بالتوصية (يدوي من التقرير)
+  workDate    DateTime?
+  /// الإجراء المتخذ
+  actionTaken String?   @db.Text
 
   createdAt DateTime @default(now())
 
@@ -161,11 +239,80 @@ model WarmingToolSent {
   day2Content String? @db.Text
   day3Content String? @db.Text
 
+  /// تم إرسال أدوات اليوم N (تبديل تم/لم يتم)
+  day1Done Boolean @default(false)
+  day2Done Boolean @default(false)
+  day3Done Boolean @default(false)
+
   notes String? @db.Text
 
   createdAt DateTime @default(now())
 
   @@index([clientId, communicatedAt])
+}
+
+/// سجل إجراءات للعميل (زر «سجل العمل» والتعديلات المهمة)
+model AuditLog {
+  id       String  @id @default(cuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  /// كيان عام (Client، Report، …)
+  entity   String?
+  entityId String?
+
+  kind    String // e.g. CELL_EDIT, STATUS_CHANGE, IMPORT
+  action  String?
+  summary String @db.Text
+  meta    Json?  @db.Json
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([userId, createdAt])
+  @@index([entity, entityId, createdAt])
+}
+
+/// نقل عميل بين مندوبي المبيعات
+model ClientTransfer {
+  id String @id @default(cuid())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  fromUserId String?
+  fromUser   User?   @relation("TransferFromUser", fields: [fromUserId], references: [id])
+
+  toUserId String
+  toUser   User    @relation("TransferToUser", fields: [toUserId], references: [id])
+
+  /// «تم الاطلاع» من المندوب الجديد
+  acknowledgedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([toUserId, acknowledgedAt])
+  @@index([clientId, createdAt])
+}
+
+/// تلوين صفوف التقارير (لكل مستخدم)
+model ReportRowStyle {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reportKey String // e.g. report-b
+  clientId  String
+  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  colorKey   String // e.g. red | yellow | green
+  legendNote String?
+
+  @@unique([userId, reportKey, clientId])
+  @@index([userId, reportKey])
 }
 
 model ClientStatusChange {
@@ -211,4 +358,17 @@ model CustomFieldDefinition {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+}
+
+/// Arabic labels for fixed Client columns (admin-editable display layer)
+model CoreFieldLabel {
+  id        String   @id @default(cuid())
+  fieldKey  String   @unique
+  labelAr   String
+  visible   Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([visible, sortOrder])
 }
