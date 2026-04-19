@@ -35,7 +35,7 @@ export default async function RecommendationsReportPage({
     where: {
       client: clientScope,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 500,
     include: {
       client: {

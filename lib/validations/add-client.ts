@@ -187,24 +187,6 @@ export function buildAddClientFormSchema(
             message: "تصنيف غير صالح.",
             path: ["pipelineChoice"],
           });
-        } else if (!main.isBRow) {
-          const sub = data.classificationSubId?.trim();
-          if (!sub) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "اختر التصنيف الفرعي",
-              path: ["classificationSubId"],
-            });
-          } else {
-            const subRow = classifications.find((c) => c.id === sub);
-            if (!subRow || subRow.isBRow) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "التصنيف الفرعي غير صالح.",
-                path: ["classificationSubId"],
-              });
-            }
-          }
         }
       } else if (choice !== "won" && choice !== "lost") {
         ctx.addIssue({

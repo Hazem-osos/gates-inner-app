@@ -156,6 +156,12 @@ function mergedCallAndSituation(call: string | null, sit: string | null): string
   return `${a}\n---\n${b}`;
 }
 
+/** عند التمرير على الحقل يظهر نص التلميح بالمحتوى الكامل */
+function fullCellTooltip(value: string | null | undefined): string {
+  const s = value ?? "";
+  return s.trim() ? s : "— فارغ —";
+}
+
 function splitCallAndSituation(combined: string): {
   callSummary: string;
   currentSituation: string;
@@ -210,9 +216,8 @@ export function ReportBTable({
   toolbar = "full",
 }: Props) {
   const router = useRouter();
-  const [pending] = useTransition();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const reportBScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollReportBHorizontal = useCallback((direction: -1 | 1) => {
     const root = reportBScrollRef.current;
@@ -366,31 +371,6 @@ export function ReportBTable({
     return () => document.removeEventListener("click", block, true);
   }, [gateInvalid, gateClientId]);
 
-  useEffect(() => {
-    return () => {
-      Object.values(timers.current).forEach((t) => clearTimeout(t));
-    };
-  }, []);
-
-  const debouncedPatch = useCallback(
-    (id: string, patch: ReportClientPatchInput) => {
-      const tKey = id;
-      if (timers.current[tKey]) clearTimeout(timers.current[tKey]);
-      timers.current[tKey] = setTimeout(async () => {
-        const res = await patchClientReportFields(id, patch);
-        if (res.ok) {
-          router.refresh();
-          setLocal((p) => {
-            const n = { ...p };
-            delete n[id];
-            return n;
-          });
-        } else toast.error(res.message);
-      }, 500);
-    },
-    [router]
-  );
-
   function patchFromRow(row: ReportBRow): ReportClientPatchInput {
     const slots = normalizeSlots(row.followUpSlots);
 
@@ -428,16 +408,39 @@ export function ReportBTable({
     return out;
   }
 
-  const onField = useCallback(
-    (id: string, base: ReportBRow, patch: Partial<ReportBRow>) => {
-      setLocal((prev) => {
-        const nextLayer = { ...(prev[id] ?? {}), ...patch };
-        const mergedRow = { ...base, ...nextLayer };
-        debouncedPatch(id, patchFromRow(mergedRow));
-        return { ...prev, [id]: nextLayer };
-      });
+  const saveRow = useCallback(
+    async (id: string) => {
+      const row = mergedMap.get(id);
+      if (!row) return;
+      setSavingRowId(id);
+      try {
+        const res = await patchClientReportFields(id, patchFromRow(row));
+        if (res.ok) {
+          toast.success("تم حفظ الصف");
+          setLocal((p) => {
+            const n = { ...p };
+            delete n[id];
+            return n;
+          });
+          router.refresh();
+        } else {
+          toast.error(res.message);
+        }
+      } finally {
+        setSavingRowId(null);
+      }
     },
-    [debouncedPatch]
+    [mergedMap, router]
+  );
+
+  const onField = useCallback(
+    (id: string, _base: ReportBRow, patch: Partial<ReportBRow>) => {
+      setLocal((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? {}), ...patch },
+      }));
+    },
+    []
   );
 
   const filteredByViolation = useMemo(() => {
@@ -742,113 +745,6 @@ export function ReportBTable({
         </Button>
       </div>
 
-      <div data-gate-exempt className="rounded-lg border-2 border-destructive p-3">
-        <p className="mb-2 text-sm font-semibold text-destructive">
-          ⚠ تجاوزات التقرير
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            className={violBtn(violation === "visit_overdue")}
-            onClick={() =>
-              setViolation((v) =>
-                v === "visit_overdue" ? null : "visit_overdue"
-              )
-            }
-          >
-            تجاوز ميعاد الزيارة
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className={violBtn(violation === "days_over")}
-            onClick={() => {
-              setViolation((x) => (x === "days_over" ? null : "days_over"));
-              setDaysActive(true);
-            }}
-          >
-            تجاوز عدد أيام
-          </Button>
-          <Input
-            type="number"
-            min={0}
-            className="h-8 w-20 text-center"
-            disabled={!daysActive}
-            value={daysInput}
-            onChange={(e) => setDaysInput(e.target.value)}
-            dir="ltr"
-          />
-          <Button
-            type="button"
-            size="sm"
-            className={violBtn(violation === "follow_count")}
-            onClick={() => {
-              setViolation((x) =>
-                x === "follow_count" ? null : "follow_count"
-              );
-              setFollowActive(true);
-            }}
-          >
-            تجاوز عدد متابعات
-          </Button>
-          <Input
-            type="number"
-            min={0}
-            className="h-8 w-20 text-center"
-            disabled={!followActive}
-            value={followInput}
-            onChange={(e) => setFollowInput(e.target.value)}
-            dir="ltr"
-          />
-          <Button
-            type="button"
-            size="sm"
-            className={violBtn(violation === "neglected")}
-            onClick={() =>
-              setViolation((v) =>
-                v === "neglected" ? null : "neglected"
-              )
-            }
-          >
-            عملاء مهملين
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className={violBtn(violation === "no_answer")}
-            onClick={() =>
-              setViolation((v) =>
-                v === "no_answer" ? null : "no_answer"
-              )
-            }
-          >
-            عملاء لا ترد
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setViolation(null);
-              setDaysInput("");
-              setFollowInput("");
-              setDaysActive(false);
-              setFollowActive(false);
-            }}
-          >
-            إلغاء كل الفلاتر
-          </Button>
-        </div>
-      </div>
-
-      {(violationMessage() || visitBanner()) && (
-        <div className="space-y-1 text-sm text-destructive">
-          {violationMessage() ? <p>{violationMessage()}</p> : null}
-          {visitBanner() ? <p>{visitBanner()}</p> : null}
-        </div>
-      )}
-
       <SimpleDialog
         open={workOpen}
         onOpenChange={setWorkOpen}
@@ -983,52 +879,183 @@ export function ReportBTable({
         </div>
       </SimpleDialog>
 
-      <div dir="rtl" className="flex flex-row-reverse items-start gap-3">
-        <aside
-          data-gate-exempt
-          className="sticky top-16 flex w-44 shrink-0 flex-col gap-3 rounded-lg border border-border p-2"
-        >
-          <p className="text-center text-[11px] font-medium text-muted-foreground">
-            تلوين الصفوف
-          </p>
-          {REPORT_B_PALETTE.map(({ hex }) => (
-            <div key={hex} className="flex flex-col gap-1">
-              <button
-                type="button"
-                title={hex}
-                className={`h-10 w-full rounded-md border-2 shadow-sm transition ${
-                  selectedColor === hex
-                    ? "border-primary ring-2 ring-primary"
-                    : "border-transparent"
-                }`}
-                style={{ backgroundColor: hex }}
-                onClick={() =>
-                  setSelectedColor((prev) => (prev === hex ? null : hex))
-                }
-              />
-              <Input
-                className="h-7 text-[10px]"
-                placeholder="وصف اللون"
-                value={legends[hex] ?? ""}
-                onChange={(e) =>
-                  setLegends((prev) => ({ ...prev, [hex]: e.target.value }))
-                }
-                dir="rtl"
-              />
-            </div>
-          ))}
-          <p className="text-[10px] text-muted-foreground">
-            اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
-            لإلغاء اختياره.
-          </p>
-        </aside>
-
+      <div
+        className={cn(
+          "sticky top-14 z-30 mb-3 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
+          toolbar !== "closed"
+            ? "border-destructive/80 ring-1 ring-destructive/15"
+            : "border-border/80"
+        )}
+      >
         <div
-          ref={reportBScrollRef}
-          data-report-b-scroll
-          className="min-w-0 flex-1 overflow-hidden rounded-xl border border-border/60 shadow-sm"
+          className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-4"
+          dir="rtl"
         >
+          {toolbar !== "closed" ? (
+            <div
+              data-gate-exempt
+              className="min-w-0 flex-1 rounded-lg border-2 border-destructive bg-background p-3 dark:bg-background"
+            >
+              <p className="mb-2 text-sm font-semibold text-destructive">
+                ⚠ تجاوزات التقرير
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className={violBtn(violation === "visit_overdue")}
+                  onClick={() =>
+                    setViolation((v) =>
+                      v === "visit_overdue" ? null : "visit_overdue"
+                    )
+                  }
+                >
+                  تجاوز ميعاد الزيارة
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className={violBtn(violation === "days_over")}
+                  onClick={() => {
+                    setViolation((x) =>
+                      x === "days_over" ? null : "days_over"
+                    );
+                    setDaysActive(true);
+                  }}
+                >
+                  تجاوز عدد أيام
+                </Button>
+                <Input
+                  type="number"
+                  min={0}
+                  className="h-8 w-20 text-center"
+                  disabled={!daysActive}
+                  value={daysInput}
+                  onChange={(e) => setDaysInput(e.target.value)}
+                  dir="ltr"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className={violBtn(violation === "follow_count")}
+                  onClick={() => {
+                    setViolation((x) =>
+                      x === "follow_count" ? null : "follow_count"
+                    );
+                    setFollowActive(true);
+                  }}
+                >
+                  تجاوز عدد متابعات
+                </Button>
+                <Input
+                  type="number"
+                  min={0}
+                  className="h-8 w-20 text-center"
+                  disabled={!followActive}
+                  value={followInput}
+                  onChange={(e) => setFollowInput(e.target.value)}
+                  dir="ltr"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className={violBtn(violation === "neglected")}
+                  onClick={() =>
+                    setViolation((v) =>
+                      v === "neglected" ? null : "neglected"
+                    )
+                  }
+                >
+                  عملاء مهملين
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className={violBtn(violation === "no_answer")}
+                  onClick={() =>
+                    setViolation((v) =>
+                      v === "no_answer" ? null : "no_answer"
+                    )
+                  }
+                >
+                  عملاء لا ترد
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setViolation(null);
+                    setDaysInput("");
+                    setFollowInput("");
+                    setDaysActive(false);
+                    setFollowActive(false);
+                  }}
+                >
+                  إلغاء كل الفلاتر
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <aside
+            data-gate-exempt
+            className={cn(
+              "flex flex-col gap-3 rounded-lg border border-border bg-muted/25 p-2 dark:bg-muted/15",
+              toolbar !== "closed"
+                ? "w-full shrink-0 lg:w-44"
+                : "mx-auto w-full max-w-md"
+            )}
+          >
+            <p className="text-center text-[11px] font-medium text-muted-foreground">
+              تلوين الصفوف
+            </p>
+            {REPORT_B_PALETTE.map(({ hex }) => (
+              <div key={hex} className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  title={hex}
+                  className={`h-10 w-full rounded-md border-2 shadow-sm transition ${
+                    selectedColor === hex
+                      ? "border-primary ring-2 ring-primary"
+                      : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: hex }}
+                  onClick={() =>
+                    setSelectedColor((prev) => (prev === hex ? null : hex))
+                  }
+                />
+                <Input
+                  className="h-7 text-[10px]"
+                  placeholder="وصف اللون"
+                  value={legends[hex] ?? ""}
+                  onChange={(e) =>
+                    setLegends((prev) => ({ ...prev, [hex]: e.target.value }))
+                  }
+                  dir="rtl"
+                />
+              </div>
+            ))}
+            <p className="text-[10px] text-muted-foreground">
+              اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
+              لإلغاء اختياره.
+            </p>
+          </aside>
+        </div>
+        {toolbar !== "closed" && (violationMessage() || visitBanner()) ? (
+          <div className="mt-3 space-y-1 border-t border-destructive/25 pt-3 text-sm text-destructive dark:border-destructive/30">
+            {violationMessage() ? <p>{violationMessage()}</p> : null}
+            {visitBanner() ? <p>{visitBanner()}</p> : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        ref={reportBScrollRef}
+        data-report-b-scroll
+        className="min-w-0 w-full rounded-xl border border-border/60 shadow-sm"
+      >
           <Table
+            containerClassName="max-h-[min(70vh,calc(100vh-11rem))]"
             className={cn(
               "min-w-[3200px] text-sm [&_td]:whitespace-normal [&_td]:align-top",
               "[&_th]:!border-s [&_th]:!border-border/50 [&_td]:!border-s [&_td]:!border-border/50",
@@ -1037,7 +1064,7 @@ export function ReportBTable({
             )}
           >
             <TableHeader>
-              <TableRow className="bg-muted/60">
+              <TableRow className="bg-muted/60 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-muted/95 [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
                 {toolbar === "closed" ? (
                   <>
                     <TableHead className="min-w-[110px]">تاريخ الإغلاق</TableHead>
@@ -1045,7 +1072,7 @@ export function ReportBTable({
                     <TableHead className="min-w-[140px]">سبب الإغلاق</TableHead>
                   </>
                 ) : null}
-                <TableHead className="sticky right-0 z-10 min-w-[120px] bg-muted/95">
+                <TableHead className="sticky right-0 top-0 z-30 min-w-[120px] bg-muted/95 shadow-[0_1px_0_0_hsl(var(--border))]">
                   إجراءات
                 </TableHead>
                 <TableHead className="min-w-[170px]">متابعة تالية</TableHead>
@@ -1093,6 +1120,12 @@ export function ReportBTable({
                 const combinedNote = mergedCallAndSituation(
                   r.callSummary,
                   r.currentSituation
+                );
+                const classificationTooltip = fullCellTooltip(
+                  r.classificationLabel ??
+                    classifications.find((c) => c.id === r.classificationId)
+                      ?.label ??
+                    (r.classificationId ? r.classificationId : "")
                 );
                 const rowBg = styleMap[r.id]?.color;
                 const bgStyle = rowBg
@@ -1219,7 +1252,35 @@ export function ReportBTable({
                           }
                         />
                         ) : null}
-                        <div className="mt-1.5 flex items-center justify-center gap-1 border-t border-border/50 pt-1.5 dark:border-border/40">
+                        <Button
+                          type="button"
+                          variant={
+                            Object.keys(local[r.id] ?? {}).length > 0
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          className="h-7 w-full px-1 text-[11px] leading-tight"
+                          disabled={
+                            savingRowId !== null ||
+                            Object.keys(local[r.id] ?? {}).length === 0
+                          }
+                          title={
+                            Object.keys(local[r.id] ?? {}).length === 0
+                              ? "عدّل حقلًا في الصف ثم اضغط حفظ"
+                              : "حفظ تعديلات هذا الصف"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void saveRow(r.id);
+                          }}
+                        >
+                          {savingRowId === r.id ? "جاري…" : "حفظ الصف"}
+                        </Button>
+                        <div
+                          dir="ltr"
+                          className="mt-1.5 flex items-center justify-center gap-1 border-t border-border/50 pt-1.5 dark:border-border/40"
+                        >
                           <Button
                             type="button"
                             variant="secondary"
@@ -1259,7 +1320,8 @@ export function ReportBTable({
                           "min-w-[11rem] text-left tabular-nums"
                         )}
                         dir="ltr"
-                        disabled={pending}
+                        title={fullCellTooltip(isoToLocal(r.nextFollowUpAt))}
+                        disabled={savingRowId === r.id}
                         value={isoToLocal(r.nextFollowUpAt)}
                         onChange={(e) => {
                           const nextFollowUpAt = localToIso(e.target.value);
@@ -1277,7 +1339,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.managementRecommendationText)}
+                        disabled={savingRowId === r.id}
                         value={r.managementRecommendationText ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, {
@@ -1291,7 +1354,8 @@ export function ReportBTable({
                         type="date"
                         dir="ltr"
                         className={cn(reportBInput, "text-left")}
-                        disabled={pending}
+                        title={fullCellTooltip(mgmtDateStr)}
+                        disabled={savingRowId === r.id}
                         value={mgmtDateStr}
                         onChange={(e) =>
                           onField(r.id, r, {
@@ -1309,7 +1373,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.company)}
+                        disabled={savingRowId === r.id}
                         value={r.company ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { company: e.target.value })
@@ -1328,7 +1393,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.name)}
+                        disabled={savingRowId === r.id}
                         value={r.name}
                         onChange={(e) =>
                           onField(r.id, r, { name: e.target.value })
@@ -1339,7 +1405,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.activity)}
+                        disabled={savingRowId === r.id}
                         value={r.activity ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { activity: e.target.value })
@@ -1350,7 +1417,7 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         value={r.position ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { position: e.target.value })
@@ -1361,8 +1428,9 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={cn(reportBTextarea, "min-w-[12rem]")}
+                        title={fullCellTooltip(r.address)}
                         value={r.address ?? ""}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         onChange={(e) =>
                           onField(r.id, r, { address: e.target.value })
                         }
@@ -1372,8 +1440,11 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={cn(reportBTextarea, "min-w-[11rem] text-left")}
+                        title={fullCellTooltip(
+                          [r.phone, r.phone2].filter(Boolean).join(" / ")
+                        )}
                         value={[r.phone, r.phone2].filter(Boolean).join(" / ")}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         onChange={(e) => {
                           const parts = e.target.value.split(/\s*\/\s*/);
                           onField(r.id, r, {
@@ -1390,8 +1461,9 @@ export function ReportBTable({
                           reportBTextarea,
                           "min-w-[6rem] text-left tabular-nums"
                         )}
+                        title={fullCellTooltip(r.quotePrice)}
                         value={r.quotePrice ?? ""}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         onChange={(e) =>
                           onField(r.id, r, { quotePrice: e.target.value })
                         }
@@ -1400,9 +1472,9 @@ export function ReportBTable({
                     <TableCell>
                       <Textarea
                         rows={2}
-                        title={r.quoteDetail ?? ""}
+                        title={fullCellTooltip(r.quoteDetail)}
                         className={reportBTextarea}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         value={r.quoteDetail ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { quoteDetail: e.target.value })
@@ -1412,9 +1484,9 @@ export function ReportBTable({
                     <TableCell>
                       <Textarea
                         rows={2}
-                        title={combinedNote}
+                        title={fullCellTooltip(combinedNote)}
                         className={reportBTextarea}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         value={combinedNote}
                         onChange={(e) => {
                           const sp = splitCallAndSituation(e.target.value);
@@ -1428,9 +1500,9 @@ export function ReportBTable({
                     <TableCell>
                       <Textarea
                         rows={2}
-                        title={r.salesNotes ?? ""}
+                        title={fullCellTooltip(r.salesNotes)}
                         className={reportBTextarea}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         value={r.salesNotes ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { salesNotes: e.target.value })
@@ -1450,19 +1522,16 @@ export function ReportBTable({
                           });
                         }}
                       >
-                        <SelectTrigger className={reportBSelectTrigger}>
-                          <SelectValue placeholder="—">
-                            {r.classificationId
-                              ? (r.classificationLabel ??
-                                  classifications.find(
-                                    (c) => c.id === r.classificationId
-                                  )?.label ??
-                                  undefined)
-                              : undefined}
-                          </SelectValue>
+                        <SelectTrigger
+                          className={reportBSelectTrigger}
+                          title={classificationTooltip}
+                        >
+                          <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">—</SelectItem>
+                          <SelectItem value="__none__" label="—">
+                            —
+                          </SelectItem>
                           {(() => {
                             const base = tableClassificationOptions;
                             const extra =
@@ -1474,7 +1543,7 @@ export function ReportBTable({
                                 : null;
                             const opts = extra ? [...base, extra] : base;
                             return opts.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
+                              <SelectItem key={c.id} value={c.id} label={c.label}>
                                 <span className="flex items-center gap-2">
                                   <span
                                     className="inline-block size-2.5 rounded-sm border"
@@ -1492,7 +1561,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.adPlatform)}
+                        disabled={savingRowId === r.id}
                         value={r.adPlatform ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { adPlatform: e.target.value })
@@ -1503,7 +1573,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.sourceAdName)}
+                        disabled={savingRowId === r.id}
                         value={r.sourceAdName ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, { sourceAdName: e.target.value })
@@ -1514,8 +1585,13 @@ export function ReportBTable({
                       <input
                         type="checkbox"
                         className="size-4 accent-primary"
+                        title={
+                          r.visitAppointmentScheduled
+                            ? "زيارة مجدولة: نعم"
+                            : "زيارة مجدولة: لا"
+                        }
                         checked={r.visitAppointmentScheduled}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         onChange={(e) =>
                           onField(r.id, r, {
                             visitAppointmentScheduled: e.target.checked,
@@ -1528,7 +1604,10 @@ export function ReportBTable({
                         type="date"
                         dir="ltr"
                         className={cn(reportBInput, "text-left")}
-                        disabled={pending}
+                        title={fullCellTooltip(
+                          isoToDateInput(r.visitAppointmentDate)
+                        )}
+                        disabled={savingRowId === r.id}
                         value={isoToDateInput(r.visitAppointmentDate)}
                         onChange={(e) =>
                           onField(r.id, r, {
@@ -1543,7 +1622,8 @@ export function ReportBTable({
                       <Textarea
                         rows={2}
                         className={reportBTextarea}
-                        disabled={pending}
+                        title={fullCellTooltip(r.presentingEmployeeName)}
+                        disabled={savingRowId === r.id}
                         value={r.presentingEmployeeName ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, {
@@ -1572,22 +1652,37 @@ export function ReportBTable({
                           })
                         }
                       >
-                        <SelectTrigger className={reportBSelectTrigger}>
+                        <SelectTrigger
+                          className={reportBSelectTrigger}
+                          title={fullCellTooltip(
+                            r.qqAnswer === null
+                              ? ""
+                              : r.qqAnswer
+                                ? "نعم"
+                                : "لا"
+                          )}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">—</SelectItem>
-                          <SelectItem value="yes">نعم</SelectItem>
-                          <SelectItem value="no">لا</SelectItem>
+                          <SelectItem value="__none__" label="—">
+                            —
+                          </SelectItem>
+                          <SelectItem value="yes" label="نعم">
+                            نعم
+                          </SelectItem>
+                          <SelectItem value="no" label="لا">
+                            لا
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
                     <TableCell>
                       <Textarea
                         rows={2}
-                        title={r.finalStatusNote ?? ""}
+                        title={fullCellTooltip(r.finalStatusNote)}
                         className={reportBTextarea}
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         value={r.finalStatusNote ?? ""}
                         onChange={(e) =>
                           onField(r.id, r, {
@@ -1603,9 +1698,9 @@ export function ReportBTable({
                           <TableCell>
                             <Textarea
                               rows={2}
-                              title={slot?.note ?? ""}
+                              title={fullCellTooltip(slot?.note)}
                               className={reportBTextarea}
-                              disabled={pending}
+                              disabled={savingRowId === r.id}
                               value={slot?.note ?? ""}
                               onChange={(e) => {
                                 const next = [...slots];
@@ -1631,7 +1726,12 @@ export function ReportBTable({
                               type="date"
                               dir="ltr"
                               className={cn(reportBInput, "text-left")}
-                              disabled={pending}
+                              title={fullCellTooltip(
+                                slot?.date
+                                  ? isoToDateInput(slot.date)
+                                  : ""
+                              )}
+                              disabled={savingRowId === r.id}
                               value={
                                 slot?.date
                                   ? isoToDateInput(slot.date)
@@ -1666,7 +1766,7 @@ export function ReportBTable({
                         size="sm"
                         variant="outline"
                         className="h-7 px-2"
-                        disabled={pending}
+                        disabled={savingRowId === r.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           const next = [...slots];
@@ -1693,7 +1793,6 @@ export function ReportBTable({
               لا توجد بيانات ضمن الفلاتر الحالية.
             </p>
           ) : null}
-        </div>
       </div>
     </div>
   );
@@ -1726,11 +1825,6 @@ function StatusPopoverBlock({
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(
     null
   );
-
-  const clsLabel = useMemo(() => {
-    if (!clsId) return null;
-    return classifications.find((c) => c.id === clsId)?.label ?? null;
-  }, [clsId, classifications]);
 
   const updateAnchor = useCallback(() => {
     const el = triggerRef.current;
@@ -1882,14 +1976,14 @@ function StatusPopoverBlock({
                 className={cn(reportBSelectTrigger, "h-9 w-full")}
                 dir="rtl"
               >
-                <SelectValue placeholder="التصنيف">
-                  {clsLabel ?? undefined}
-                </SelectValue>
+                <SelectValue placeholder="التصنيف" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">—</SelectItem>
+                <SelectItem value="__none__" label="—">
+                  —
+                </SelectItem>
                 {classifications.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
+                  <SelectItem key={c.id} value={c.id} label={c.label}>
                     <span className="flex items-center gap-2">
                       <span
                         className="inline-block size-3 shrink-0 rounded-sm border border-border"
@@ -1995,8 +2089,7 @@ function StatusPopoverBlock({
         ref={triggerRef}
         type="button"
         size="sm"
-        variant="outline"
-        className="h-7 w-full px-1"
+        className="h-7 w-full border-emerald-700 bg-emerald-600 px-1 text-white hover:bg-emerald-700"
         onClick={(e) => {
           guard(e);
           setOpen(open ? null : "menu");

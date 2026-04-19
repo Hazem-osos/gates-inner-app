@@ -87,34 +87,6 @@ export function AddClientForm({
   const visitScheduled = Boolean(form.watch("visitAppointmentScheduled"));
   const docDateStr = form.watch("documentDate") as string | undefined;
 
-  const mainClassificationRow = useMemo(() => {
-    if (!pipelineChoice.startsWith("cls:")) return null;
-    const id = pipelineChoice.slice(4);
-    return classifications.find((c) => c.id === id) ?? null;
-  }, [pipelineChoice, classifications]);
-
-  const pipelineDisplayLabel = useMemo(() => {
-    if (!pipelineChoice) return null;
-    if (pipelineChoice === "won") return "تم البيع";
-    if (pipelineChoice === "lost") return "تم الإغلاق";
-    if (pipelineChoice.startsWith("cls:")) {
-      const id = pipelineChoice.slice(4);
-      const c = classifications.find((x) => x.id === id);
-      if (!c) return null;
-      return `${c.label}${c.isBRow ? " (مسار B)" : ""}`;
-    }
-    return null;
-  }, [pipelineChoice, classifications]);
-
-  const classificationSubId =
-    (form.watch("classificationSubId") as string) || "";
-
-  const subClassificationDisplayLabel = useMemo(() => {
-    if (!classificationSubId) return null;
-    const c = classifications.find((x) => x.id === classificationSubId);
-    return c?.label ?? null;
-  }, [classificationSubId, classifications]);
-
   const docDatePreview = useMemo(() => {
     if (!docDateStr) return "";
     const d = new Date(docDateStr + "T12:00:00");
@@ -388,7 +360,6 @@ export function AddClientForm({
                     value={(field.value as string) || ""}
                     onValueChange={(v) => {
                       field.onChange(v);
-                      form.setValue("classificationSubId", "");
                     }}
                   >
                     <SelectTrigger
@@ -396,13 +367,15 @@ export function AddClientForm({
                       className="w-full min-w-0"
                       dir="rtl"
                     >
-                      <SelectValue placeholder="اختر التصنيف">
-                        {pipelineDisplayLabel ?? undefined}
-                      </SelectValue>
+                      <SelectValue placeholder="اختر التصنيف" />
                     </SelectTrigger>
                     <SelectContent>
                       {classifications.map((c) => (
-                        <SelectItem key={c.id} value={`cls:${c.id}`}>
+                        <SelectItem
+                          key={c.id}
+                          value={`cls:${c.id}`}
+                          label={c.label}
+                        >
                           <span className="flex items-center gap-2">
                             <span
                               className="inline-block size-3 shrink-0 rounded-sm border border-border"
@@ -410,14 +383,17 @@ export function AddClientForm({
                               aria-hidden
                             />
                             {c.label}
-                            {c.isBRow ? " (مسار B)" : ""}
                           </span>
                         </SelectItem>
                       ))}
                       {pipelineChoice === "won" || pipelineChoice === "lost" ? (
                         <>
-                          <SelectItem value="won">تم البيع</SelectItem>
-                          <SelectItem value="lost">تم الإغلاق</SelectItem>
+                          <SelectItem value="won" label="تم البيع">
+                            تم البيع
+                          </SelectItem>
+                          <SelectItem value="lost" label="تم الإغلاق">
+                            تم الإغلاق
+                          </SelectItem>
                         </>
                       ) : null}
                     </SelectContent>
@@ -425,51 +401,6 @@ export function AddClientForm({
                 )}
               />
             </Field>
-            {mainClassificationRow && !mainClassificationRow.isBRow ? (
-              <Field
-                label="التصنيف الفرعي"
-                htmlFor="classificationSubId"
-                required={req}
-                error={
-                  form.formState.errors.classificationSubId?.message as
-                    | string
-                    | undefined
-                }
-              >
-                <Controller
-                  control={form.control}
-                  name="classificationSubId"
-                  render={({ field }) => (
-                    <Select
-                      value={(field.value as string) || ""}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger id="classificationSubId" dir="rtl">
-                        <SelectValue placeholder="اختر التصنيف الفرعي">
-                          {subClassificationDisplayLabel ?? undefined}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classifications
-                          .filter((c) => !c.isBRow)
-                          .map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className="inline-block size-3 shrink-0 rounded-sm border border-border"
-                                  style={{ backgroundColor: c.color }}
-                                  aria-hidden
-                                />
-                                {c.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-            ) : null}
 
             <Field
               label="QQ"
@@ -844,10 +775,12 @@ function DynamicField({
                 </SelectTrigger>
                 <SelectContent>
                   {!def.isRequired ? (
-                    <SelectItem value={none}>— بدون —</SelectItem>
+                    <SelectItem value={none} label="— بدون —">
+                      — بدون —
+                    </SelectItem>
                   ) : null}
                   {opts.map((o) => (
-                    <SelectItem key={o} value={o}>
+                    <SelectItem key={o} value={o} label={o}>
                       {o}
                     </SelectItem>
                   ))}

@@ -64,8 +64,12 @@ export async function listClientsForReport(args: {
       orderBy.push({ initialCallDate: dir === "asc" ? "desc" : "asc" });
       break;
     default:
-      orderBy.push({ updatedAt: "desc" });
+      /** ترتيب ثابت — لا يعتمد على updatedAt حتى لا يقفز الصف لأعلى القائمة بعد كل حفظ */
+      orderBy.push({ createdAt: "asc" });
+      break;
   }
+
+  orderBy.push({ id: "asc" });
 
   return prisma.client.findMany({
     where,

@@ -174,7 +174,7 @@ export async function buildExportPayload(
       const w = c.warmingTools[0];
       const contact = c.initialCallDate?.toISOString() ?? "";
       return {
-        id: c.id,
+        معرف: c.id,
         العميل: c.name,
         النشاط: c.activity ?? "",
         تاريخ_الاتصال: contact,
@@ -227,8 +227,8 @@ export async function buildExportPayload(
     }
 
     const rows = rowsDb.map((r) => ({
-      recommendation_id: r.id,
-      client_id: r.clientId,
+      معرف_التوصية: r.id,
+      معرف_العميل: r.clientId,
       العميل: r.client?.name ?? "",
       سيلز: r.client?.assignedUser?.name ?? "",
       التوصية: r.body,
@@ -331,7 +331,7 @@ export async function buildExportPayload(
     });
 
     const rows = filtered.map((c) => ({
-      id: c.id,
+      معرف: c.id,
       سيلز: c.assignedUser?.name ?? "",
       العميل: c.name,
       مرجع_التاريخ:
@@ -420,8 +420,8 @@ export async function buildExportPayload(
   if (kind === "report-won") {
     rows = clients.map((c) => ({
       ...reportBRowToExportRecord(clientEntityToReportBRow(c)),
-      saleDate: c.saleDate?.toISOString() ?? "",
-      contractValue: c.contractValue?.toString() ?? "",
+      تاريخ_البيع: c.saleDate?.toISOString() ?? "",
+      قيمة_العقد: c.contractValue?.toString() ?? "",
     }));
   } else {
     rows = clients.map((c) =>

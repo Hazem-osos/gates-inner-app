@@ -123,7 +123,7 @@ export default async function DashboardPage() {
       </Card>
 
       <section className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-emerald-200/70 bg-emerald-50/90 px-4 py-3.5 text-emerald-950">
+        <div className="sticky top-14 z-20 flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-emerald-200/70 bg-emerald-50/95 px-4 py-3.5 text-emerald-950 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-emerald-50/90">
           <h2 className="text-lg font-semibold md:text-xl">متابعات اليوم</h2>
           {todayRows.length > 0 ? (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-lg font-bold tabular-nums text-emerald-900 ring-1 ring-emerald-200/80">
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-rose-200/70 bg-rose-50/90 px-4 py-3.5 text-rose-950">
+        <div className="sticky top-14 z-20 flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-rose-200/70 bg-rose-50/95 px-4 py-3.5 text-rose-950 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-rose-50/90">
           <h2 className="text-lg font-semibold md:text-xl">متابعات متأخرة</h2>
           {overdueRows.length > 0 ? (
             <span className="rounded-full bg-rose-100 px-3 py-1 text-lg font-bold tabular-nums text-rose-900 ring-1 ring-rose-200/80">

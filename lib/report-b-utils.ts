@@ -138,7 +138,11 @@ export function matchesSearch(row: ReportBFilterRow, q: string): boolean {
   return hay.includes(needle);
 }
 
-export function sortRows<T extends ReportBFilterRow>(
+function compareIdStable(a: { id: string }, b: { id: string }): number {
+  return a.id.localeCompare(b.id);
+}
+
+export function sortRows<T extends ReportBFilterRow & { id: string }>(
   rows: T[],
   key: "days" | "quotePrice" | "initialCallDate",
   dir: Exclude<SortTriState, null>
@@ -146,6 +150,7 @@ export function sortRows<T extends ReportBFilterRow>(
   const mult = dir === "asc" ? 1 : -1;
   const copy = [...rows];
   copy.sort((a, b) => {
+    let cmp = 0;
     if (key === "days") {
       const da =
         daysElapsedSinceContact(
@@ -155,16 +160,18 @@ export function sortRows<T extends ReportBFilterRow>(
         daysElapsedSinceContact(
           b.initialCallDate ? new Date(b.initialCallDate) : null
         ) ?? -1;
-      return (da - db) * mult;
-    }
-    if (key === "quotePrice") {
+      cmp = (da - db) * mult;
+    } else if (key === "quotePrice") {
       const pa = parseFloat(a.quotePrice ?? "") || 0;
       const pb = parseFloat(b.quotePrice ?? "") || 0;
-      return (pa - pb) * mult;
+      cmp = (pa - pb) * mult;
+    } else {
+      const ta = parseIsoDate(a.initialCallDate)?.getTime() ?? 0;
+      const tb = parseIsoDate(b.initialCallDate)?.getTime() ?? 0;
+      cmp = (ta - tb) * mult;
     }
-    const ta = parseIsoDate(a.initialCallDate)?.getTime() ?? 0;
-    const tb = parseIsoDate(b.initialCallDate)?.getTime() ?? 0;
-    return (ta - tb) * mult;
+    if (cmp !== 0) return cmp;
+    return compareIdStable(a, b);
   });
   return copy;
 }

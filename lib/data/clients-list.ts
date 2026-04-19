@@ -15,7 +15,7 @@ export async function listClientsForUser(
 
   return prisma.client.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: {
       id: true,
       name: true,

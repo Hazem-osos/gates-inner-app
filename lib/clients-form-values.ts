@@ -71,25 +71,7 @@ export function clientToFormValues(
     }
   }
 
-  let classificationSubId = "";
-  if (
-    client.classificationId &&
-    classifications.find((c) => c.id === client.classificationId)?.isBRow ===
-      false
-  ) {
-    const raw = (client.notBClassification ?? "").trim();
-    if (raw) {
-      const byId = classifications.find((c) => c.id === raw && !c.isBRow);
-      const byLabel = classifications.find((c) => c.label === raw && !c.isBRow);
-      classificationSubId = (byId ?? byLabel)?.id ?? raw;
-    }
-  } else if (client.status === ClientStatus.NOT_B && !client.classificationId) {
-    const raw = (client.notBClassification ?? "").trim();
-    const nonB = classifications.filter((c) => !c.isBRow);
-    const byId = nonB.find((c) => c.id === raw);
-    const byLabel = nonB.find((c) => c.label === raw);
-    classificationSubId = (byId ?? byLabel)?.id ?? "";
-  }
+  const classificationSubId = "";
 
   const today = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");

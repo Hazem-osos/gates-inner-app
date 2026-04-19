@@ -1,3 +1,4 @@
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { prisma } from "@/lib/prisma";
 
 export type ClassificationRow = {
@@ -16,7 +17,7 @@ export async function listClientClassifications(): Promise<ClassificationRow[]> 
   return rows.map((r) => ({
     id: r.id,
     slug: r.slug,
-    label: r.label,
+    label: sanitizeDisplayLabel(r.label),
     color: r.color,
     sortOrder: r.sortOrder,
     isBRow: r.isBRow,

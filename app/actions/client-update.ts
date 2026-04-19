@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth-helpers";
 import type { ClassificationRow } from "@/lib/data/classifications";
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { prisma } from "@/lib/prisma";
 import { resolvePipelineFields } from "@/lib/pipeline-choice";
 import {
@@ -60,7 +61,7 @@ export async function updateClientAction(
   const classifications: ClassificationRow[] = classificationRows.map((r) => ({
     id: r.id,
     slug: r.slug,
-    label: r.label,
+    label: sanitizeDisplayLabel(r.label),
     color: r.color,
     sortOrder: r.sortOrder,
     isBRow: r.isBRow,

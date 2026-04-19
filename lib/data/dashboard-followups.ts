@@ -22,6 +22,6 @@ export async function listClientsForDashboardFollowups(
       },
     },
     take: 1000,
-    orderBy: { nextFollowUpAt: "asc" },
+    orderBy: [{ nextFollowUpAt: "asc" }, { id: "asc" }],
   });
 }

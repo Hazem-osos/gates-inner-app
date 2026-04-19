@@ -68,7 +68,7 @@ export default async function ReportWarmingPage({
         },
       },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
     take: 800,
   });
 

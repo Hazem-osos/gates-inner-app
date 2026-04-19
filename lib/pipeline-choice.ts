@@ -4,7 +4,7 @@ import type { ClassificationRow } from "@/lib/data/classifications";
 
 export function resolvePipelineFields(
   pipelineChoice: string,
-  classificationSubId: string | undefined,
+  _classificationSubId: string | undefined,
   classifications: ClassificationRow[]
 ): {
   status: ClientStatus;
@@ -44,10 +44,10 @@ export function resolvePipelineFields(
     };
   }
 
-  const sub = (classificationSubId ?? "").trim();
   return {
     status: ClientStatus.NOT_B,
     classificationId: id,
-    notBClassification: sub || null,
+    /** التصنيف الفرعي أُزيل من الواجهة — يُعتمد على classificationId فقط */
+    notBClassification: null,
   };
 }

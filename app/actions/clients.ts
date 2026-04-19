@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getSessionUser } from "@/lib/auth-helpers";
 import type { ClassificationRow } from "@/lib/data/classifications";
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { prisma } from "@/lib/prisma";
 import { resolvePipelineFields } from "@/lib/pipeline-choice";
 import {
@@ -57,7 +58,7 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
   const classifications: ClassificationRow[] = classificationRows.map((r) => ({
     id: r.id,
     slug: r.slug,
-    label: r.label,
+    label: sanitizeDisplayLabel(r.label),
     color: r.color,
     sortOrder: r.sortOrder,
     isBRow: r.isBRow,

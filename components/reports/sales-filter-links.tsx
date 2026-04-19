@@ -42,7 +42,7 @@ export async function SalesFilterLinks(props: {
   delete sp.sales;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90">
       <span className="font-medium text-muted-foreground">فلتر السيلز:</span>
       <Link
         href={buildHref(props.pathname, sp, "all")}

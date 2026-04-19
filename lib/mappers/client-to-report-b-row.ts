@@ -1,5 +1,6 @@
 import type { Client, ClientClassification, User } from "@prisma/client";
 import type { ReportBRow } from "@/components/reports/report-b-table";
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 
 type ClientWithReportInc = Client & {
   assignedUser?: Pick<User, "id" | "name"> | null;
@@ -42,7 +43,10 @@ export function clientEntityToReportBRow(c: ClientWithReportInc): ReportBRow {
     qqAnswer: c.qqAnswer,
     assignedUserName: c.assignedUser?.name ?? null,
     classificationId: c.classificationId ?? null,
-    classificationLabel: c.classification?.label ?? null,
+    classificationLabel:
+      c.classification?.label != null
+        ? sanitizeDisplayLabel(c.classification.label)
+        : null,
     classificationColor: c.classification?.color ?? null,
     followUpSlots: c.followUpSlots,
     closedLostAt:

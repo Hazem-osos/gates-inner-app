@@ -44,7 +44,7 @@ export async function getReportData(
 
   const clients = await prisma.client.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: 500,
     select: {
       id: true,

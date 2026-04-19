@@ -160,7 +160,12 @@ export async function POST(req: Request) {
       }
 
       if (kind === "report-recommendations") {
-        const recId = cellStr(row, ["recommendation_id", "id"]);
+        const recId = cellStr(row, [
+          "recommendation_id",
+          "id",
+          "معرف_التوصية",
+          "معرف التوصية",
+        ]);
         if (!recId) continue;
         const rec = await prisma.managementRecommendation.findUnique({
           where: { id: recId },
@@ -228,8 +233,13 @@ export async function POST(req: Request) {
       const parsed = excelRowToReportClientPatch(row);
       if (!parsed) continue;
       const { clientId, patch } = parsed;
-      const cv = cellStr(row, ["contractValue", "قيمة_التعاقد"]);
-      const sd = cellStr(row, ["saleDate", "تاريخ_البيع"]);
+      const cv = cellStr(row, [
+        "contractValue",
+        "قيمة_التعاقد",
+        "قيمة_العقد",
+        "قيمة العقد",
+      ]);
+      const sd = cellStr(row, ["saleDate", "تاريخ_البيع", "تاريخ البيع"]);
 
       const client = await prisma.client.findUnique({
         where: { id: clientId },

@@ -1,5 +1,5 @@
-import type { ReportBRow } from "@/components/reports/report-b-table";
 import type { ReportClientPatchInput } from "@/app/actions/report-client-patch";
+import type { ReportBRow } from "@/components/reports/report-b-table";
 
 /** مفاتيح ثابتة لملف Excel (تصدير/استيراد) — صف واحد = عميل واحد */
 export const REPORT_B_EXPORT_KEYS = [
@@ -39,6 +39,42 @@ export const REPORT_B_EXPORT_KEYS = [
 
 export type ReportBExportKey = (typeof REPORT_B_EXPORT_KEYS)[number];
 
+/** عناوين أعمدة التصدير (Excel / PDF) — تطابق واجهة التقرير */
+export const REPORT_B_EXPORT_HEADER_AR: Record<ReportBExportKey, string> = {
+  id: "معرف",
+  name: "اسم المسئول",
+  phone: "هاتف",
+  phone2: "هاتف ثاني",
+  company: "شركة",
+  position: "وظيفة",
+  address: "عنوان",
+  activity: "نشاط",
+  status: "حالة",
+  initialCallDate: "تاريخ اتصال",
+  nextFollowUpAt: "متابعة تالية",
+  quotePrice: "عرض سعر",
+  quoteDetail: "تفصيل السعر",
+  managementRecommendationText: "توصيات الإدارة",
+  managementRecommendationDate: "تاريخ التوصية",
+  callSummary: "ملخص مكالمة",
+  currentSituation: "الموقف",
+  salesNotes: "ملاحظات سيلز",
+  finalStatusNote: "موقف نهائي",
+  clientWarmingText: "أدوات Warming",
+  adPlatform: "منصة",
+  sourceAdName: "إعلان",
+  visitAppointmentScheduled: "زيارة مجدولة",
+  visitAppointmentDate: "تاريخ زيارة",
+  presentingEmployeeName: "موظف عرض",
+  qqAnswer: "QQ",
+  classificationId: "معرف تصنيف",
+  classificationLabel: "اسم التصنيف",
+  assignedUserName: "سيلز",
+  followUpSlots: "متابعات",
+  closedLostAt: "تاريخ الإغلاق",
+  lossReason: "سبب الإغلاق",
+};
+
 function boolToCell(v: boolean | null | undefined): string {
   if (v === null || v === undefined) return "";
   return v ? "true" : "false";
@@ -54,7 +90,7 @@ function slotsToCell(slots: unknown): string {
 }
 
 export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> {
-  return {
+  const byKey: Record<ReportBExportKey, string> = {
     id: r.id,
     name: r.name,
     phone: r.phone,
@@ -88,6 +124,11 @@ export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> 
     closedLostAt: r.closedLostAt ?? "",
     lossReason: r.lossReason ?? "",
   };
+  const out: Record<string, string> = {};
+  for (const k of REPORT_B_EXPORT_KEYS) {
+    out[REPORT_B_EXPORT_HEADER_AR[k]] = byKey[k];
+  }
+  return out;
 }
 
 function cellStr(row: Record<string, unknown>, keys: string[]): string {
@@ -141,64 +182,80 @@ function assignStr(
 export function excelRowToReportClientPatch(
   row: Record<string, unknown>
 ): { clientId: string; patch: ReportClientPatchInput } | null {
-  const clientId = cellStr(row, ["id", "معرف", "client_id", "معرف_العميل"]);
+  const clientId = cellStr(row, [
+    "id",
+    "معرف",
+    "client_id",
+    "معرف_العميل",
+    REPORT_B_EXPORT_HEADER_AR.id,
+  ]);
   if (!clientId) return null;
 
   const patch: ReportClientPatchInput = {};
 
-  assignStr(patch, "name", row, ["name", "الاسم"]);
-  assignStr(patch, "phone", row, ["phone", "الهاتف"]);
-  assignStr(patch, "phone2", row, ["phone2", "هاتف_ثاني", "هاتف ثاني"], {
+  assignStr(patch, "name", row, [
+    "name",
+    "الاسم",
+    REPORT_B_EXPORT_HEADER_AR.name,
+  ]);
+  assignStr(patch, "phone", row, ["phone", "الهاتف", REPORT_B_EXPORT_HEADER_AR.phone]);
+  assignStr(patch, "phone2", row, ["phone2", "هاتف_ثاني", "هاتف ثاني", REPORT_B_EXPORT_HEADER_AR.phone2], {
     allowEmpty: true,
   });
-  assignStr(patch, "company", row, ["company", "الشركة"], { allowEmpty: true });
-  assignStr(patch, "position", row, ["position", "وظيفة"], { allowEmpty: true });
-  assignStr(patch, "address", row, ["address", "عنوان"], { allowEmpty: true });
-  assignStr(patch, "activity", row, ["activity", "نشاط"], { allowEmpty: true });
-  assignStr(patch, "quotePrice", row, ["quotePrice", "عرض_سعر"], {
+  assignStr(patch, "company", row, ["company", "الشركة", REPORT_B_EXPORT_HEADER_AR.company], { allowEmpty: true });
+  assignStr(patch, "position", row, ["position", "وظيفة", REPORT_B_EXPORT_HEADER_AR.position], { allowEmpty: true });
+  assignStr(patch, "address", row, ["address", "عنوان", REPORT_B_EXPORT_HEADER_AR.address], { allowEmpty: true });
+  assignStr(patch, "activity", row, ["activity", "نشاط", REPORT_B_EXPORT_HEADER_AR.activity], { allowEmpty: true });
+  assignStr(patch, "quotePrice", row, ["quotePrice", "عرض_سعر", "عرض سعر", REPORT_B_EXPORT_HEADER_AR.quotePrice], {
     allowEmpty: true,
   });
-  assignStr(patch, "quoteDetail", row, ["quoteDetail", "تفصيل_السعر"], {
+  assignStr(patch, "quoteDetail", row, ["quoteDetail", "تفصيل_السعر", "تفصيل السعر", REPORT_B_EXPORT_HEADER_AR.quoteDetail], {
     allowEmpty: true,
   });
   assignStr(patch, "managementRecommendationText", row, [
     "managementRecommendationText",
     "توصيات_الإدارة",
+    REPORT_B_EXPORT_HEADER_AR.managementRecommendationText,
   ], { allowEmpty: true });
   assignStr(patch, "managementRecommendationDate", row, [
     "managementRecommendationDate",
     "تاريخ_التوصية",
+    REPORT_B_EXPORT_HEADER_AR.managementRecommendationDate,
   ], { allowEmpty: true });
-  assignStr(patch, "callSummary", row, ["callSummary", "ملخص_مكالمة"], {
+  assignStr(patch, "callSummary", row, ["callSummary", "ملخص_مكالمة", "ملخص مكالمة", REPORT_B_EXPORT_HEADER_AR.callSummary], {
     allowEmpty: true,
   });
   assignStr(patch, "currentSituation", row, [
     "currentSituation",
     "ملخص_وموقف",
     "الموقف",
+    REPORT_B_EXPORT_HEADER_AR.currentSituation,
   ], { allowEmpty: true });
-  assignStr(patch, "salesNotes", row, ["salesNotes", "ملاحظات_سيلز"], {
+  assignStr(patch, "salesNotes", row, ["salesNotes", "ملاحظات_سيلز", "ملاحظات سيلز", REPORT_B_EXPORT_HEADER_AR.salesNotes], {
     allowEmpty: true,
   });
-  assignStr(patch, "finalStatusNote", row, ["finalStatusNote", "موقف_نهائي"], {
+  assignStr(patch, "finalStatusNote", row, ["finalStatusNote", "موقف_نهائي", "موقف نهائي", REPORT_B_EXPORT_HEADER_AR.finalStatusNote], {
     allowEmpty: true,
   });
-  assignStr(patch, "clientWarmingText", row, ["clientWarmingText"], {
+  assignStr(patch, "clientWarmingText", row, ["clientWarmingText", REPORT_B_EXPORT_HEADER_AR.clientWarmingText], {
     allowEmpty: true,
   });
-  assignStr(patch, "adPlatform", row, ["adPlatform", "منصة"], { allowEmpty: true });
-  assignStr(patch, "sourceAdName", row, ["sourceAdName", "إعلان"], {
+  assignStr(patch, "adPlatform", row, ["adPlatform", "منصة", REPORT_B_EXPORT_HEADER_AR.adPlatform], { allowEmpty: true });
+  assignStr(patch, "sourceAdName", row, ["sourceAdName", "إعلان", REPORT_B_EXPORT_HEADER_AR.sourceAdName], {
     allowEmpty: true,
   });
   assignStr(patch, "presentingEmployeeName", row, [
     "presentingEmployeeName",
     "موظف_عرض",
+    "موظف عرض",
+    REPORT_B_EXPORT_HEADER_AR.presentingEmployeeName,
   ], { allowEmpty: true });
 
   const visitSched = cellStrAllowEmpty(row, [
     "visitAppointmentScheduled",
     "زيارة_محددة",
     "محدد_ميعاد",
+    REPORT_B_EXPORT_HEADER_AR.visitAppointmentScheduled,
   ]);
   if (visitSched !== undefined) {
     const b = parseBoolCell(visitSched);
@@ -208,20 +265,30 @@ export function excelRowToReportClientPatch(
   assignStr(patch, "visitAppointmentDate", row, [
     "visitAppointmentDate",
     "تاريخ_زيارة",
+    "تاريخ زيارة",
+    REPORT_B_EXPORT_HEADER_AR.visitAppointmentDate,
   ], { allowEmpty: true });
 
-  const qq = cellStrAllowEmpty(row, ["qqAnswer", "QQ"]);
+  const qq = cellStrAllowEmpty(row, ["qqAnswer", "QQ", REPORT_B_EXPORT_HEADER_AR.qqAnswer]);
   if (qq !== undefined) {
     const b = parseBoolCell(qq);
     if (b !== undefined) patch.qqAnswer = b;
   }
 
-  const cls = cellStrAllowEmpty(row, ["classificationId", "تصنيف_id"]);
+  const cls = cellStrAllowEmpty(row, [
+    "classificationId",
+    "تصنيف_id",
+    REPORT_B_EXPORT_HEADER_AR.classificationId,
+  ]);
   if (cls !== undefined) {
     patch.classificationId = cls.trim() === "" ? null : cls.trim();
   }
 
-  const slotsRaw = cellStrAllowEmpty(row, ["followUpSlots", "متابعات"]);
+  const slotsRaw = cellStrAllowEmpty(row, [
+    "followUpSlots",
+    "متابعات",
+    REPORT_B_EXPORT_HEADER_AR.followUpSlots,
+  ]);
   if (slotsRaw !== undefined) {
     const t = slotsRaw.trim();
     if (t === "") patch.followUpSlots = [];
@@ -235,7 +302,12 @@ export function excelRowToReportClientPatch(
     }
   }
 
-  const nfu = cellStrAllowEmpty(row, ["nextFollowUpAt", "متابعة_تالية"]);
+  const nfu = cellStrAllowEmpty(row, [
+    "nextFollowUpAt",
+    "متابعة_تالية",
+    "متابعة تالية",
+    REPORT_B_EXPORT_HEADER_AR.nextFollowUpAt,
+  ]);
   if (nfu !== undefined) {
     const t = nfu.trim();
     if (t !== "") patch.nextFollowUpAt = t;

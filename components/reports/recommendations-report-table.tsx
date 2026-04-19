@@ -35,10 +35,10 @@ export function RecommendationsReportTable({
   rows: RecommendationReportRow[];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border/80">
-      <Table>
+    <div className="rounded-xl border border-border/80">
+      <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
         <TableHeader>
-          <TableRow>
+          <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
             <TableHead className="min-w-[130px]">اسم العميل</TableHead>
             <TableHead>موظف السيلز</TableHead>
             <TableHead className="min-w-[200px]">التوصية</TableHead>
