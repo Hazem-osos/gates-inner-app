@@ -6,6 +6,7 @@ import {
   WarmingReportTable,
   type WarmingReportRow,
 } from "@/components/reports/warming-report-table";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import { requireSessionUser } from "@/lib/auth-helpers";
@@ -148,6 +149,8 @@ export default async function ReportWarmingPage({
           sales: salesKey,
         })}
       />
+
+      <ReportRecordsCount count={rows.length} />
 
       <WarmingReportTable rows={rows} />
 

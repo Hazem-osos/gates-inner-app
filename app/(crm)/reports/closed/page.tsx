@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
@@ -68,6 +69,8 @@ export default async function ReportClosedPage({
           sales: salesKey,
         })}
       />
+
+      <ReportRecordsCount count={rows.length} />
 
       <p className="text-xs text-destructive">
         التقرير يعرض العملاء بحالة تم الإغلاق فقط — الشبكة الكاملة قابلة للتعديل كتقرير B.

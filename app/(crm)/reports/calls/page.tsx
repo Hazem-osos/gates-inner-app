@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import {
   Table,
@@ -187,6 +188,8 @@ export default async function CallsReportPage({
           sales: salesKey,
         })}
       />
+
+      <ReportRecordsCount count={filtered.length} />
 
       <div className="rounded-xl border border-border/80">
         <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -114,6 +115,8 @@ export default async function ReportWonPage({
           to: sp.to,
         })}
       />
+
+      <ReportRecordsCount count={filtered.length} />
 
       <div className="overflow-x-auto rounded-xl border border-border/80">
         <Table>

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,8 @@ export default async function ReportNotBPage({
           class: classKey && classKey !== "all" ? classKey : undefined,
         })}
       />
+
+      <ReportRecordsCount count={rows.length} />
 
       <ReportBTable
         rows={rows}

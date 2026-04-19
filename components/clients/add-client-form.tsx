@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import type { ClassificationRow } from "@/lib/data/classifications";
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 import {
   buildAddClientFormSchema,
   defaultAddClientValues,
@@ -85,6 +86,17 @@ export function AddClientForm({
 
   const pipelineChoice = (form.watch("pipelineChoice") as string) || "";
   const visitScheduled = Boolean(form.watch("visitAppointmentScheduled"));
+
+  const pipelineChoiceDisplay = useMemo(() => {
+    const m = new Map<string, { label: string; color: string }>();
+    for (const c of classifications) {
+      m.set(`cls:${c.id}`, {
+        label: sanitizeDisplayLabel(c.label),
+        color: c.color,
+      });
+    }
+    return m;
+  }, [classifications]);
   const docDateStr = form.watch("documentDate") as string | undefined;
 
   const docDatePreview = useMemo(() => {
@@ -367,25 +379,60 @@ export function AddClientForm({
                       className="w-full min-w-0"
                       dir="rtl"
                     >
-                      <SelectValue placeholder="اختر التصنيف" />
+                      <SelectValue placeholder="اختر التصنيف">
+                        {(v) => {
+                          if (v == null || v === "") {
+                            return "اختر التصنيف";
+                          }
+                          if (v === "won") {
+                            return <span dir="rtl">تم البيع</span>;
+                          }
+                          if (v === "lost") {
+                            return <span dir="rtl">تم الإغلاق</span>;
+                          }
+                          const row = pipelineChoiceDisplay.get(String(v));
+                          if (!row) {
+                            return (
+                              <bdi>{sanitizeDisplayLabel(String(v))}</bdi>
+                            );
+                          }
+                          return (
+                            <span
+                              className="flex min-w-0 flex-1 items-center gap-1.5"
+                              dir="rtl"
+                            >
+                              <span
+                                className="inline-block size-3 shrink-0 rounded-sm border border-border"
+                                style={{ backgroundColor: row.color }}
+                                aria-hidden
+                              />
+                              <bdi className="min-w-0 truncate">
+                                {row.label}
+                              </bdi>
+                            </span>
+                          );
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {classifications.map((c) => (
+                      {classifications.map((c) => {
+                        const lab = sanitizeDisplayLabel(c.label);
+                        return (
                         <SelectItem
                           key={c.id}
                           value={`cls:${c.id}`}
-                          label={c.label}
+                          label={lab}
                         >
-                          <span className="flex items-center gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
                             <span
                               className="inline-block size-3 shrink-0 rounded-sm border border-border"
                               style={{ backgroundColor: c.color }}
                               aria-hidden
                             />
-                            {c.label}
+                            <bdi className="min-w-0 truncate">{lab}</bdi>
                           </span>
                         </SelectItem>
-                      ))}
+                      )})}
                       {pipelineChoice === "won" || pipelineChoice === "lost" ? (
                         <>
                           <SelectItem value="won" label="تم البيع">

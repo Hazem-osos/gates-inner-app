@@ -51,6 +51,10 @@ export async function GET(req: Request) {
       XLSX.utils.book_append_sheet(wb, ws, sheet.sheetName.slice(0, 31));
     }
 
+    /** عرض الورقة من اليمين (مناسب للعربية) — Excel / Numbers */
+    if (!wb.Workbook) wb.Workbook = {};
+    wb.Workbook.Views = [{ RTL: true }];
+
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
 
     const asciiName = `${kind.replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`;

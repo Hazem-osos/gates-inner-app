@@ -174,7 +174,6 @@ export async function buildExportPayload(
       const w = c.warmingTools[0];
       const contact = c.initialCallDate?.toISOString() ?? "";
       return {
-        معرف: c.id,
         العميل: c.name,
         النشاط: c.activity ?? "",
         تاريخ_الاتصال: contact,
@@ -227,8 +226,6 @@ export async function buildExportPayload(
     }
 
     const rows = rowsDb.map((r) => ({
-      معرف_التوصية: r.id,
-      معرف_العميل: r.clientId,
       العميل: r.client?.name ?? "",
       سيلز: r.client?.assignedUser?.name ?? "",
       التوصية: r.body,
@@ -331,7 +328,6 @@ export async function buildExportPayload(
     });
 
     const rows = filtered.map((c) => ({
-      معرف: c.id,
       سيلز: c.assignedUser?.name ?? "",
       العميل: c.name,
       مرجع_التاريخ:

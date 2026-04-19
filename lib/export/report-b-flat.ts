@@ -1,9 +1,8 @@
 import type { ReportClientPatchInput } from "@/app/actions/report-client-patch";
 import type { ReportBRow } from "@/components/reports/report-b-table";
 
-/** مفاتيح ثابتة لملف Excel (تصدير/استيراد) — صف واحد = عميل واحد */
+/** مفاتيح ثابتة لملف Excel (تصدير/استيراد) — صف واحد = عميل واحد — بدون عمود المعرف في التصدير */
 export const REPORT_B_EXPORT_KEYS = [
-  "id",
   "name",
   "phone",
   "phone2",
@@ -41,7 +40,6 @@ export type ReportBExportKey = (typeof REPORT_B_EXPORT_KEYS)[number];
 
 /** عناوين أعمدة التصدير (Excel / PDF) — تطابق واجهة التقرير */
 export const REPORT_B_EXPORT_HEADER_AR: Record<ReportBExportKey, string> = {
-  id: "معرف",
   name: "اسم المسئول",
   phone: "هاتف",
   phone2: "هاتف ثاني",
@@ -91,7 +89,6 @@ function slotsToCell(slots: unknown): string {
 
 export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> {
   const byKey: Record<ReportBExportKey, string> = {
-    id: r.id,
     name: r.name,
     phone: r.phone,
     phone2: r.phone2 ?? "",
@@ -187,7 +184,6 @@ export function excelRowToReportClientPatch(
     "معرف",
     "client_id",
     "معرف_العميل",
-    REPORT_B_EXPORT_HEADER_AR.id,
   ]);
   if (!clientId) return null;
 

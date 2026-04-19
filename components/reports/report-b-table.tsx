@@ -50,6 +50,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
+import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { daysElapsedSinceContact } from "@/lib/days-elapsed";
 import {
   matchesSearch,
@@ -881,29 +882,32 @@ export function ReportBTable({
 
       <div
         className={cn(
-          "sticky top-14 z-30 mb-3 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
+          "sticky top-14 z-30 mb-2 rounded-md border bg-background/95 p-1.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
           toolbar !== "closed"
             ? "border-destructive/80 ring-1 ring-destructive/15"
             : "border-border/80"
         )}
       >
         <div
-          className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-4"
+          className="flex flex-col gap-1.5 lg:flex-row lg:items-start lg:gap-2"
           dir="rtl"
         >
           {toolbar !== "closed" ? (
             <div
               data-gate-exempt
-              className="min-w-0 flex-1 rounded-lg border-2 border-destructive bg-background p-3 dark:bg-background"
+              className="min-w-0 flex-1 rounded border border-destructive bg-background px-1.5 py-1 dark:bg-background"
             >
-              <p className="mb-2 text-sm font-semibold text-destructive">
+              <p className="mb-0.5 text-[10px] font-semibold leading-tight text-destructive">
                 ⚠ تجاوزات التقرير
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-0.5">
                 <Button
                   type="button"
                   size="sm"
-                  className={violBtn(violation === "visit_overdue")}
+                  className={cn(
+                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    violBtn(violation === "visit_overdue")
+                  )}
                   onClick={() =>
                     setViolation((v) =>
                       v === "visit_overdue" ? null : "visit_overdue"
@@ -915,7 +919,10 @@ export function ReportBTable({
                 <Button
                   type="button"
                   size="sm"
-                  className={violBtn(violation === "days_over")}
+                  className={cn(
+                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    violBtn(violation === "days_over")
+                  )}
                   onClick={() => {
                     setViolation((x) =>
                       x === "days_over" ? null : "days_over"
@@ -928,7 +935,7 @@ export function ReportBTable({
                 <Input
                   type="number"
                   min={0}
-                  className="h-8 w-20 text-center"
+                  className="h-5 w-11 px-0.5 text-center text-[9px]"
                   disabled={!daysActive}
                   value={daysInput}
                   onChange={(e) => setDaysInput(e.target.value)}
@@ -937,7 +944,10 @@ export function ReportBTable({
                 <Button
                   type="button"
                   size="sm"
-                  className={violBtn(violation === "follow_count")}
+                  className={cn(
+                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    violBtn(violation === "follow_count")
+                  )}
                   onClick={() => {
                     setViolation((x) =>
                       x === "follow_count" ? null : "follow_count"
@@ -950,7 +960,7 @@ export function ReportBTable({
                 <Input
                   type="number"
                   min={0}
-                  className="h-8 w-20 text-center"
+                  className="h-5 w-11 px-0.5 text-center text-[9px]"
                   disabled={!followActive}
                   value={followInput}
                   onChange={(e) => setFollowInput(e.target.value)}
@@ -959,7 +969,10 @@ export function ReportBTable({
                 <Button
                   type="button"
                   size="sm"
-                  className={violBtn(violation === "neglected")}
+                  className={cn(
+                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    violBtn(violation === "neglected")
+                  )}
                   onClick={() =>
                     setViolation((v) =>
                       v === "neglected" ? null : "neglected"
@@ -971,7 +984,10 @@ export function ReportBTable({
                 <Button
                   type="button"
                   size="sm"
-                  className={violBtn(violation === "no_answer")}
+                  className={cn(
+                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    violBtn(violation === "no_answer")
+                  )}
                   onClick={() =>
                     setViolation((v) =>
                       v === "no_answer" ? null : "no_answer"
@@ -984,6 +1000,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   variant="secondary"
+                  className="h-5 rounded px-1.5 py-0 text-[9px] leading-tight"
                   onClick={() => {
                     setViolation(null);
                     setDaysInput("");
@@ -1000,49 +1017,51 @@ export function ReportBTable({
           <aside
             data-gate-exempt
             className={cn(
-              "flex flex-col gap-3 rounded-lg border border-border bg-muted/25 p-2 dark:bg-muted/15",
+              "rounded border border-border bg-muted/25 px-1.5 py-1 dark:bg-muted/15",
               toolbar !== "closed"
-                ? "w-full shrink-0 lg:w-44"
-                : "mx-auto w-full max-w-md"
+                ? "w-full shrink-0 lg:w-auto lg:min-w-[9.5rem]"
+                : "mx-auto w-full max-w-[14rem]"
             )}
           >
-            <p className="text-center text-[11px] font-medium text-muted-foreground">
+            <p className="mb-0.5 text-center text-[9px] font-medium leading-tight text-muted-foreground">
               تلوين الصفوف
             </p>
-            {REPORT_B_PALETTE.map(({ hex }) => (
-              <div key={hex} className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  title={hex}
-                  className={`h-10 w-full rounded-md border-2 shadow-sm transition ${
-                    selectedColor === hex
-                      ? "border-primary ring-2 ring-primary"
-                      : "border-transparent"
-                  }`}
-                  style={{ backgroundColor: hex }}
-                  onClick={() =>
-                    setSelectedColor((prev) => (prev === hex ? null : hex))
-                  }
-                />
-                <Input
-                  className="h-7 text-[10px]"
-                  placeholder="وصف اللون"
-                  value={legends[hex] ?? ""}
-                  onChange={(e) =>
-                    setLegends((prev) => ({ ...prev, [hex]: e.target.value }))
-                  }
-                  dir="rtl"
-                />
-              </div>
-            ))}
-            <p className="text-[10px] text-muted-foreground">
+            <div className="grid grid-cols-4 gap-1">
+              {REPORT_B_PALETTE.map(({ hex }) => (
+                <div key={hex} className="flex min-w-0 flex-col gap-px">
+                  <button
+                    type="button"
+                    title={hex}
+                    className={`mx-auto h-4 w-7 shrink-0 rounded-sm border shadow-sm transition ${
+                      selectedColor === hex
+                        ? "border-primary ring-1 ring-primary"
+                        : "border-border/60"
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    onClick={() =>
+                      setSelectedColor((prev) => (prev === hex ? null : hex))
+                    }
+                  />
+                  <Input
+                    className="h-5 min-h-5 px-0.5 text-[8px] leading-tight"
+                    placeholder="وصف"
+                    value={legends[hex] ?? ""}
+                    onChange={(e) =>
+                      setLegends((prev) => ({ ...prev, [hex]: e.target.value }))
+                    }
+                    dir="rtl"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-0.5 text-[8px] leading-snug text-muted-foreground">
               اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
               لإلغاء اختياره.
             </p>
           </aside>
         </div>
         {toolbar !== "closed" && (violationMessage() || visitBanner()) ? (
-          <div className="mt-3 space-y-1 border-t border-destructive/25 pt-3 text-sm text-destructive dark:border-destructive/30">
+          <div className="mt-1.5 space-y-0.5 border-t border-destructive/25 pt-1.5 text-[11px] leading-snug text-destructive dark:border-destructive/30">
             {violationMessage() ? <p>{violationMessage()}</p> : null}
             {visitBanner() ? <p>{visitBanner()}</p> : null}
           </div>
@@ -1879,6 +1898,17 @@ function StatusPopoverBlock({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
 
+  const clsLabelById = useMemo(() => {
+    const m = new Map<string, { label: string; color: string }>();
+    for (const c of classifications) {
+      m.set(c.id, {
+        label: sanitizeDisplayLabel(c.label),
+        color: c.color,
+      });
+    }
+    return m;
+  }, [classifications]);
+
   function guard(e: React.MouseEvent) {
     if (gateInvalid) {
       e.preventDefault();
@@ -1976,24 +2006,50 @@ function StatusPopoverBlock({
                 className={cn(reportBSelectTrigger, "h-9 w-full")}
                 dir="rtl"
               >
-                <SelectValue placeholder="التصنيف" />
+                <SelectValue placeholder="التصنيف">
+                  {(v) => {
+                    if (v == null || v === "" || v === "__none__") {
+                      return "التصنيف";
+                    }
+                    const row = clsLabelById.get(String(v));
+                    if (!row) {
+                      return <bdi>{sanitizeDisplayLabel(String(v))}</bdi>;
+                    }
+                    return (
+                      <span
+                        className="flex min-w-0 flex-1 items-center gap-1.5"
+                        dir="rtl"
+                      >
+                        <span
+                          className="inline-block size-3 shrink-0 rounded-sm border border-border"
+                          style={{ backgroundColor: row.color }}
+                          aria-hidden
+                        />
+                        <bdi className="min-w-0 truncate">{row.label}</bdi>
+                      </span>
+                    );
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__" label="—">
                   —
                 </SelectItem>
-                {classifications.map((c) => (
-                  <SelectItem key={c.id} value={c.id} label={c.label}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="inline-block size-3 shrink-0 rounded-sm border border-border"
-                        style={{ backgroundColor: c.color }}
-                        aria-hidden
-                      />
-                      {c.label}
-                    </span>
-                  </SelectItem>
-                ))}
+                {classifications.map((c) => {
+                  const lab = sanitizeDisplayLabel(c.label);
+                  return (
+                    <SelectItem key={c.id} value={c.id} label={lab}>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="inline-block size-3 shrink-0 rounded-sm border border-border"
+                          style={{ backgroundColor: c.color }}
+                          aria-hidden
+                        />
+                        <bdi className="min-w-0 truncate">{lab}</bdi>
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <div className="flex gap-1">

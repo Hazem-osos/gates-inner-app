@@ -4,6 +4,7 @@ import {
   RecommendationsReportTable,
   type RecommendationReportRow,
 } from "@/components/reports/recommendations-report-table";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import { requireSessionUser } from "@/lib/auth-helpers";
@@ -133,6 +134,8 @@ export default async function RecommendationsReportPage({
           sales: salesKey,
         })}
       />
+
+      <ReportRecordsCount count={tableRows.length} />
 
       <RecommendationsReportTable rows={tableRows} />
     </div>

@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { ExportToolbar } from "@/components/export/export-toolbar";
+import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { listClientClassifications } from "@/lib/data/classifications";
@@ -64,6 +65,8 @@ export default async function ReportBPage({
           sales: salesKey,
         })}
       />
+
+      <ReportRecordsCount count={rows.length} />
 
       <ReportBTable
         rows={rows}
