@@ -137,7 +137,6 @@ export default async function ReportNotBPage({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ExcelClientsImportDialog importType="not-b" />
         <ExportToolbar
-          importKind="report-not-b"
           excelHref={reportExportExcelHref({
             kind: "report-not-b",
             sales: salesKey,

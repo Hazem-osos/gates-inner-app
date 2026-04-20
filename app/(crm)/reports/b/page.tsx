@@ -82,7 +82,6 @@ export default async function ReportBPage({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ExcelClientsImportDialog importType="b" />
         <ExportToolbar
-          importKind="report-b"
           excelHref={reportExportExcelHref({
             kind: "report-b",
             sales: salesKey,

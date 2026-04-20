@@ -2,8 +2,28 @@ import * as XLSX from "xlsx";
 
 export type ImportType = "b" | "not-b";
 
+/** حدود سنة مقبولة لـ MySQL / Prisma DateTime */
+const MIN_DB_YEAR = 1900;
+const MAX_DB_YEAR = 2100;
+
 export function excelDateToJS(serial: number): Date {
   return new Date((serial - 25569) * 86400 * 1000);
+}
+
+/** يُرجع التاريخ فقط إن كان ضمن نطاق معقول — يمنع أخطاء مثل سنة 20206 من parsing خاطئ */
+export function toSafeDbDate(d: Date | null | undefined): Date | null {
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  if (y < MIN_DB_YEAR || y > MAX_DB_YEAR) return null;
+  return d;
+}
+
+/**
+ * تسلسل Excel للتاريخ (يوميات من ~1905 حتى ~2268).
+ * ما بعد التحقق يُمرَّر على toSafeDbDate لرفض السنوات خارج 1900–2100.
+ */
+function isLikelyExcelDateSerial(n: number): boolean {
+  return Number.isFinite(n) && n >= 2_000 && n <= 500_000;
 }
 
 function normalizeArabicHeader(s: string): string {
@@ -38,20 +58,24 @@ function parseNumericPrefixFromSlash(raw: unknown): number | null {
 export function parseExcelDateCell(v: unknown): Date | null {
   if (v === null || v === undefined || v === "") return null;
   if (v instanceof Date) {
-    return Number.isNaN(v.getTime()) ? null : v;
+    if (Number.isNaN(v.getTime())) return null;
+    return toSafeDbDate(v);
   }
   if (typeof v === "number") {
-    if (v > 20000 && v < 120000) return excelDateToJS(v);
-    if (v > 1e11) return new Date(v);
+    if (isLikelyExcelDateSerial(v)) {
+      return toSafeDbDate(excelDateToJS(v));
+    }
+    if (v > 1e11) return toSafeDbDate(new Date(v));
   }
   const s = cellStr(v);
   if (!s) return null;
   const prefixNum = parseNumericPrefixFromSlash(s);
-  if (prefixNum !== null && prefixNum > 20000 && prefixNum < 120000) {
-    return excelDateToJS(prefixNum);
+  if (prefixNum !== null && isLikelyExcelDateSerial(prefixNum)) {
+    return toSafeDbDate(excelDateToJS(prefixNum));
   }
   const t = Date.parse(s);
-  return Number.isNaN(t) ? null : new Date(t);
+  if (Number.isNaN(t)) return null;
+  return toSafeDbDate(new Date(t));
 }
 
 /** أول سعر رقمي قبل / أو أول مجموعة أرقام */
