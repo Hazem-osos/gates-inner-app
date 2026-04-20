@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { DashboardShortcuts } from "@/components/dashboard/dashboard-shortcuts";
 import { MarkAlertButton } from "@/components/dashboard/mark-alert-button";
 import { ReportBTable } from "@/components/reports/report-b-table";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,8 @@ export default async function DashboardPage() {
         excelHref={dashboardFollowupsExportHref()}
       />
 
+      <DashboardShortcuts />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -122,7 +125,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <section className="space-y-2">
+      <section id="dashboard-today-followups" className="scroll-mt-24 space-y-2">
         <div className="sticky top-14 z-20 flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-emerald-200/70 bg-emerald-50/95 px-4 py-3.5 text-emerald-950 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-emerald-50/90">
           <h2 className="text-lg font-semibold md:text-xl">متابعات اليوم</h2>
           {todayRows.length > 0 ? (
