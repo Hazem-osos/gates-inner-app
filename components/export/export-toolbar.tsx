@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ReportExcelImportDialog } from "@/components/import/report-excel-import-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { pdfFromExcelHref, reportImportExcelUrl } from "@/lib/export-excel-href";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function onImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onQuickImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !importKind) return;
@@ -79,21 +80,24 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
         طباعة / PDF
       </Link>
       {importKind ? (
-        <label
-          className={cn(
-            buttonVariants({ variant: "secondary", size: "sm" }),
-            busy ? "pointer-events-none opacity-60" : "cursor-pointer"
-          )}
-        >
-          <input
-            type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="sr-only"
-            disabled={busy}
-            onChange={onImport}
-          />
-          {busy ? "جاري الاستيراد…" : "استيراد Excel"}
-        </label>
+        <>
+          <ReportExcelImportDialog importKind={importKind} />
+          <label
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              busy ? "pointer-events-none opacity-60" : "cursor-pointer"
+            )}
+          >
+            <input
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="sr-only"
+              disabled={busy}
+              onChange={onQuickImport}
+            />
+            {busy ? "جاري الاستيراد…" : "استيراد سريع"}
+          </label>
+        </>
       ) : null}
       {msg ? (
         <span className="max-w-full text-xs text-muted-foreground" dir="rtl">

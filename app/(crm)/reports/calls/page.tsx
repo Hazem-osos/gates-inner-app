@@ -12,7 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { Input } from "@/components/ui/input";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
 import { callsReportExportExcelHref } from "@/lib/export-excel-href";
@@ -34,6 +36,7 @@ export default async function CallsReportPage({
   }>;
 }) {
   const user = await requireSessionUser();
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
 
   const todayStr = todayInputDate();
@@ -134,26 +137,22 @@ export default async function CallsReportPage({
         </label>
         <label className="flex flex-col gap-1">
           من تاريخ
-          <input
+          <Input
             type="date"
             name="from"
             defaultValue={fromStr}
-            className="rounded border px-2 py-1"
-            onChange={(e) => {
-              queueMicrotask(() => e.currentTarget.blur())
-            }}
+            className="h-9 rounded border px-2 py-1"
+            dir="ltr"
           />
         </label>
         <label className="flex flex-col gap-1">
           إلى تاريخ
-          <input
+          <Input
             type="date"
             name="to"
             defaultValue={toStr}
-            className="rounded border px-2 py-1"
-            onChange={(e) => {
-              queueMicrotask(() => e.currentTarget.blur())
-            }}
+            className="h-9 rounded border px-2 py-1"
+            dir="ltr"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -193,16 +192,19 @@ export default async function CallsReportPage({
         </p>
       ) : null}
 
-      <ExportToolbar
-        importKind="report-calls"
-        excelHref={callsReportExportExcelHref({
-          from: fromStr,
-          to: toStr,
-          dateMode,
-          scheduled: scheduledFilter,
-          sales: salesKey,
-        })}
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReportWorkLogDialog reportKey="report-calls" userId={workLogUserId} />
+        <ExportToolbar
+          importKind="report-calls"
+          excelHref={callsReportExportExcelHref({
+            from: fromStr,
+            to: toStr,
+            dateMode,
+            scheduled: scheduledFilter,
+            sales: salesKey,
+          })}
+        />
+      </div>
 
       <ReportRecordsCount count={filtered.length} />
 

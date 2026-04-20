@@ -38,8 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
-import { formatDateTimeArabic } from "@/lib/date-arabic";
-import type { AuditWorkClientGroup } from "@/lib/audit/work-log-types";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   Table,
   TableBody,
@@ -126,6 +125,8 @@ type Props = {
   rowStyleReportType?: "b" | "not-b";
   /** تقرير المغلقة: شبكة كاملة بدون أدوات الفلترة العلوية من تقرير B */
   toolbar?: "full" | "closed";
+  /** مفتاح تقرير سجل العمل (تصفية AuditLog) — مثل report-dashboard-followups */
+  auditReportKey?: string;
 };
 
 type FollowSlot = { order: number; note: string; date: string };
@@ -216,6 +217,7 @@ export function ReportBTable({
   currentUserId = "",
   rowStyleReportType = "b",
   toolbar = "full",
+  auditReportKey,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -252,6 +254,14 @@ export function ReportBTable({
     [rowStyleReportType, classifications]
   );
 
+  const resolvedAuditReportKey = useMemo(() => {
+    const k = auditReportKey?.trim();
+    if (k) return k;
+    if (toolbar === "closed") return "report-closed";
+    if (rowStyleReportType === "not-b") return "report-not-b";
+    return "report-b";
+  }, [auditReportKey, toolbar, rowStyleReportType]);
+
   const [searchQ, setSearchQ] = useState("");
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
@@ -269,19 +279,6 @@ export function ReportBTable({
 
   /** أعمدة متابعة إضافية للعرض فقط — لا تُكتب في JSON حتى يملأ المستخدم الخانة */
   const [followColExtra, setFollowColExtra] = useState(0);
-
-  const [workOpen, setWorkOpen] = useState(false);
-  const [auditFrom, setAuditFrom] = useState(todayInputDate());
-  const [auditTo, setAuditTo] = useState(todayInputDate());
-  const [auditGroups, setAuditGroups] = useState<AuditWorkClientGroup[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-
-  useEffect(() => {
-    if (!workOpen) return;
-    const t = todayInputDate();
-    setAuditFrom(t);
-    setAuditTo(t);
-  }, [workOpen]);
 
   const [gateDialogOpen, setGateDialogOpen] = useState(false);
   const [gateClientId, setGateClientId] = useState<string | null>(null);
@@ -416,7 +413,9 @@ export function ReportBTable({
       if (!row) return;
       setSavingRowId(id);
       try {
-        const res = await patchClientReportFields(id, patchFromRow(row));
+        const res = await patchClientReportFields(id, patchFromRow(row), {
+          reportKey: resolvedAuditReportKey,
+        });
         if (res.ok) {
           toast.success("تم حفظ الصف");
           setLocal((p) => {
@@ -432,7 +431,7 @@ export function ReportBTable({
         setSavingRowId(null);
       }
     },
-    [mergedMap, router]
+    [mergedMap, router, resolvedAuditReportKey]
   );
 
   const onField = useCallback(
@@ -581,37 +580,6 @@ export function ReportBTable({
     }
   }
 
-  async function loadAudit() {
-    if (!currentUserId) {
-      toast.error("تعذر تحديد المستخدم.");
-      return;
-    }
-    setAuditLoading(true);
-    try {
-      const p = new URLSearchParams({
-        from: `${auditFrom}T00:00:00`,
-        to: `${auditTo}T23:59:59`,
-        userId: currentUserId,
-      });
-      const res = await fetch(`/api/audit-log?${p.toString()}`);
-      const data = (await res.json()) as {
-        groups?: AuditWorkClientGroup[];
-        message?: string;
-      };
-      if (!res.ok) {
-        toast.error(data.message ?? "فشل الجلب");
-        setAuditGroups([]);
-      } else {
-        setAuditGroups(data.groups ?? []);
-      }
-    } catch {
-      toast.error("فشل الجلب");
-      setAuditGroups([]);
-    } finally {
-      setAuditLoading(false);
-    }
-  }
-
   function violationMessage(): string | null {
     if (violation === "visit_overdue")
       return "يعرض العملاء التي تجاوز ميعاد زيارتهم ولم يُسجَّل موظف عارض";
@@ -658,25 +626,26 @@ export function ReportBTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {toolbar !== "closed" ? (
-        <>
       <div data-gate-exempt className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          className="bg-black text-white hover:bg-black/90"
-          onClick={() => setWorkOpen(true)}
-        >
-          سجل العمل
-        </Button>
-        <Input
-          placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
-          className="h-9 max-w-md"
-          value={searchQ}
-          onChange={(e) => setSearchQ(e.target.value)}
-          dir="rtl"
-        />
+        {currentUserId ? (
+          <ReportWorkLogDialog
+            reportKey={resolvedAuditReportKey}
+            userId={currentUserId}
+          />
+        ) : null}
+        {toolbar !== "closed" ? (
+          <Input
+            placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
+            className="h-9 max-w-md"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            dir="rtl"
+          />
+        ) : null}
       </div>
 
+      {toolbar !== "closed" ? (
+        <>
       <div data-gate-exempt className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -744,122 +713,6 @@ export function ReportBTable({
         </Button>
       </div>
 
-      <SimpleDialog
-        open={workOpen}
-        onOpenChange={setWorkOpen}
-        title="سجل العمل"
-        closeOnBackdrop={false}
-        closeOnEscape={false}
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={() => setWorkOpen(false)}>
-              إغلاق
-            </Button>
-            <Button type="button" onClick={() => void loadAudit()} disabled={auditLoading}>
-              {auditLoading ? "جاري…" : "موافق"}
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 md:grid-cols-2 md:gap-6">
-          <label className="grid gap-2 text-xs font-medium text-foreground">
-            من تاريخ
-            <Input
-              type="date"
-              dir="ltr"
-              className="h-10 border-border/80 bg-background"
-              value={auditFrom}
-              onChange={(e) => setAuditFrom(e.target.value)}
-            />
-          </label>
-          <label className="grid gap-2 text-xs font-medium text-foreground">
-            إلى تاريخ
-            <Input
-              type="date"
-              dir="ltr"
-              className="h-10 border-border/80 bg-background"
-              value={auditTo}
-              onChange={(e) => setAuditTo(e.target.value)}
-            />
-          </label>
-        </div>
-        <div className="mt-5 max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-gradient-to-b from-muted/30 to-background p-1 shadow-inner">
-          <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr className="bg-muted/70 text-xs font-semibold tracking-tight text-foreground">
-                <th className="sticky top-0 z-[1] w-[min(28%,12rem)] border-b border-border/80 p-3 text-right shadow-[0_1px_0_0_hsl(var(--border))]">
-                  العميل
-                </th>
-                <th
-                  className="sticky top-0 z-[1] w-[min(22%,10rem)] border-b border-border/80 p-3 text-left shadow-[0_1px_0_0_hsl(var(--border))]"
-                  dir="ltr"
-                >
-                  الهاتف
-                </th>
-                <th className="sticky top-0 z-[1] border-b border-border/80 p-3 text-right shadow-[0_1px_0_0_hsl(var(--border))]">
-                  سجل الإجراءات (مرتب بالزمن)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditGroups.map((g, gi) => (
-                <tr
-                  key={g.clientId}
-                  className={cn(
-                    "align-top transition-colors",
-                    gi > 0 && "border-t-[10px] border-t-muted/40",
-                    gi % 2 === 0 ? "bg-background/50" : "bg-muted/20"
-                  )}
-                >
-                  <td className="border-b border-border/50 p-4 align-top font-semibold text-foreground first:border-s-0">
-                    {g.clientName}
-                  </td>
-                  <td
-                    className="border-b border-border/50 p-4 align-top text-xs text-muted-foreground first:border-s-0"
-                    dir="ltr"
-                  >
-                    {g.phone}
-                  </td>
-                  <td className="border-b border-border/50 p-4 align-top first:border-s-0">
-                    <ul className="flex flex-col gap-4">
-                      {g.events.map((ev) => (
-                        <li
-                          key={ev.id}
-                          className="overflow-hidden rounded-xl border border-border/70 bg-card/95 shadow-md ring-1 ring-border/25"
-                        >
-                          <div className="border-b border-border/50 bg-muted/40 px-3 py-2">
-                            <p
-                              className="inline-flex items-center rounded-full bg-background/90 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground ring-1 ring-border/60"
-                              dir="ltr"
-                            >
-                              {formatDateTimeArabic(new Date(ev.createdAt))}
-                            </p>
-                          </div>
-                          <ul className="flex flex-col gap-2 p-3">
-                            {ev.lines.map((ln, i) => (
-                              <li
-                                key={i}
-                                className="rounded-lg border border-border/55 bg-background/90 px-3 py-2.5 text-xs leading-relaxed text-foreground shadow-[0_1px_0_0_hsl(var(--border)/0.35)]"
-                              >
-                                {ln}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {auditGroups.length === 0 && !auditLoading ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">
-              لا توجد سجلات — اضغط موافق بعد اختيار الفترة.
-            </p>
-          ) : null}
-        </div>
-      </SimpleDialog>
         </>
       ) : null}
 
@@ -1250,7 +1103,8 @@ export function ReportBTable({
                               setReopeningClientId(r.id);
                               try {
                                 const res = await reopenClosedClientFromReport(
-                                  r.id
+                                  r.id,
+                                  { reportKey: resolvedAuditReportKey }
                                 );
                                 if (res.ok) {
                                   toast.success(
@@ -1290,6 +1144,7 @@ export function ReportBTable({
                         <StatusPopoverBlock
                           clientId={r.id}
                           classifications={notBClassifications}
+                          auditReportKey={resolvedAuditReportKey}
                           gateInvalid={
                             gateInvalid && gateClientId === r.id
                           }
@@ -1341,11 +1196,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليسار"
-                            aria-label="تمرير الجدول لليسار"
+                            title="تمرير الجدول لليمين"
+                            aria-label="تمرير الجدول لليمين"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(-1);
+                              scrollReportBHorizontal(1);
                             }}
                           >
                             <ChevronLeft className="size-4" aria-hidden />
@@ -1355,11 +1210,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليمين"
-                            aria-label="تمرير الجدول لليمين"
+                            title="تمرير الجدول لليسار"
+                            aria-label="تمرير الجدول لليسار"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(1);
+                              scrollReportBHorizontal(-1);
                             }}
                           >
                             <ChevronRight className="size-4" aria-hidden />
@@ -1369,21 +1224,29 @@ export function ReportBTable({
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="datetime-local"
+                        type="date"
                         className={cn(
                           reportBInput,
                           "min-w-[11rem] text-left tabular-nums"
                         )}
                         dir="ltr"
-                        title={fullCellTooltip(isoToLocal(r.nextFollowUpAt))}
+                        title={fullCellTooltip(
+                          isoToDateInput(r.nextFollowUpAt)
+                        )}
                         disabled={savingRowId === r.id}
-                        value={isoToLocal(r.nextFollowUpAt)}
+                        value={isoToDateInput(r.nextFollowUpAt)}
                         onChange={(e) => {
-                          const nextFollowUpAt = localToIso(e.target.value);
-                          onField(r.id, r, { nextFollowUpAt });
+                          const nextFollowUpAt = dateInputToIso(
+                            e.target.value
+                          );
+                          const nextFollowUpAtStr =
+                            nextFollowUpAt ?? "";
+                          onField(r.id, r, {
+                            nextFollowUpAt: nextFollowUpAtStr,
+                          });
                           if (
                             gateClientId === r.id &&
-                            nextFollowUpMeetsGate(nextFollowUpAt)
+                            nextFollowUpMeetsGate(nextFollowUpAtStr)
                           ) {
                             setGateClientId(null);
                           }
@@ -1908,6 +1771,7 @@ function StatusPopoverBlock({
   onDone,
   gateInvalid,
   onBlocked,
+  auditReportKey,
 }: {
   clientId: string;
   classifications: ClassificationRow[];
@@ -1916,6 +1780,7 @@ function StatusPopoverBlock({
   onDone: (hideId?: string) => void;
   gateInvalid: boolean;
   onBlocked: () => void;
+  auditReportKey: string;
 }) {
   const [reason, setReason] = useState("");
   const [clsId, setClsId] = useState("");
@@ -2056,7 +1921,9 @@ function StatusPopoverBlock({
                 disabled={busy}
                 onClick={() =>
                   start(async () => {
-                    const res = await closeClientFromReport(clientId, reason);
+                    const res = await closeClientFromReport(clientId, reason, {
+                      reportKey: auditReportKey,
+                    });
                     if (res.ok) {
                       toast.success("تم الإغلاق");
                       onDone(clientId);
@@ -2145,7 +2012,8 @@ function StatusPopoverBlock({
                   start(async () => {
                     const res = await moveClientToNotBFromReport(
                       clientId,
-                      clsId
+                      clsId,
+                      { reportKey: auditReportKey }
                     );
                     if (res.ok) {
                       toast.success("تم النقل");
@@ -2193,7 +2061,8 @@ function StatusPopoverBlock({
                     const res = await markClientSoldFromReport(
                       clientId,
                       saleVal,
-                      new Date(saleDate + "T12:00:00").toISOString()
+                      new Date(saleDate + "T12:00:00").toISOString(),
+                      { reportKey: auditReportKey }
                     );
                     if (res.ok) {
                       toast.success("تم تسجيل البيع");
@@ -2241,20 +2110,6 @@ function StatusPopoverBlock({
         : null}
     </div>
   );
-}
-
-function isoToLocal(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function localToIso(local: string): string {
-  if (!local) return "";
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
 function isoToDateInput(iso: string | null): string {

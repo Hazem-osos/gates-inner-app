@@ -55,7 +55,7 @@ export function ClientWarmingForm({ clientId }: { clientId: string }) {
       <h4 className="font-medium md:col-span-2">إضافة سجل Warming</h4>
       <div className="space-y-1">
         <Label>تاريخ التواصل</Label>
-        <Input type="datetime-local" dir="ltr" className="text-left" {...form.register("communicatedAt")} />
+        <Input type="date" dir="ltr" className="text-left" {...form.register("communicatedAt")} />
       </div>
       <div className="space-y-1">
         <Label>النشاط (لقطة)</Label>

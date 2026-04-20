@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import type {
   AuditWorkClientGroup,
 } from "@/lib/audit/work-log-types";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type { AuditWorkClientGroup, AuditWorkEvent } from "@/lib/audit/work-log-types";
@@ -56,6 +57,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "غير مصرح بعرض سجل مستخدم آخر." }, { status: 403 });
   }
 
+  const reportKey = searchParams.get("reportKey")?.trim() || null;
+
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
   if (!fromStr || !toStr) {
@@ -75,15 +78,27 @@ export async function GET(req: Request) {
   end.setHours(23, 59, 59, 999);
 
   try {
+    const baseWhere: Prisma.AuditLogWhereInput = {
+      userId: userIdParam,
+      clientId: { not: null },
+      createdAt: { gte: from, lte: end },
+    };
+
+    const where: Prisma.AuditLogWhereInput = reportKey
+      ? {
+          ...baseWhere,
+          meta: {
+            path: "reportKey",
+            equals: reportKey,
+          },
+        }
+      : baseWhere;
+
     const logs = await prisma.auditLog.findMany({
-      where: {
-        userId: userIdParam,
-        clientId: { not: null },
-        createdAt: { gte: from, lte: end },
-      },
+      where,
       include: {
         client: {
-          select: { id: true, name: true, phone: true },
+          select: { id: true, name: true, company: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -99,7 +114,7 @@ export async function GET(req: Request) {
         byClient.set(cid, {
           clientId: cid,
           clientName: l.client?.name ?? "—",
-          phone: l.client?.phone ?? "—",
+          company: l.client?.company ?? null,
           events: [],
         });
       }

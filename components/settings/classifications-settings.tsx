@@ -144,7 +144,7 @@ export function ClassificationsSettings({ initialRows }: Props) {
               <TableHead>الاسم</TableHead>
               <TableHead>اللون</TableHead>
               <TableHead>مسار B</TableHead>
-              <TableHead className="text-left">حفظ / حذف</TableHead>
+              <TableHead>حفظ / حذف</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

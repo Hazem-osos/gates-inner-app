@@ -69,7 +69,8 @@ function normalizeFollowSlots(raw: unknown): Prisma.InputJsonValue {
 
 export async function patchClientReportFields(
   clientId: string,
-  patch: ReportClientPatchInput
+  patch: ReportClientPatchInput,
+  opts?: { reportKey?: string | null }
 ): Promise<PatchResult> {
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
@@ -170,6 +171,11 @@ export async function patchClientReportFields(
     const auditSummary =
       auditLines.length > 0 ? auditLines.join(" — ") : "حفظ من التقرير";
 
+    const rk =
+      opts?.reportKey && String(opts.reportKey).trim() !== ""
+        ? String(opts.reportKey).trim()
+        : null;
+
     await prisma.auditLog.create({
       data: {
         userId: dbUserId,
@@ -185,6 +191,7 @@ export async function patchClientReportFields(
             auditLines.length > 0
               ? auditLines
               : ["حفظ من التقرير (لم يُكتشف فرق في الحقول المعروضة)"],
+          ...(rk ? { reportKey: rk } : {}),
         } as Prisma.InputJsonValue,
       },
     });

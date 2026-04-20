@@ -84,7 +84,7 @@ export async function PATCH(
           kind: "RECOMMENDATION_REPORT_PATCH",
           action: "PATCH",
           summary: "تحديث توصية إدارية من التقرير",
-          meta: data as object,
+          meta: { ...(data as object), reportKey: "report-recommendations" },
         },
       });
     });

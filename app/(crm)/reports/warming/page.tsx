@@ -9,7 +9,8 @@ import {
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { warmingExportExcelHref } from "@/lib/export-excel-href";
@@ -38,6 +39,7 @@ export default async function ReportWarmingPage({
   searchParams: Promise<{ mode?: string; sales?: string }>;
 }) {
   const user = await requireSessionUser();
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const mode = sp.mode === "overdue" ? "overdue" : "all";
   const salesKey = sp.sales ?? "all";
@@ -142,13 +144,16 @@ export default async function ReportWarmingPage({
         </p>
       ) : null}
 
-      <ExportToolbar
-        importKind="warming"
-        excelHref={warmingExportExcelHref({
-          mode,
-          sales: salesKey,
-        })}
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReportWorkLogDialog reportKey="report-warming" userId={workLogUserId} />
+        <ExportToolbar
+          importKind="warming"
+          excelHref={warmingExportExcelHref({
+            mode,
+            sales: salesKey,
+          })}
+        />
+      </div>
 
       <ReportRecordsCount count={rows.length} />
 

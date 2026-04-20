@@ -7,7 +7,8 @@ import {
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { recommendationsExportExcelHref } from "@/lib/export-excel-href";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export default async function RecommendationsReportPage({
   searchParams: Promise<{ filter?: string; sales?: string }>;
 }) {
   const user = await requireSessionUser();
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const filter = sp.filter ?? "all";
   const salesKey = sp.sales ?? "all";
@@ -127,13 +129,19 @@ export default async function RecommendationsReportPage({
         </p>
       ) : null}
 
-      <ExportToolbar
-        importKind="report-recommendations"
-        excelHref={recommendationsExportExcelHref({
-          filter,
-          sales: salesKey,
-        })}
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReportWorkLogDialog
+          reportKey="report-recommendations"
+          userId={workLogUserId}
+        />
+        <ExportToolbar
+          importKind="report-recommendations"
+          excelHref={recommendationsExportExcelHref({
+            filter,
+            sales: salesKey,
+          })}
+        />
+      </div>
 
       <ReportRecordsCount count={tableRows.length} />
 

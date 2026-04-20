@@ -137,7 +137,11 @@ export default async function DashboardPage() {
               لا توجد متابعات مجدولة اليوم.
             </p>
           ) : (
-            <ReportBTable rows={todayRows} {...reportBTableSharedProps} />
+            <ReportBTable
+              rows={todayRows}
+              {...reportBTableSharedProps}
+              auditReportKey="report-dashboard-followups"
+            />
           )}
         </div>
       </section>
@@ -155,7 +159,11 @@ export default async function DashboardPage() {
           {overdueRows.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">لا يوجد تأخير.</p>
           ) : (
-            <ReportBTable rows={overdueRows} {...reportBTableSharedProps} />
+            <ReportBTable
+              rows={overdueRows}
+              {...reportBTableSharedProps}
+              auditReportKey="report-dashboard-followups"
+            />
           )}
         </div>
       </section>

@@ -119,7 +119,7 @@ export async function PATCH(
           kind: "WARMING_PATCH",
           action: "PATCH",
           summary: "تحديث أدوات الـ Warming",
-          meta: payload as object,
+          meta: { ...(payload as object), reportKey: "report-warming" },
         },
       });
     });

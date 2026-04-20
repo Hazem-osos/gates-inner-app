@@ -17,17 +17,17 @@ type Form = {
   nextFollowUpAt: string;
 };
 
-function defaultLocalDatetime(): string {
+function defaultLocalDate(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 export function ClientInteractionForm({ clientId }: { clientId: string }) {
   const [pending, startTransition] = useTransition();
   const form = useForm<Form>({
     defaultValues: {
-      interactionAt: defaultLocalDatetime(),
+      interactionAt: defaultLocalDate(),
       notes: "",
       followUpStatus: "",
       nextFollowUpAt: "",
@@ -40,7 +40,7 @@ export function ClientInteractionForm({ clientId }: { clientId: string }) {
       if (res.ok) {
         toast.success("تم تسجيل المتابعة");
         form.reset({
-          interactionAt: defaultLocalDatetime(),
+          interactionAt: defaultLocalDate(),
           notes: "",
           followUpStatus: "",
           nextFollowUpAt: "",
@@ -58,10 +58,10 @@ export function ClientInteractionForm({ clientId }: { clientId: string }) {
     >
       <h3 className="text-base font-semibold md:col-span-2">تسجيل متابعة جديدة</h3>
       <div className="space-y-2">
-        <Label htmlFor="interactionAt">تاريخ ووقت الاتصال</Label>
+        <Label htmlFor="interactionAt">تاريخ الاتصال</Label>
         <Input
           id="interactionAt"
-          type="datetime-local"
+          type="date"
           dir="ltr"
           className="text-left"
           {...form.register("interactionAt", { required: true })}
@@ -71,7 +71,7 @@ export function ClientInteractionForm({ clientId }: { clientId: string }) {
         <Label htmlFor="nextFollowUpAt">تاريخ المتابعة التالي (إجباري)</Label>
         <Input
           id="nextFollowUpAt"
-          type="datetime-local"
+          type="date"
           dir="ltr"
           className="text-left"
           {...form.register("nextFollowUpAt", { required: true })}

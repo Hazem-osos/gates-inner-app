@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth-helpers";
+import { parseOptionalDate } from "@/lib/date-parse";
 import { prisma } from "@/lib/prisma";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -17,12 +18,6 @@ const schema = z.object({
   day3Content: z.string().optional(),
   notes: z.string().optional(),
 });
-
-function parseDt(v: string | undefined): Date | null {
-  if (!v) return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 export async function createWarmingSentAction(
   raw: unknown
@@ -50,7 +45,7 @@ export async function createWarmingSentAction(
     await prisma.warmingToolSent.create({
       data: {
         clientId: d.clientId,
-        communicatedAt: parseDt(d.communicatedAt),
+        communicatedAt: parseOptionalDate(d.communicatedAt),
         activitySnapshot: d.activitySnapshot || null,
         day1Content: d.day1Content || null,
         day2Content: d.day2Content || null,

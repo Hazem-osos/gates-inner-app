@@ -47,7 +47,11 @@ export async function transferClientToSalesAction(
           kind: "TRANSFER_SALES",
           action: "MOVE_SALES",
           summary: `نقل عميل إلى ${target.name}`,
-          meta: { fromUserId: client.assignedUserId, toUserId } as object,
+          meta: {
+            fromUserId: client.assignedUserId,
+            toUserId,
+            reportKey: "report-transferred",
+          } as object,
         },
       });
     });

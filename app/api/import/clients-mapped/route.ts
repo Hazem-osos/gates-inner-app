@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
-import {
-  loadSheetAoa,
-  parseAllImportRows,
-  resolveColumnMap,
-  type ImportType,
+import type {
+  ImportType,
+  ParsedImportRow,
 } from "@/lib/import/excel-client-import";
+import { rowRecordToParsedImportRow } from "@/lib/import/row-record-to-parsed-import";
 import { runClientsParsedImport } from "@/lib/import/run-clients-parsed-import";
 
 export const maxDuration = 120;
@@ -24,37 +23,32 @@ export async function POST(req: Request) {
     );
   }
 
-  let form: FormData;
+  let body: { importType?: string; rows?: Record<string, unknown>[] };
   try {
-    form = await req.formData();
+    body = (await req.json()) as typeof body;
   } catch {
-    return NextResponse.json({ message: "طلب غير صالح." }, { status: 400 });
+    return NextResponse.json({ message: "جسم الطلب غير صالح." }, { status: 400 });
   }
 
-  const file = form.get("file");
-  const importTypeRaw = String(form.get("importType") ?? "b").toLowerCase();
-  const importType: ImportType =
-    importTypeRaw === "not-b" ? "not-b" : "b";
+  const importTypeRaw = String(body.importType ?? "b").toLowerCase();
+  const importType: ImportType = importTypeRaw === "not-b" ? "not-b" : "b";
+  const rowsRaw = Array.isArray(body.rows) ? body.rows : [];
 
-  if (!file || !(file instanceof Blob)) {
-    return NextResponse.json({ message: "لم يُرفع ملف." }, { status: 400 });
+  const parsed: ParsedImportRow[] = [];
+  const errors: { row: number; reason: string }[] = [];
+
+  for (let i = 0; i < rowsRaw.length; i++) {
+    const r = rowRecordToParsedImportRow(rowsRaw[i], i + 2);
+    if ("skip" in r) {
+      errors.push({ row: r.excelRow, reason: r.reason });
+      continue;
+    }
+    parsed.push(r);
   }
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  const aoa = loadSheetAoa(buf);
-  if (!aoa) {
-    return NextResponse.json(
-      { message: "ملف Excel غير صالح أو فارغ." },
-      { status: 400 }
-    );
-  }
-
-  const map = resolveColumnMap(aoa);
-  const { rows, errors: parseErrors } = parseAllImportRows(aoa, map);
 
   const result = await runClientsParsedImport({
     importType,
-    rows,
+    rows: parsed,
     dbUserId,
   });
 
@@ -66,7 +60,7 @@ export async function POST(req: Request) {
     ok: true,
     imported: result.imported,
     skipped: result.skipped,
-    errors: [...parseErrors, ...result.errors],
+    errors: [...errors, ...result.errors],
     duplicates: result.duplicates,
   });
 }

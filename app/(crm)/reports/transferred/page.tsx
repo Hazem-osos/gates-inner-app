@@ -9,7 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
 import { transferredExportExcelHref } from "@/lib/export-excel-href";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TransferredClientsReportPage() {
   const user = await requireSessionUser();
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
 
   const transfers = await prisma.clientTransfer.findMany({
     where: {
@@ -44,7 +46,13 @@ export default async function TransferredClientsReportPage() {
         الاطلاع على العميل وعمل اللازم.
       </p>
 
-      <ExportToolbar excelHref={transferredExportExcelHref()} />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReportWorkLogDialog
+          reportKey="report-transferred"
+          userId={workLogUserId}
+        />
+        <ExportToolbar excelHref={transferredExportExcelHref()} />
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-border/80">
         <Table>

@@ -64,7 +64,8 @@ async function resolveDbUserOrError(
 /** إغلاق عميل من التقرير — الحالة LOST مع سبب وتاريخ */
 export async function closeClientFromReport(
   clientId: string,
-  reason: string
+  reason: string,
+  opts?: { reportKey?: string }
 ): Promise<TransitionResult> {
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
@@ -107,7 +108,10 @@ export async function closeClientFromReport(
           action: "CLOSE_FROM_REPORT_B",
           kind: "STATUS_CHANGE",
           summary: `إغلاق من تقرير B: ${r.slice(0, 120)}`,
-          meta: { reason: r } as unknown as Prisma.InputJsonValue,
+          meta: {
+            reason: r,
+            reportKey: opts?.reportKey ?? "report-b",
+          } as unknown as Prisma.InputJsonValue,
         },
       });
     });
@@ -128,7 +132,8 @@ export async function closeClientFromReport(
  * مع الحفاظ على التصنيف المخزّن ما لم يكن يحتاج تصحيحاً لمطابقة مسار B.
  */
 export async function reopenClosedClientFromReport(
-  clientId: string
+  clientId: string,
+  opts?: { reportKey?: string }
 ): Promise<ReopenClosedResult> {
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
@@ -222,6 +227,7 @@ export async function reopenClosedClientFromReport(
           summary: `إعادة فتح — ${targetStatus}`,
           meta: {
             previousStatus: targetStatus,
+            reportKey: opts?.reportKey ?? "report-closed",
           } as unknown as Prisma.InputJsonValue,
         },
       });
@@ -246,7 +252,8 @@ export async function reopenClosedClientFromReport(
 /** نقل إلى Not B مع تصنيف (غير B) */
 export async function moveClientToNotBFromReport(
   clientId: string,
-  newClassificationId: string
+  newClassificationId: string,
+  opts?: { reportKey?: string }
 ): Promise<TransitionResult> {
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
@@ -299,6 +306,7 @@ export async function moveClientToNotBFromReport(
           meta: {
             classificationId: cid,
             label: cls.label,
+            reportKey: opts?.reportKey ?? "report-b",
           } as unknown as Prisma.InputJsonValue,
         },
       });
@@ -319,7 +327,8 @@ export async function moveClientToNotBFromReport(
 export async function markClientSoldFromReport(
   clientId: string,
   saleValue: string,
-  saleDateIso: string
+  saleDateIso: string,
+  opts?: { reportKey?: string }
 ): Promise<TransitionResult> {
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
@@ -371,6 +380,7 @@ export async function markClientSoldFromReport(
           meta: {
             saleValue,
             saleDate: saleDateIso,
+            reportKey: opts?.reportKey ?? "report-b",
           } as unknown as Prisma.InputJsonValue,
         },
       });

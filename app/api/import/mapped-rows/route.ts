@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import type { UserRole } from "@prisma/client";
 
 import { processReportImportRows } from "@/lib/import/process-report-import-rows";
+
+export const maxDuration = 120;
 
 export async function POST(req: Request) {
   const session = await getSessionUser();
@@ -19,32 +20,25 @@ export async function POST(req: Request) {
     );
   }
 
-  const { searchParams } = new URL(req.url);
-  const kind = searchParams.get("kind") ?? "report-b";
-
-  const form = await req.formData();
-  const file = form.get("file");
-  if (!file || !(file instanceof Blob)) {
-    return NextResponse.json({ message: "لم يُرفع ملف." }, { status: 400 });
-  }
-
-  let workbook: XLSX.WorkBook;
+  let body: { kind?: string; rows?: Record<string, unknown>[] };
   try {
-    const buf = Buffer.from(await file.arrayBuffer());
-    workbook = XLSX.read(buf, { type: "buffer" });
+    body = (await req.json()) as typeof body;
   } catch {
-    return NextResponse.json({ message: "ملف Excel غير صالح." }, { status: 400 });
+    return NextResponse.json({ message: "جسم الطلب غير صالح." }, { status: 400 });
   }
 
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    return NextResponse.json({ message: "الملف فارغ." }, { status: 400 });
-  }
+  const kind = String(body.kind ?? "report-b").trim();
+  const rows = Array.isArray(body.rows) ? body.rows : [];
 
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    defval: "",
-  });
+  if (rows.length === 0) {
+    return NextResponse.json({ message: "لا توجد صفوف للاستيراد." }, { status: 400 });
+  }
+  if (rows.length > 5000) {
+    return NextResponse.json(
+      { message: "عدد الصفوف كبير جداً (الحد 5000)." },
+      { status: 400 }
+    );
+  }
 
   const out = await processReportImportRows(rows, {
     kind,

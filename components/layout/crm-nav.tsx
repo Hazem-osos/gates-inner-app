@@ -2,7 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, UserRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRightLeft,
+  ChevronDown,
+  ClipboardList,
+  Database,
+  Flame,
+  LayoutDashboard,
+  PhoneCall,
+  SlidersHorizontal,
+  Table2,
+  Tags,
+  Trophy,
+  Type,
+  UserPlus,
+  Users,
+  UsersRound,
+  UserRound,
+  UserX,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -40,11 +59,69 @@ const tailLinks: NavLink[] = [
     label: "تصنيفات العملاء",
     managerPlus: true,
   },
+  {
+    href: "/settings/backup",
+    label: "نسخ احتياطي للقاعدة",
+    adminOnly: true,
+  },
   { href: "/admin/custom-fields", label: "الحقول المخصصة", adminOnly: true },
   { href: "/admin/core-labels", label: "تسميات الحقول", adminOnly: true },
 ];
 
-function filterLinks(role: UserRole, items: NavLink[]) {
+type NavShortcut = {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  adminOnly?: boolean;
+  managerPlus?: boolean;
+};
+
+/** أيقونات سريعة تحت القائمة — التمرير يعرض الاسم (title) */
+const navShortcuts: NavShortcut[] = [
+  { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
+  { href: "/clients", label: "العملاء", Icon: Users },
+  { href: "/clients/new", label: "إضافة عميل", Icon: UserPlus },
+  { href: "/reports/b", label: "تقرير عملاء B", Icon: Table2 },
+  { href: "/reports/not-b", label: "تقرير Not B", Icon: UsersRound },
+  { href: "/reports/closed", label: "عملاء مغلقة", Icon: UserX },
+  { href: "/reports/won", label: "تم البيع", Icon: Trophy },
+  {
+    href: "/reports/recommendations",
+    label: "توصيات الإدارة",
+    Icon: ClipboardList,
+  },
+  { href: "/reports/calls", label: "عملاء جدد / المواعيد", Icon: PhoneCall },
+  { href: "/reports/warming", label: "أدوات Warming", Icon: Flame },
+  { href: "/reports/transferred", label: "عملاء منقولة", Icon: ArrowRightLeft },
+  {
+    href: "/settings/field-labels",
+    label: "تصنيفات العملاء",
+    Icon: Tags,
+    managerPlus: true,
+  },
+  {
+    href: "/settings/backup",
+    label: "نسخ احتياطي للقاعدة",
+    Icon: Database,
+    adminOnly: true,
+  },
+  {
+    href: "/admin/custom-fields",
+    label: "الحقول المخصصة",
+    Icon: SlidersHorizontal,
+    adminOnly: true,
+  },
+  {
+    href: "/admin/core-labels",
+    label: "تسميات الحقول",
+    Icon: Type,
+    adminOnly: true,
+  },
+];
+
+function filterLinks<
+  T extends { adminOnly?: boolean; managerPlus?: boolean },
+>(role: UserRole, items: T[]): T[] {
   const isAdmin = role === "ADMIN";
   const managerPlus = role === "ADMIN" || role === "MANAGER";
   return items.filter(
@@ -65,6 +142,21 @@ function isActive(pathname: string, href: string): boolean {
     );
   }
   return pathname.startsWith(`${href}/`);
+}
+
+function shortcutIsActive(pathname: string, href: string): boolean {
+  if (href === "/clients/new") return pathname.startsWith("/clients/new");
+  return isActive(pathname, href);
+}
+
+function shortcutBtnClass(pathname: string, href: string) {
+  const active = shortcutIsActive(pathname, href);
+  return cn(
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border text-zinc-600 transition-colors duration-150",
+    active
+      ? "border-slate-300/90 bg-slate-100 text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+      : "border-transparent hover:border-zinc-200/90 hover:bg-zinc-50 hover:text-zinc-900"
+  );
 }
 
 function navLinkClass(pathname: string, href: string, compact?: boolean) {
@@ -123,6 +215,7 @@ export function CrmNav({
   const p = filterLinks(role, primaryLinks);
   const r = filterLinks(role, reportLinks);
   const t = filterLinks(role, tailLinks);
+  const shortcuts = filterLinks(role, navShortcuts);
 
   const [reportsOpen, setReportsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -165,7 +258,8 @@ export function CrmNav({
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-md supports-backdrop-filter:bg-white/75">
-      <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5">
+      <div className="mx-auto max-w-[1600px] px-4 pb-1.5 pt-2.5">
+        <div className="flex items-center gap-3">
         <nav
           className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-2"
           aria-label="التطبيق"
@@ -277,6 +371,26 @@ export function CrmNav({
           </div>
           <SignOutButton />
         </div>
+        </div>
+
+        {shortcuts.length > 0 ? (
+          <nav
+            className="mt-1.5 flex flex-wrap items-center gap-0.5 border-t border-zinc-200/70 pt-1.5"
+            aria-label="اختصارات سريعة"
+          >
+            {shortcuts.map(({ href, label, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                aria-label={label}
+                className={shortcutBtnClass(pathname, href)}
+              >
+                <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </header>
   );

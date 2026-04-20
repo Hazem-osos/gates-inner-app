@@ -11,3 +11,22 @@ export function parseOptionalDate(
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+/**
+ * يغلق منتقي التاريخ الأصلي بعد اختيار يوم (Safari/Firefox غالباً لا يغلقون عند `blur` مرة واحدة).
+ */
+export function scheduleCloseNativeDatePicker(
+  el: HTMLInputElement | null | undefined
+): void {
+  if (!el) return;
+  const run = () => {
+    try {
+      el.blur();
+    } catch {
+      /* ignore */
+    }
+  };
+  queueMicrotask(run);
+  setTimeout(run, 0);
+  setTimeout(run, 120);
+}

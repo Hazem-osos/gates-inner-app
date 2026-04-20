@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getSessionUser } from "@/lib/auth-helpers";
+import { parseOptionalDate } from "@/lib/date-parse";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -16,11 +17,6 @@ const schema = z.object({
 });
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
-
-function parseDt(v: string): Date | null {
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 export async function logInteractionAction(
   raw: unknown
@@ -38,8 +34,8 @@ export async function logInteractionAction(
 
   const { clientId, interactionAt, notes, followUpStatus, nextFollowUpAt } =
     parsed.data;
-  const at = parseDt(interactionAt);
-  const nextAt = parseDt(nextFollowUpAt);
+  const at = parseOptionalDate(interactionAt);
+  const nextAt = parseOptionalDate(nextFollowUpAt);
   if (!at || !nextAt) {
     return { ok: false, message: "صيغة التاريخ غير صالحة." };
   }

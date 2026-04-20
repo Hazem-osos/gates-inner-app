@@ -6,6 +6,7 @@ import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,7 +18,8 @@ import {
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
@@ -38,6 +40,7 @@ export default async function ReportWonPage({
   }>;
 }) {
   const user = await requireSessionUser();
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
@@ -93,26 +96,22 @@ export default async function ReportWonPage({
         ) : null}
         <div>
           <label className="text-xs text-muted-foreground">من</label>
-          <input
+          <Input
             type="date"
             name="from"
             defaultValue={sp.from ?? ""}
-            className="block rounded-md border border-input px-2 py-1 text-sm"
-            onChange={(e) => {
-              queueMicrotask(() => e.currentTarget.blur())
-            }}
+            className="mt-0.5 block h-9 rounded-md border border-input px-2 py-1 text-sm"
+            dir="ltr"
           />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">إلى</label>
-          <input
+          <Input
             type="date"
             name="to"
             defaultValue={sp.to ?? ""}
-            className="block rounded-md border border-input px-2 py-1 text-sm"
-            onChange={(e) => {
-              queueMicrotask(() => e.currentTarget.blur())
-            }}
+            className="mt-0.5 block h-9 rounded-md border border-input px-2 py-1 text-sm"
+            dir="ltr"
           />
         </div>
         <ReportSortControls defaultSort={sort} defaultDir={dir} />
@@ -131,16 +130,19 @@ export default async function ReportWonPage({
         </p>
       ) : null}
 
-      <ExportToolbar
-        importKind="report-won"
-        excelHref={reportExportExcelHref({
-          kind: "report-won",
-          sales: salesKey,
-          from: sp.from,
-          to: sp.to,
-          ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-        })}
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReportWorkLogDialog reportKey="report-won" userId={workLogUserId} />
+        <ExportToolbar
+          importKind="report-won"
+          excelHref={reportExportExcelHref({
+            kind: "report-won",
+            sales: salesKey,
+            from: sp.from,
+            to: sp.to,
+            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+          })}
+        />
+      </div>
 
       <ReportRecordsCount count={filtered.length} />
 

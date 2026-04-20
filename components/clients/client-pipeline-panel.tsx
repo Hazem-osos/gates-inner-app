@@ -100,7 +100,7 @@ export function ClientPipelinePanel({
               <div className="space-y-1">
                 <Label>تاريخ البيع</Label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   dir="ltr"
                   className="text-left"
                   value={saleDate}
@@ -131,7 +131,7 @@ export function ClientPipelinePanel({
             <div className="space-y-1">
               <Label>تاريخ الإغلاق</Label>
               <Input
-                type="datetime-local"
+                type="date"
                 dir="ltr"
                 className="text-left"
                 value={closedLostAt}
