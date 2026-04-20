@@ -78,7 +78,21 @@ type NavShortcut = {
   managerPlus?: boolean;
 };
 
-/** أيقونات سريعة تحت القائمة — التمرير يعرض الاسم (title) */
+/** ألوان خفيفة لكل شريحة — تتكرر حسب الترتيب */
+const SHORTCUT_CHIP_CLASSES = [
+  "border-sky-400/45 bg-gradient-to-br from-sky-400/25 to-sky-700/10 text-sky-950 dark:border-sky-500/35 dark:from-sky-500/20 dark:to-sky-950/55 dark:text-sky-50",
+  "border-violet-400/45 bg-gradient-to-br from-violet-400/25 to-violet-700/10 text-violet-950 dark:border-violet-500/35 dark:from-violet-500/20 dark:to-violet-950/55 dark:text-violet-50",
+  "border-emerald-400/45 bg-gradient-to-br from-emerald-400/25 to-emerald-700/10 text-emerald-950 dark:border-emerald-500/35 dark:from-emerald-500/20 dark:to-emerald-950/55 dark:text-emerald-50",
+  "border-amber-400/45 bg-gradient-to-br from-amber-400/25 to-amber-700/10 text-amber-950 dark:border-amber-500/35 dark:from-amber-500/20 dark:to-amber-950/55 dark:text-amber-50",
+  "border-rose-400/45 bg-gradient-to-br from-rose-400/25 to-rose-700/10 text-rose-950 dark:border-rose-500/35 dark:from-rose-500/20 dark:to-rose-950/55 dark:text-rose-50",
+  "border-cyan-400/45 bg-gradient-to-br from-cyan-400/25 to-cyan-700/10 text-cyan-950 dark:border-cyan-500/35 dark:from-cyan-500/20 dark:to-cyan-950/55 dark:text-cyan-50",
+  "border-orange-400/45 bg-gradient-to-br from-orange-400/25 to-orange-700/10 text-orange-950 dark:border-orange-500/35 dark:from-orange-500/20 dark:to-orange-950/55 dark:text-orange-50",
+  "border-indigo-400/45 bg-gradient-to-br from-indigo-400/25 to-indigo-700/10 text-indigo-950 dark:border-indigo-500/35 dark:from-indigo-500/20 dark:to-indigo-950/55 dark:text-indigo-50",
+  "border-fuchsia-400/45 bg-gradient-to-br from-fuchsia-400/25 to-fuchsia-700/10 text-fuchsia-950 dark:border-fuchsia-500/35 dark:from-fuchsia-500/20 dark:to-fuchsia-950/55 dark:text-fuchsia-50",
+  "border-teal-400/45 bg-gradient-to-br from-teal-400/25 to-teal-700/10 text-teal-950 dark:border-teal-500/35 dark:from-teal-500/20 dark:to-teal-950/55 dark:text-teal-50",
+] as const;
+
+/** أيقونات سريعة تحت القائمة — شبكة ملتفة بدون تمرير أفقي */
 const navShortcuts: NavShortcut[] = [
   { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
   { href: "/clients", label: "العملاء", Icon: Users },
@@ -149,16 +163,6 @@ function isActive(pathname: string, href: string): boolean {
 function shortcutIsActive(pathname: string, href: string): boolean {
   if (href === "/clients/new") return pathname.startsWith("/clients/new");
   return isActive(pathname, href);
-}
-
-function shortcutLinkClass(pathname: string, href: string) {
-  const active = shortcutIsActive(pathname, href);
-  return cn(
-    "group relative flex shrink-0 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition-all duration-200 sm:px-3 sm:py-2.5",
-    active
-      ? "border-primary/25 bg-primary/[0.06] text-foreground shadow-sm ring-1 ring-primary/15 dark:bg-primary/10 dark:ring-primary/25"
-      : "border-transparent bg-background/60 text-muted-foreground hover:border-border/80 hover:bg-background hover:text-foreground hover:shadow-sm dark:bg-background/40"
-  );
 }
 
 function navLinkClass(pathname: string, href: string, compact?: boolean) {
@@ -402,25 +406,29 @@ export function CrmNav({
         </div>
 
         {shortcuts.length > 0 ? (
-          <div className="border-t border-border/60 bg-gradient-to-b from-muted/15 to-transparent py-3 dark:from-muted/10">
+          <div className="border-t border-border/60 bg-gradient-to-b from-muted/12 to-transparent py-1.5 dark:from-muted/8">
             <nav
-              className="flex items-stretch gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2.5 [&::-webkit-scrollbar]:hidden"
+              className="space-y-1"
               aria-label="اختصارات سريعة"
             >
-              <div className="flex shrink-0 items-center gap-2 pe-1 text-muted-foreground sm:pe-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-                  <Zap className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+              <div className="flex items-center gap-1 px-0.5">
+                <span className="flex size-5 items-center justify-center rounded bg-primary/15 text-primary ring-1 ring-primary/20">
+                  <Zap className="size-2.5 shrink-0" strokeWidth={2.5} aria-hidden />
                 </span>
-                <span className="hidden text-xs font-semibold tracking-tight text-foreground/90 sm:inline sm:max-w-[5.5rem] sm:leading-snug">
+                <span className="text-[10px] font-bold tracking-tight text-muted-foreground">
                   وصول سريع
                 </span>
               </div>
               <div
                 role="list"
-                className="flex min-w-0 flex-1 items-stretch gap-1.5 sm:gap-2"
+                className="grid grid-cols-4 gap-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12"
               >
-                {shortcuts.map(({ href, label, Icon }) => {
+                {shortcuts.map(({ href, label, Icon }, index) => {
                   const shortcutActive = shortcutIsActive(pathname, href);
+                  const chip =
+                    SHORTCUT_CHIP_CLASSES[
+                      index % SHORTCUT_CHIP_CLASSES.length
+                    ];
                   return (
                     <Link
                       key={href}
@@ -428,26 +436,20 @@ export function CrmNav({
                       role="listitem"
                       title={label}
                       aria-current={shortcutActive ? "page" : undefined}
-                      className={shortcutLinkClass(pathname, href)}
+                      className={cn(
+                        "group flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-md border bg-gradient-to-br px-0.5 py-1 text-center shadow-sm transition-transform duration-150 hover:z-[1] hover:scale-[1.02] hover:shadow-md",
+                        chip,
+                        shortcutActive &&
+                          "ring-2 ring-primary ring-offset-1 ring-offset-background dark:ring-offset-background"
+                      )}
                     >
-                      <span
-                        className={cn(
-                          "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 sm:size-10",
-                          shortcutActive
-                            ? "bg-primary/15 text-primary ring-1 ring-primary/20"
-                            : "bg-muted/60 text-muted-foreground ring-1 ring-border/50 group-hover:bg-background group-hover:text-foreground dark:bg-muted/40"
-                        )}
-                      >
-                        <Icon
-                          className="size-[1.125rem] sm:size-5"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="line-clamp-2 max-w-[7.5rem] text-[11px] font-semibold leading-tight text-foreground sm:max-w-[9rem] sm:text-xs">
-                          {label}
-                        </span>
+                      <Icon
+                        className="size-3 shrink-0 opacity-90"
+                        strokeWidth={2.25}
+                        aria-hidden
+                      />
+                      <span className="line-clamp-2 w-full px-0.5 text-[9px] font-semibold leading-[1.15] sm:text-[10px]">
+                        {label}
                       </span>
                     </Link>
                   );
