@@ -9,18 +9,13 @@ import type { ClassificationRow } from "@/lib/data/classifications";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { prisma } from "@/lib/prisma";
 import { resolvePipelineFields } from "@/lib/pipeline-choice";
+import { parseOptionalDate } from "@/lib/date-parse";
 import {
   buildAddClientFormSchema,
   extractCustomFieldsPayload,
 } from "@/lib/validations/add-client";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
-
-function parseOptionalDate(isoOrLocal: string | undefined): Date | null {
-  if (!isoOrLocal) return null;
-  const d = new Date(isoOrLocal);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 function parseOptionalDecimal(v: string | undefined): Prisma.Decimal | null {
   if (!v || v === "") return null;
@@ -112,6 +107,7 @@ export async function updateClientAction(
         company: data.company || null,
         position: data.position || null,
         address: data.address || null,
+        activity: (data.activity as string | undefined)?.trim() || null,
         quotePrice: parseOptionalDecimal(data.quotePrice as string | undefined),
         quoteDetail: (data.quoteDetail as string | undefined)?.trim() || null,
         allowedDiscount: parseOptionalDecimal(

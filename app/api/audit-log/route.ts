@@ -1,9 +1,49 @@
 import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/lib/auth-helpers";
+import type {
+  AuditWorkClientGroup,
+} from "@/lib/audit/work-log-types";
 import { prisma } from "@/lib/prisma";
 
-/** سجل عمل المستخدم الحالي على العملاء ضمن نطاق تواريخ */
+export type { AuditWorkClientGroup, AuditWorkEvent } from "@/lib/audit/work-log-types";
+
+function auditEventLines(log: {
+  kind: string;
+  action: string | null;
+  summary: string;
+  meta: unknown;
+}): string[] {
+  const meta = log.meta as Record<string, unknown> | null | undefined;
+  if (
+    meta &&
+    typeof meta === "object" &&
+    meta.v === 2 &&
+    Array.isArray(meta.lines)
+  ) {
+    return (meta.lines as unknown[]).map((x) => String(x));
+  }
+  if (log.kind === "RECOMMENDATION_REPORT_PATCH") {
+    return ["تحديث على توصية إدارية (بدون عرض نص التوصية أو الإجراء)"];
+  }
+  if (log.kind === "INTERACTION_LOG") {
+    const m = meta as Record<string, unknown> | undefined;
+    const nx = m?.nextFollowUpAt;
+    let at = "";
+    if (typeof nx === "string") at = nx.slice(0, 10);
+    else if (nx instanceof Date) at = nx.toISOString().slice(0, 10);
+    return [`تسجيل متابعة${at ? ` — متابعة تالية بتاريخ ${at}` : ""}`];
+  }
+  if (log.kind === "REPORT_ROW_STYLE") {
+    return [log.summary];
+  }
+  if (log.kind === "REPORT_CELL_EDIT" || log.action === "REPORT_CELL_EDIT") {
+    return ["تعديل من تقرير (سجل قديم — تفاصيل غير مفصاة)"];
+  }
+  return [log.summary || log.kind];
+}
+
+/** سجل عمل المستخدم الحالي على العملاء ضمن نطاق تواريخ — عميل واحد لكل صف مع أحداث مرتبة */
 export async function GET(req: Request) {
   const session = await getSessionUser();
   if (!session) {
@@ -46,21 +86,43 @@ export async function GET(req: Request) {
           select: { id: true, name: true, phone: true },
         },
       },
-      orderBy: { createdAt: "desc" },
-      take: 500,
+      orderBy: { createdAt: "asc" },
+      take: 2000,
     });
 
-    const rows = logs.map((l) => ({
-      id: l.id,
-      clientName: l.client?.name ?? "—",
-      phone: l.client?.phone ?? "—",
-      action: l.action ?? l.kind,
-      summary: l.summary,
-      meta: l.meta,
-      createdAt: l.createdAt.toISOString(),
-    }));
+    const byClient = new Map<string, AuditWorkClientGroup>();
 
-    return NextResponse.json({ rows });
+    for (const l of logs) {
+      const cid = l.clientId;
+      if (!cid) continue;
+      if (!byClient.has(cid)) {
+        byClient.set(cid, {
+          clientId: cid,
+          clientName: l.client?.name ?? "—",
+          phone: l.client?.phone ?? "—",
+          events: [],
+        });
+      }
+      byClient.get(cid)!.events.push({
+        id: l.id,
+        createdAt: l.createdAt.toISOString(),
+        lines: auditEventLines(l),
+      });
+    }
+
+    const groups = Array.from(byClient.values()).sort((a, b) => {
+      const ta = Math.max(
+        0,
+        ...a.events.map((e) => new Date(e.createdAt).getTime())
+      );
+      const tb = Math.max(
+        0,
+        ...b.events.map((e) => new Date(e.createdAt).getTime())
+      );
+      return tb - ta;
+    });
+
+    return NextResponse.json({ groups });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ message: "فشل الجلب." }, { status: 500 });

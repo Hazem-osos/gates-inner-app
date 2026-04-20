@@ -16,6 +16,7 @@ import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
 import { callsReportExportExcelHref } from "@/lib/export-excel-href";
+import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { endOfDay, startOfDay } from "date-fns";
 
@@ -102,7 +103,10 @@ export default async function CallsReportPage({
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
-      <PageHeader fullWidthBar title="العملاء الجدد" />
+      <PageHeader
+        fullWidthBar
+        title="عملاء جدد / المواعيد"
+      />
 
       <SalesFilterLinks
         role={user.role}
@@ -135,11 +139,22 @@ export default async function CallsReportPage({
             name="from"
             defaultValue={fromStr}
             className="rounded border px-2 py-1"
+            onChange={(e) => {
+              queueMicrotask(() => e.currentTarget.blur())
+            }}
           />
         </label>
         <label className="flex flex-col gap-1">
           إلى تاريخ
-          <input type="date" name="to" defaultValue={toStr} className="rounded border px-2 py-1" />
+          <input
+            type="date"
+            name="to"
+            defaultValue={toStr}
+            className="rounded border px-2 py-1"
+            onChange={(e) => {
+              queueMicrotask(() => e.currentTarget.blur())
+            }}
+          />
         </label>
         <label className="flex flex-col gap-1">
           الفلتر
@@ -164,7 +179,7 @@ export default async function CallsReportPage({
         </button>
       </form>
 
-      <p className="text-sm font-medium text-destructive">
+      <p className={reportPageDescriptionClass}>
         {dateMode === "initial"
           ? "أول اتصال في الفترة:"
           : "العملاء المضافون جدد في الفترة:"}{" "}

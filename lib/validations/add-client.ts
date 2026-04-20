@@ -131,6 +131,7 @@ export function buildAddClientFormSchema(
       company: z.string().min(1, "اسم الشركة مطلوب"),
       position: z.string().min(1, "المسمى الوظيفي مطلوب"),
       address: z.string().min(1, "العنوان مطلوب"),
+      activity: z.string().min(1, "النشاط مطلوب"),
 
       initialCallDate: z.string().min(1, "تاريخ الاتصال مطلوب"),
 
@@ -264,6 +265,7 @@ export function defaultAddClientValues(
     company: "",
     position: "",
     address: "",
+    activity: "",
     initialCallDate: callDate,
     quotePrice: "",
     quoteDetail: "",

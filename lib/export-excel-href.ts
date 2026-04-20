@@ -41,11 +41,12 @@ export function reportImportExcelUrl(kind: string): string {
   return `/api/import/report-xlsx?${u.toString()}`;
 }
 
-/** قائمة العملاء — حسب نطاق السيلز الحالي */
-export function clientsListExportHref(args: { sales?: string }): string {
+/** قائمة العملاء — حسب نطاق السيلز الحالي والبحث */
+export function clientsListExportHref(args: { sales?: string; q?: string }): string {
   const u = new URLSearchParams();
   u.set("kind", "clients-list");
   if (args.sales && args.sales !== "all") u.set("sales", args.sales);
+  if (args.q?.trim()) u.set("q", args.q.trim());
   return `/api/export/excel?${u.toString()}`;
 }
 
@@ -88,7 +89,7 @@ export function clientsImportTemplateHref(): string {
   return `/api/export/excel?kind=clients-import-template`;
 }
 
-/** تصدير تقرير موقف المكالمات — نفس فلاتر الصفحة */
+/** تصدير تقرير عملاء جدد / المواعيد — نفس فلاتر الصفحة */
 export function callsReportExportExcelHref(args: {
   from?: string;
   to?: string;

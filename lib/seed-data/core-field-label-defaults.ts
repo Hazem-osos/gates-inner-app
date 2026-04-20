@@ -11,6 +11,7 @@ export const CORE_FIELD_LABEL_DEFAULTS: readonly {
   { fieldKey: "company", labelAr: "اسم الشركة", sortOrder: 30 },
   { fieldKey: "position", labelAr: "المسمى الوظيفي", sortOrder: 40 },
   { fieldKey: "address", labelAr: "العنوان", sortOrder: 50 },
+  { fieldKey: "activity", labelAr: "النشاط", sortOrder: 55 },
   { fieldKey: "quotePrice", labelAr: "عرض السعر", sortOrder: 60 },
   { fieldKey: "allowedDiscount", labelAr: "الخصم المسموح", sortOrder: 70 },
   { fieldKey: "status", labelAr: "تصنيف العميل", sortOrder: 80 },

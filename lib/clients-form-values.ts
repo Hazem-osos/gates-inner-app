@@ -3,13 +3,6 @@ import { ClientStatus, CustomFieldValueType } from "@prisma/client";
 
 import type { ClassificationRow } from "@/lib/data/classifications";
 
-function fmtLocal(d: Date | null | undefined): string {
-  if (!d) return "";
-  const x = new Date(d);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
-}
-
 function fmtDateOnly(d: Date | null | undefined): string {
   if (!d) return "";
   const x = new Date(d);
@@ -87,6 +80,7 @@ export function clientToFormValues(
     company: client.company ?? "",
     position: client.position ?? "",
     address: client.address ?? "",
+    activity: client.activity ?? "",
     quotePrice: decToStr(client.quotePrice),
     quoteDetail: client.quoteDetail ?? "",
     allowedDiscount: decToStr(client.allowedDiscount),
@@ -102,11 +96,13 @@ export function clientToFormValues(
     initialCallDate: client.initialCallDate
       ? fmtDateOnly(client.initialCallDate)
       : "",
-    nextFollowUpAt: client.nextFollowUpAt ? fmtLocal(client.nextFollowUpAt) : "",
+    nextFollowUpAt: client.nextFollowUpAt
+      ? fmtDateOnly(client.nextFollowUpAt)
+      : "",
     contractValue: decToStr(client.contractValue),
-    saleDate: fmtLocal(client.saleDate),
+    saleDate: fmtDateOnly(client.saleDate),
     lossReason: client.lossReason ?? "",
-    closedLostAt: fmtLocal(client.closedLostAt),
+    closedLostAt: fmtDateOnly(client.closedLostAt),
     ...custom,
   };
 }

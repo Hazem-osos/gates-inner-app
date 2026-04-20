@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -15,8 +16,10 @@ import {
 } from "@/components/ui/table";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { listClientsForReport } from "@/lib/data/report-queries";
+import { parseReportSortParams } from "@/lib/report-sort-params";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
+import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
 import { ClientStatus } from "@prisma/client";
 import { endOfDay, startOfDay } from "date-fns";
@@ -26,17 +29,26 @@ export const dynamic = "force-dynamic";
 export default async function ReportWonPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string; sales?: string }>;
+  searchParams: Promise<{
+    from?: string;
+    to?: string;
+    sales?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 }) {
   const user = await requireSessionUser();
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
+  const { sort, dir } = parseReportSortParams(sp);
 
   const clients = await listClientsForReport({
     role: user.role,
     userId: user.id,
     salesUserId: salesKey,
     status: ClientStatus.WON,
+    sort,
+    sortDir: dir,
     take: 500,
   });
 
@@ -49,7 +61,8 @@ export default async function ReportWonPage({
     return true;
   });
 
-  const filterActive = salesKey !== "all" || Boolean(sp.from || sp.to);
+  const filterActive =
+    salesKey !== "all" || Boolean(sp.from || sp.to) || Boolean(sort);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
@@ -65,11 +78,16 @@ export default async function ReportWonPage({
         searchParams={{
           ...(sp.from ? { from: sp.from } : {}),
           ...(sp.to ? { to: sp.to } : {}),
+          ...(sort ? { sort } : {}),
+          ...(dir !== "desc" ? { dir } : {}),
         }}
         currentSales={salesKey}
       />
 
-      <form className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 p-4">
+      <form
+        method="get"
+        className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 p-4"
+      >
         {salesKey !== "all" ? (
           <input type="hidden" name="sales" value={salesKey} />
         ) : null}
@@ -80,6 +98,9 @@ export default async function ReportWonPage({
             name="from"
             defaultValue={sp.from ?? ""}
             className="block rounded-md border border-input px-2 py-1 text-sm"
+            onChange={(e) => {
+              queueMicrotask(() => e.currentTarget.blur())
+            }}
           />
         </div>
         <div>
@@ -89,14 +110,18 @@ export default async function ReportWonPage({
             name="to"
             defaultValue={sp.to ?? ""}
             className="block rounded-md border border-input px-2 py-1 text-sm"
+            onChange={(e) => {
+              queueMicrotask(() => e.currentTarget.blur())
+            }}
           />
         </div>
+        <ReportSortControls defaultSort={sort} defaultDir={dir} />
         <button type="submit" className={cn(buttonVariants(), "h-9")}>
           فلترة
         </button>
       </form>
 
-      <p className="text-xs text-destructive">
+      <p className={reportPageDescriptionClass}>
         يعرض العملاء الذين تم البيع لهم فقط (مع فلتر التاريخ إن وُجد).
       </p>
 
@@ -113,6 +138,7 @@ export default async function ReportWonPage({
           sales: salesKey,
           from: sp.from,
           to: sp.to,
+          ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
         })}
       />
 

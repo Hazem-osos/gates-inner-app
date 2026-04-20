@@ -1,0 +1,476 @@
+import * as XLSX from "xlsx";
+
+export type ImportType = "b" | "not-b";
+
+export function excelDateToJS(serial: number): Date {
+  return new Date((serial - 25569) * 86400 * 1000);
+}
+
+function normalizeArabicHeader(s: string): string {
+  return String(s ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ة/g, "ه")
+    .toLowerCase();
+}
+
+export function cellStr(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number") return String(v);
+  if (v instanceof Date) return v.toISOString();
+  return String(v).trim();
+}
+
+function parseNumericPrefixFromSlash(raw: unknown): number | null {
+  const s = cellStr(raw);
+  if (!s) return null;
+  const head = s.split(/[/／]/)[0]?.trim() ?? s;
+  const n = Number(head.replace(/,/g, "").replace(/^[^\d.-]+/, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+export function parseExcelDateCell(v: unknown): Date | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (v instanceof Date) {
+    return Number.isNaN(v.getTime()) ? null : v;
+  }
+  if (typeof v === "number") {
+    if (v > 20000 && v < 120000) return excelDateToJS(v);
+    if (v > 1e11) return new Date(v);
+  }
+  const s = cellStr(v);
+  if (!s) return null;
+  const prefixNum = parseNumericPrefixFromSlash(s);
+  if (prefixNum !== null && prefixNum > 20000 && prefixNum < 120000) {
+    return excelDateToJS(prefixNum);
+  }
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? null : new Date(t);
+}
+
+/** أول سعر رقمي قبل / أو أول مجموعة أرقام */
+export function parseFirstQuotedPriceString(raw: unknown): string | null {
+  const s = cellStr(raw);
+  if (!s) return null;
+  const part = s.split(/[/／]/)[0]?.trim() ?? s;
+  const cleaned = (part.split(/\s+/)[0] ?? "").replace(/,/g, "");
+  const m = cleaned.match(/-?\d+(\.\d+)?/);
+  return m ? m[0] : null;
+}
+
+export function parsePhones(raw: unknown): { phone: string; phone2: string | null } {
+  const s = cellStr(raw);
+  if (!s) return { phone: "", phone2: null };
+  const parts = s
+    .split(/[/／]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  function digitize(p: string) {
+    return p.replace(/[^\d]/g, "");
+  }
+
+  function normalizeEgypt(digits: string): string {
+    let d = digits;
+    if (!d) return "";
+    if (d.startsWith("20") && d.length >= 12) d = d.slice(-10);
+    if (d.length >= 9 && d.startsWith("1") && !d.startsWith("01")) d = `0${d}`;
+    return d;
+  }
+
+  const p1 = normalizeEgypt(digitize(parts[0] ?? ""));
+  const p2 = parts[1] ? normalizeEgypt(digitize(parts[1])) : "";
+  return { phone: p1, phone2: p2 || null };
+}
+
+export function parseDiscount(raw: unknown): {
+  allowedDiscount: string | null;
+  salesNoteAppend: string | null;
+} {
+  const s = cellStr(raw);
+  if (!s) return { allowedDiscount: null, salesNoteAppend: null };
+  const compact = s.replace(/\s/g, "");
+  if (/^[\d.,%]+$/.test(compact)) {
+    const num = Number(s.replace(/,/g, "").replace("%", ""));
+    if (!Number.isNaN(num)) {
+      let pct = num;
+      if (pct > 0 && pct <= 1) pct = num * 100;
+      if (pct >= 0 && pct <= 100) {
+        return { allowedDiscount: pct.toFixed(2), salesNoteAppend: null };
+      }
+    }
+  }
+  return { allowedDiscount: null, salesNoteAppend: s };
+}
+
+function parseYesCell(raw: unknown): boolean | null {
+  const s = cellStr(raw).toLowerCase();
+  if (!s) return null;
+  if (/^(نعم|اه|ايه|yes|true|1|y)$/.test(s) || s === "تم") return true;
+  if (/^(لا|no|false|0)$/.test(s)) return false;
+  return null;
+}
+
+export function isFollowDateHeader(h: string): boolean {
+  const n = normalizeArabicHeader(h);
+  return n.includes("تاريخ") && n.includes("متابع");
+}
+
+export function isFollowNoteHeader(h: string): boolean {
+  const n = normalizeArabicHeader(h);
+  if (!n || n.includes("تاريخ")) return false;
+  return n.includes("متابع");
+}
+
+export type ColumnMap = {
+  contactCol: number;
+  nextFollowCol: number | null;
+  byField: Record<string, number | null>;
+};
+
+function findContactCol(headerRow: unknown[]): number | null {
+  for (let j = 0; j < headerRow.length; j++) {
+    const n = normalizeArabicHeader(String(headerRow[j] ?? ""));
+    if (n.includes("تاريخ") && n.includes("اتصال")) return j;
+  }
+  return null;
+}
+
+function findCol(
+  headerRow: unknown[],
+  patterns: string[],
+  used: Set<number>
+): number | null {
+  for (let j = 0; j < headerRow.length; j++) {
+    if (used.has(j)) continue;
+    const n = normalizeArabicHeader(String(headerRow[j] ?? ""));
+    for (const p of patterns) {
+      const pn = normalizeArabicHeader(p);
+      if (n === pn || n.includes(pn) || pn.includes(n)) return j;
+    }
+  }
+  return null;
+}
+
+export function buildColumnMap(headerRow: unknown[]): ColumnMap | null {
+  const contactCol = findContactCol(headerRow);
+  if (contactCol === null) return null;
+
+  const used = new Set<number>([contactCol]);
+  let nextFollowCol: number | null = null;
+  for (let j = 0; j < contactCol; j++) {
+    if (isFollowDateHeader(String(headerRow[j] ?? ""))) {
+      nextFollowCol = j;
+      used.add(j);
+      break;
+    }
+  }
+
+  const byField: Record<string, number | null> = {};
+  const take = (key: string, patterns: string[]) => {
+    const i = findCol(headerRow, patterns, used);
+    if (i !== null) used.add(i);
+    byField[key] = i;
+  };
+
+  take("clientWarmingText", [
+    "تعليمات تنمية مهارات ai",
+    "تعليمات تنمية مهارات",
+  ]);
+  take("managementRecommendationText", ["توصيات الاجتماع"]);
+  take("name", ["اسم الشركه", "أسم الشركة", "اسم الشركة"]);
+  take("daysCount", ["عدد الايام", "عدد الأيام"]);
+  take("company", ["اسم المسئول", "أسم المسئول", "اسم المسؤول"]);
+  take("phone", ["رقم التليفون", "رقم التلفون", "رقم الهاتف", "هاتف"]);
+  take("activity", ["النشاط"]);
+  take("position", ["البوزيشن", "الوظيفة"]);
+  take("address", ["العنوان"]);
+  take("quotePrice", ["عرض السعر"]);
+  take("allowedDiscount", ["الخصم الممنوح", "الخصم"]);
+  take("salesNotes", ["ملاحظات"]);
+  take("sourceAdName", ["اسم الاعلان", "اسم الإعلان"]);
+  take("adPlatform", ["قناة التسويق"]);
+  take("visitAppointmentScheduled", ["تم ميتنج ولا لا", "تم ميتنج"]);
+  take("clientType", ["نوعية العميل", "نوع العميل"]);
+  take("presentingEmployeeName", ["موظف المبيعات"]);
+  take("visitAppointmentDate", ["تاريخ الزياره", "تاريخ الزيارة"]);
+  take("lossReason", ["سبب الاغلاق", "سبب الإغلاق"]);
+  take("qqAnswer", ["ليه كيو كيو", "كيو كيو"]);
+  take("currentSituation", ["الموقف الحالي", "الموقف"]);
+  take("managementRecommendationDate", ["تاريخ اليوم"]);
+  byField.initialCallDate = contactCol;
+
+  return { contactCol, nextFollowCol, byField };
+}
+
+/** ترتيب افتراضي لملف B عند فشل مطابقة العناوين */
+export function bPositionalMap(colCount: number): ColumnMap {
+  const keys = [
+    "nextFollowUpAt",
+    "clientWarmingText",
+    "managementRecommendationText",
+    "name",
+    "daysCount",
+    "company",
+    "phone",
+    "activity",
+    "position",
+    "address",
+    "quotePrice",
+    "allowedDiscount",
+    "salesNotes",
+    "sourceAdName",
+    "adPlatform",
+    "visitAppointmentScheduled",
+    "clientType",
+    "presentingEmployeeName",
+    "visitAppointmentDate",
+    "lossReason",
+    "qqAnswer",
+    "currentSituation",
+    "managementRecommendationDate",
+    "initialCallDate",
+  ] as const;
+  const byField: Record<string, number | null> = {};
+  for (let i = 0; i < keys.length; i++) {
+    byField[keys[i]] = i < colCount ? i : null;
+  }
+  const contactCol = Math.min(23, Math.max(0, colCount - 1));
+  return { contactCol, nextFollowCol: 0, byField };
+}
+
+function getCell(row: unknown[], idx: number | null | undefined): unknown {
+  if (idx === null || idx === undefined || idx < 0) return "";
+  return row[idx] ?? "";
+}
+
+export function buildFollowSlots(
+  headerRow: unknown[],
+  dataRow: unknown[],
+  contactCol: number
+): Array<{ order: number; note: string; date: string }> {
+  const slots: Array<{ order: number; note: string; date: string }> = [];
+  let c = contactCol + 1;
+  while (c < headerRow.length) {
+    const h = String(headerRow[c] ?? "");
+    if (isFollowDateHeader(h)) {
+      const hNote = c + 1 < headerRow.length ? String(headerRow[c + 1] ?? "") : "";
+      const dateRaw = dataRow[c];
+      let noteRaw: unknown = "";
+      if (isFollowNoteHeader(hNote)) {
+        noteRaw = dataRow[c + 1] ?? "";
+        c += 2;
+      } else {
+        c += 1;
+      }
+      const dt = parseExcelDateCell(dateRaw);
+      const note = cellStr(noteRaw);
+      if (!dt && !note) continue;
+      slots.push({
+        order: slots.length + 1,
+        date: dt ? dt.toISOString() : "",
+        note,
+      });
+    } else {
+      c += 1;
+    }
+  }
+  return slots;
+}
+
+function nullIfEmpty(s: string): string | null {
+  const t = s.trim();
+  return t === "" ? null : t;
+}
+
+export type ParsedImportRow = {
+  excelRow: number;
+  name: string;
+  company: string | null;
+  phone: string;
+  phone2: string | null;
+  activity: string | null;
+  position: string | null;
+  address: string | null;
+  quotePrice: string | null;
+  allowedDiscount: string | null;
+  salesNotes: string | null;
+  sourceAdName: string | null;
+  adPlatform: string | null;
+  visitAppointmentScheduled: boolean;
+  visitAppointmentDate: Date | null;
+  presentingEmployeeName: string | null;
+  lossReason: string | null;
+  qqAnswer: boolean | null;
+  currentSituation: string | null;
+  callSummary: string | null;
+  managementRecommendationText: string | null;
+  managementRecommendationDate: Date | null;
+  clientWarmingText: string | null;
+  initialCallDate: Date | null;
+  nextFollowUpAt: Date | null;
+  followUpSlots: Array<{ order: number; note: string; date: string }>;
+  clientTypeRaw: string | null;
+  daysRaw: string | null;
+};
+
+export type ParseRowResult =
+  | ParsedImportRow
+  | { skip: true; reason: string; excelRow: number };
+
+export function parseRowToImport(
+  headerRow: unknown[],
+  dataRow: unknown[],
+  map: ColumnMap,
+  excelRow: number
+): ParseRowResult {
+  const { byField, contactCol, nextFollowCol } = map;
+  const phones = parsePhones(getCell(dataRow, byField.phone));
+  if (!phones.phone || phones.phone.length < 8) {
+    return { skip: true, reason: "لا رقم هاتف صالح", excelRow };
+  }
+
+  const name = cellStr(getCell(dataRow, byField.name));
+  const contactName = cellStr(getCell(dataRow, byField.company));
+  const finalName = name || contactName || `عميل ${phones.phone.slice(-4)}`;
+
+  const disc = parseDiscount(getCell(dataRow, byField.allowedDiscount));
+  const qNoteParts: string[] = [];
+  if (disc.salesNoteAppend) qNoteParts.push(`خصم (نص): ${disc.salesNoteAppend}`);
+  const baseNotes = cellStr(getCell(dataRow, byField.salesNotes));
+  const mergedNotes = [baseNotes, ...qNoteParts].filter(Boolean).join("\n");
+  const salesNotes = mergedNotes.trim() === "" ? null : mergedNotes;
+
+  const slots = buildFollowSlots(headerRow, dataRow, contactCol);
+  const nextFollowRaw =
+    nextFollowCol !== null ? getCell(dataRow, nextFollowCol) : "";
+  const nextFollowUpAt = parseExcelDateCell(nextFollowRaw);
+
+  const visitSched = parseYesCell(
+    getCell(dataRow, byField.visitAppointmentScheduled)
+  );
+
+  return {
+    excelRow,
+    name: finalName,
+    company: contactName || null,
+    phone: phones.phone,
+    phone2: phones.phone2,
+    activity: nullIfEmpty(cellStr(getCell(dataRow, byField.activity))),
+    position: nullIfEmpty(cellStr(getCell(dataRow, byField.position))),
+    address: nullIfEmpty(cellStr(getCell(dataRow, byField.address))),
+    quotePrice: parseFirstQuotedPriceString(getCell(dataRow, byField.quotePrice)),
+    allowedDiscount: disc.allowedDiscount,
+    salesNotes,
+    sourceAdName: nullIfEmpty(cellStr(getCell(dataRow, byField.sourceAdName))),
+    adPlatform: nullIfEmpty(cellStr(getCell(dataRow, byField.adPlatform))),
+    visitAppointmentScheduled: visitSched === true,
+    visitAppointmentDate: parseExcelDateCell(
+      getCell(dataRow, byField.visitAppointmentDate)
+    ),
+    presentingEmployeeName: nullIfEmpty(
+      cellStr(getCell(dataRow, byField.presentingEmployeeName))
+    ),
+    lossReason: nullIfEmpty(cellStr(getCell(dataRow, byField.lossReason))),
+    qqAnswer: parseYesCell(getCell(dataRow, byField.qqAnswer)),
+    currentSituation: nullIfEmpty(
+      cellStr(getCell(dataRow, byField.currentSituation))
+    ),
+    callSummary: null,
+    managementRecommendationText: nullIfEmpty(
+      cellStr(getCell(dataRow, byField.managementRecommendationText))
+    ),
+    managementRecommendationDate: parseExcelDateCell(
+      getCell(dataRow, byField.managementRecommendationDate)
+    ),
+    clientWarmingText: nullIfEmpty(
+      cellStr(getCell(dataRow, byField.clientWarmingText))
+    ),
+    initialCallDate: parseExcelDateCell(
+      getCell(dataRow, byField.initialCallDate)
+    ),
+    nextFollowUpAt,
+    followUpSlots: slots,
+    clientTypeRaw: nullIfEmpty(cellStr(getCell(dataRow, byField.clientType))),
+    daysRaw: nullIfEmpty(cellStr(getCell(dataRow, byField.daysCount))),
+  };
+}
+
+export function loadSheetAoa(buf: Buffer): unknown[][] | null {
+  let wb: XLSX.WorkBook;
+  try {
+    wb = XLSX.read(buf, { type: "buffer", cellDates: true });
+  } catch {
+    return null;
+  }
+  const sheetName = wb.SheetNames[0];
+  if (!sheetName) return null;
+  const sheet = wb.Sheets[sheetName];
+  return XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    blankrows: false,
+  });
+}
+
+export function resolveColumnMap(aoa: unknown[][]): ColumnMap {
+  const header = aoa[0] ?? [];
+  const w = Math.max(...aoa.map((r) => r.length), 0);
+  return buildColumnMap(header) ?? bPositionalMap(w);
+}
+
+export function parseAllImportRows(aoa: unknown[][], map: ColumnMap): {
+  rows: ParsedImportRow[];
+  skippedNoPhone: number;
+  errors: { row: number; reason: string }[];
+} {
+  if (!aoa.length) return { rows: [], skippedNoPhone: 0, errors: [] };
+  const headerRow = aoa[0] ?? [];
+  const rows: ParsedImportRow[] = [];
+  const errors: { row: number; reason: string }[] = [];
+  let skippedNoPhone = 0;
+  for (let i = 1; i < aoa.length; i++) {
+    const row = aoa[i] ?? [];
+    const excelRow = i + 1;
+    try {
+      const parsed = parseRowToImport(headerRow, row, map, excelRow);
+      if ("skip" in parsed) {
+        skippedNoPhone++;
+        continue;
+      }
+      rows.push(parsed);
+    } catch (e) {
+      errors.push({
+        row: excelRow,
+        reason: e instanceof Error ? e.message : "خطأ غير معروف",
+      });
+    }
+  }
+  return { rows, skippedNoPhone, errors };
+}
+
+export function countImportableRows(aoa: unknown[][], map: ColumnMap): number {
+  return parseAllImportRows(aoa, map).rows.length;
+}
+
+export function previewDataRows(
+  aoa: unknown[][],
+  map: ColumnMap,
+  max: number
+): unknown[][] {
+  const headerRow = aoa[0] ?? [];
+  const out: unknown[][] = [];
+  for (let i = 1; i < aoa.length && out.length < max; i++) {
+    const row = aoa[i] ?? [];
+    const p = parseRowToImport(headerRow, row, map, i + 1);
+    if ("skip" in p) continue;
+    out.push(row);
+  }
+  return out;
+}

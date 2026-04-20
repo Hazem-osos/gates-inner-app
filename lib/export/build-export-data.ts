@@ -76,10 +76,12 @@ export async function buildExportPayload(
     const salesRaw = sp.get("sales")?.trim();
     const salesUserId =
       salesRaw && salesRaw !== "all" ? salesRaw : undefined;
+    const q = sp.get("q")?.trim() || undefined;
     const clients = await listClientsForUser(
       user.role,
       user.id,
-      salesUserId
+      salesUserId,
+      q
     );
     const rows = clients.map((c) => rowBShort(c));
     return {
@@ -343,8 +345,8 @@ export async function buildExportPayload(
 
     return {
       filename: "report-calls.xlsx",
-      documentTitle: "موقف المكالمات / الزيارات",
-      sheets: [{ sheetName: "موقف_مكالمات", rows }],
+      documentTitle: "عملاء جدد / المواعيد",
+      sheets: [{ sheetName: "عملاء_جدد_مواعيد", rows }],
     };
   }
 

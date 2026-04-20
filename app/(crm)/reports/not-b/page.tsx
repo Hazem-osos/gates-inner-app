@@ -4,14 +4,18 @@ import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { ExcelClientsImportDialog } from "@/components/reports/excel-clients-import-dialog";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
+import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
+import { parseReportSortParams } from "@/lib/report-sort-params";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
+import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { ClientStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -31,14 +35,7 @@ export default async function ReportNotBPage({
   const stylesUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
-  const sort =
-    sp.sort === "days" ||
-    sp.sort === "quotePrice" ||
-    sp.sort === "initialCallDate" ||
-    sp.sort === "nextFollowUpAt"
-      ? sp.sort
-      : undefined;
-  const dir = sp.dir === "asc" || sp.dir === "desc" ? sp.dir : "desc";
+  const { sort, dir } = parseReportSortParams(sp);
 
   const [clients, classifications] = await Promise.all([
     listClientsForReport({
@@ -124,29 +121,32 @@ export default async function ReportNotBPage({
           className="h-9 min-w-[180px] rounded-md border border-input bg-background px-2 text-sm"
           dir="rtl"
         />
+        <ReportSortControls defaultSort={sort} defaultDir={dir} />
         <Button type="submit" size="sm" variant="secondary">
           تطبيق
         </Button>
       </form>
 
-      <p className="text-xs text-destructive">
+      <p className={reportPageDescriptionClass}>
         {classFilter
           ? `التقرير يعرض فقط تصنيف: «${classFilter}»`
           : "التقرير يعرض عملاء Not B"}
         {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
 
-      <ExportToolbar
-        importKind="report-not-b"
-        excelHref={reportExportExcelHref({
-          kind: "report-not-b",
-          sales: salesKey,
-          q: sp.q,
-          sort,
-          dir,
-          class: classKey && classKey !== "all" ? classKey : undefined,
-        })}
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ExcelClientsImportDialog importType="not-b" />
+        <ExportToolbar
+          importKind="report-not-b"
+          excelHref={reportExportExcelHref({
+            kind: "report-not-b",
+            sales: salesKey,
+            q: sp.q,
+            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+            class: classKey && classKey !== "all" ? classKey : undefined,
+          })}
+        />
+      </div>
 
       <ReportRecordsCount count={rows.length} />
 

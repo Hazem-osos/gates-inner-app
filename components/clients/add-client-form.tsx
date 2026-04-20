@@ -4,10 +4,17 @@ import type { CustomFieldDefinition } from "@prisma/client";
 import { CustomFieldValueType } from "@prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import type { Resolver } from "react-hook-form";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useFormState } from "react-hook-form";
 
 import { createClientAction } from "@/app/actions/clients";
 import { updateClientAction } from "@/app/actions/client-update";
@@ -44,6 +51,108 @@ function coreLabel(
   fallback: string
 ) {
   return map?.[key] ?? fallback;
+}
+
+type ClientFormEditCueContextValue = {
+  enabled: boolean;
+  dirtyFields: Partial<Readonly<Record<string, unknown>>>;
+  savedFlash: ReadonlySet<string>;
+};
+
+const ClientFormEditCueContext =
+  createContext<ClientFormEditCueContextValue | null>(null);
+
+function useClientFormEditCue(trackId?: string): "pending" | "saved" | null {
+  const ctx = useContext(ClientFormEditCueContext);
+  if (!ctx?.enabled || !trackId) return null;
+  const dirty = ctx.dirtyFields as Record<string, unknown>;
+  const v = dirty[trackId];
+  const isDirty =
+    v === true ||
+    (v != null && typeof v === "object" && Object.keys(v as object).length > 0);
+  if (isDirty) return "pending";
+  if (ctx.savedFlash.has(trackId)) return "saved";
+  return null;
+}
+
+function flattenDirtyKeys(dirty: Record<string, unknown> | undefined): string[] {
+  if (!dirty) return [];
+  const keys: string[] = [];
+  for (const [k, v] of Object.entries(dirty)) {
+    if (v === true) keys.push(k);
+    else if (v && typeof v === "object" && !Array.isArray(v)) {
+      for (const sub of flattenDirtyKeys(v as Record<string, unknown>)) {
+        keys.push(`${k}.${sub}`);
+      }
+    }
+  }
+  return keys;
+}
+
+function labelForSavedField(
+  key: string,
+  coreLabels: Record<string, string> | undefined,
+  defs: CustomFieldDefinition[]
+): string {
+  const base = key.includes(".") ? key.slice(0, key.indexOf(".")) : key;
+  if (base.startsWith("cf_")) {
+    const short = base.slice(3);
+    const def = defs.find((d) => d.key === short);
+    return def?.labelAr ?? base;
+  }
+  const fallbacks: Record<string, string> = {
+    documentDate: "تاريخ اليوم",
+    visitAppointmentScheduled: "تم تحديد موعد زيارة",
+    visitAppointmentDate: "تاريخ الزيارة المحدد",
+    name: "اسم العميل",
+    phone: "رقم الهاتف",
+    phone2: "رقم هاتف ثاني",
+    company: "اسم الشركة",
+    position: "المسمى الوظيفي",
+    address: "العنوان",
+    activity: "النشاط",
+    initialCallDate: "تاريخ الاتصال",
+    quotePrice: "عرض السعر",
+    quoteDetail: "بيان تفصيلي بالموديولات",
+    allowedDiscount: "الخصم المسموح",
+    adPlatform: "المنصة الإعلانية",
+    sourceAdName: "اسم الإعلان",
+    pipelineChoice: "تصنيف العميل",
+    classificationSubId: "التصنيف الفرعي",
+    qqAnswer: "QQ",
+    callSummary: "ملخص المكالمة",
+    salesNotes: "ملاحظات السيلز",
+    clientWarmingText: "أدوات الـ Warming",
+    presentingEmployeeName: "موظف العرض",
+    nextFollowUpAt: "تاريخ المتابعة التالي",
+    contractValue: "قيمة التعاقد",
+    saleDate: "تاريخ البيع",
+    lossReason: "سبب الإغلاق",
+    closedLostAt: "تاريخ الإغلاق",
+  };
+  return coreLabel(coreLabels, base, fallbacks[base] ?? base);
+}
+
+function EditCueInline({ trackId }: { trackId: string }) {
+  const cue = useClientFormEditCue(trackId);
+  if (cue === "pending") {
+    return (
+      <span
+        className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100"
+        title="لم يُحفَظ بعد"
+      >
+        بانتظار الحفظ
+      </span>
+    );
+  }
+  if (cue === "saved") {
+    return (
+      <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+        ✓ تم الحفظ
+      </span>
+    );
+  }
+  return null;
 }
 
 type Props = {
@@ -84,6 +193,23 @@ export function AddClientForm({
     defaultValues: defaultValues as Record<string, unknown>,
   });
 
+  const { dirtyFields } = useFormState({ control: form.control });
+  const [savedFlash, setSavedFlash] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (savedFlash.size === 0) return;
+    const t = window.setTimeout(() => setSavedFlash(new Set()), 4500);
+    return () => window.clearTimeout(t);
+  }, [savedFlash]);
+
+  const editCueValue = useMemo<ClientFormEditCueContextValue>(
+    () =>
+      clientId
+        ? { enabled: true, dirtyFields, savedFlash }
+        : { enabled: false, dirtyFields: {}, savedFlash: new Set() },
+    [clientId, dirtyFields, savedFlash]
+  );
+
   const pipelineChoice = (form.watch("pipelineChoice") as string) || "";
   const visitScheduled = Boolean(form.watch("visitAppointmentScheduled"));
 
@@ -112,8 +238,20 @@ export function AddClientForm({
       if (clientId) {
         const res = await updateClientAction(clientId, values);
         if (res.ok) {
+          const keys = flattenDirtyKeys(
+            form.formState.dirtyFields as Record<string, unknown>
+          );
+          form.reset(values as Record<string, unknown>);
+          setSavedFlash(new Set(keys));
           setSavedId(clientId);
-          toast.success("تم حفظ التعديلات");
+          const labelList = keys.map((k) =>
+            labelForSavedField(k, coreLabels, fieldDefinitions)
+          );
+          toast.success(
+            keys.length > 0
+              ? `تم الحفظ: ${labelList.join("، ")}`
+              : "تم حفظ التعديلات"
+          );
           router.refresh();
         } else {
           form.setError("root", { message: res.message });
@@ -144,6 +282,7 @@ export function AddClientForm({
           الحقول ذات النجمة الحمراء مطلوبة وفق المواصفات.
         </CardDescription>
       </CardHeader>
+      <ClientFormEditCueContext.Provider value={editCueValue}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
         <CardContent className="grid gap-6 pt-6">
           {savedId ? (
@@ -166,6 +305,7 @@ export function AddClientForm({
             <Field
               label="تاريخ اليوم"
               htmlFor="documentDate"
+              trackId="documentDate"
               required={req}
               hint={
                 docDatePreview
@@ -186,7 +326,7 @@ export function AddClientForm({
                 control={form.control}
                 name="visitAppointmentScheduled"
                 render={({ field }) => (
-                  <label className="flex items-center gap-2 text-sm font-medium">
+                  <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     <input
                       type="checkbox"
                       className="size-4 accent-primary"
@@ -194,6 +334,7 @@ export function AddClientForm({
                       onChange={(e) => field.onChange(e.target.checked)}
                     />
                     تم تحديد موعد زيارة
+                    <EditCueInline trackId="visitAppointmentScheduled" />
                   </label>
                 )}
               />
@@ -201,6 +342,7 @@ export function AddClientForm({
                 <Field
                   label="تاريخ الزيارة المحدد"
                   htmlFor="visitAppointmentDate"
+                  trackId="visitAppointmentDate"
                   required
                   error={
                     form.formState.errors.visitAppointmentDate?.message as
@@ -224,6 +366,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "name", "اسم العميل")}
               htmlFor="name"
+              trackId="name"
               required={req}
               error={form.formState.errors.name?.message}
             >
@@ -232,6 +375,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "phone", "رقم الهاتف")}
               htmlFor="phone"
+              trackId="phone"
               required={req}
               error={form.formState.errors.phone?.message}
             >
@@ -240,6 +384,7 @@ export function AddClientForm({
             <Field
               label="رقم هاتف ثاني"
               htmlFor="phone2"
+              trackId="phone2"
               hint="اختياري"
               error={form.formState.errors.phone2?.message}
             >
@@ -248,6 +393,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "company", "اسم الشركة")}
               htmlFor="company"
+              trackId="company"
               required={req}
               error={form.formState.errors.company?.message}
             >
@@ -256,6 +402,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "position", "المسمى الوظيفي")}
               htmlFor="position"
+              trackId="position"
               required={req}
               error={form.formState.errors.position?.message}
             >
@@ -264,11 +411,22 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "address", "العنوان")}
               htmlFor="address"
+              trackId="address"
               required={req}
               className="md:col-span-2"
               error={form.formState.errors.address?.message}
             >
               <Input id="address" {...form.register("address")} dir="rtl" />
+            </Field>
+            <Field
+              label={coreLabel(coreLabels, "activity", "النشاط")}
+              htmlFor="activity"
+              trackId="activity"
+              required={req}
+              className="md:col-span-2"
+              error={form.formState.errors.activity?.message as string | undefined}
+            >
+              <Input id="activity" {...form.register("activity")} dir="rtl" />
             </Field>
             <Field
               label={coreLabel(
@@ -277,6 +435,7 @@ export function AddClientForm({
                 "تاريخ الاتصال"
               )}
               htmlFor="initialCallDate"
+              trackId="initialCallDate"
               required={req}
               error={
                 form.formState.errors.initialCallDate?.message as
@@ -295,6 +454,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "quotePrice", "عرض السعر")}
               htmlFor="quotePrice"
+              trackId="quotePrice"
               required={req}
               error={form.formState.errors.quotePrice?.message as string | undefined}
             >
@@ -309,6 +469,7 @@ export function AddClientForm({
             <Field
               label="بيان تفصيلي بالموديولات"
               htmlFor="quoteDetail"
+              trackId="quoteDetail"
               required={req}
               className="md:col-span-2"
               error={form.formState.errors.quoteDetail?.message as string | undefined}
@@ -323,6 +484,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "allowedDiscount", "الخصم المسموح")}
               htmlFor="allowedDiscount"
+              trackId="allowedDiscount"
               hint="اختياري"
               error={
                 form.formState.errors.allowedDiscount?.message as
@@ -341,6 +503,7 @@ export function AddClientForm({
             <Field
               label="المنصة الإعلانية"
               htmlFor="adPlatform"
+              trackId="adPlatform"
               required={req}
               error={form.formState.errors.adPlatform?.message as string | undefined}
             >
@@ -349,6 +512,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "sourceAdName", "اسم الإعلان")}
               htmlFor="sourceAdName"
+              trackId="sourceAdName"
               required={req}
               error={form.formState.errors.sourceAdName?.message}
             >
@@ -357,6 +521,7 @@ export function AddClientForm({
             <Field
               label={coreLabel(coreLabels, "status", "تصنيف العميل")}
               htmlFor="pipelineChoice"
+              trackId="pipelineChoice"
               required={req}
               error={
                 form.formState.errors.pipelineChoice?.message as
@@ -452,6 +617,7 @@ export function AddClientForm({
             <Field
               label="QQ"
               htmlFor="qq-yes"
+              trackId="qqAnswer"
               required={req}
               className="md:col-span-2"
               error={form.formState.errors.qqAnswer?.message as string | undefined}
@@ -493,6 +659,7 @@ export function AddClientForm({
             <Field
               label="ملخص المكالمة"
               htmlFor="callSummary"
+              trackId="callSummary"
               required={req}
               className="md:col-span-2"
               error={form.formState.errors.callSummary?.message as string | undefined}
@@ -507,6 +674,7 @@ export function AddClientForm({
             <Field
               label="ملاحظات السيلز"
               htmlFor="salesNotes"
+              trackId="salesNotes"
               required={req}
               className="md:col-span-2"
               error={form.formState.errors.salesNotes?.message as string | undefined}
@@ -521,6 +689,7 @@ export function AddClientForm({
             <Field
               label="أدوات الـ Warming"
               htmlFor="clientWarmingText"
+              trackId="clientWarmingText"
               required={req}
               className="md:col-span-2"
               error={
@@ -542,6 +711,7 @@ export function AddClientForm({
                 "تاريخ المتابعة التالي"
               )}
               htmlFor="nextFollowUpAt"
+              trackId="nextFollowUpAt"
               required={req}
               hint="بدون قيمة افتراضية — يجب اختيار تاريخ صريح"
               className="md:col-span-2"
@@ -551,7 +721,7 @@ export function AddClientForm({
             >
               <Input
                 id="nextFollowUpAt"
-                type="datetime-local"
+                type="date"
                 {...form.register("nextFollowUpAt")}
                 dir="ltr"
                 className="max-w-md text-left"
@@ -561,6 +731,7 @@ export function AddClientForm({
             <Field
               label="موظف العرض"
               htmlFor="presentingEmployeeName"
+              trackId="presentingEmployeeName"
               hint="اختياري — يُكمل لاحقاً من التقارير"
               error={
                 form.formState.errors.presentingEmployeeName?.message as
@@ -584,6 +755,7 @@ export function AddClientForm({
               <Field
                 label={coreLabel(coreLabels, "contractValue", "قيمة التعاقد")}
                 htmlFor="contractValue"
+                trackId="contractValue"
                 required={req}
                 error={
                   form.formState.errors.contractValue?.message as
@@ -602,6 +774,7 @@ export function AddClientForm({
               <Field
                 label={coreLabel(coreLabels, "saleDate", "تاريخ البيع")}
                 htmlFor="saleDate"
+                trackId="saleDate"
                 required={req}
                 error={
                   form.formState.errors.saleDate?.message as string | undefined
@@ -609,7 +782,7 @@ export function AddClientForm({
               >
                 <Input
                   id="saleDate"
-                  type="datetime-local"
+                  type="date"
                   {...form.register("saleDate")}
                   dir="ltr"
                   className="text-left"
@@ -626,6 +799,7 @@ export function AddClientForm({
               <Field
                 label={coreLabel(coreLabels, "lossReason", "سبب الإغلاق")}
                 htmlFor="lossReason"
+                trackId="lossReason"
                 required={req}
                 className="md:col-span-2"
                 error={form.formState.errors.lossReason?.message}
@@ -640,6 +814,7 @@ export function AddClientForm({
               <Field
                 label={coreLabel(coreLabels, "closedLostAt", "تاريخ الإغلاق")}
                 htmlFor="closedLostAt"
+                trackId="closedLostAt"
                 required={req}
                 error={
                   form.formState.errors.closedLostAt?.message as
@@ -649,7 +824,7 @@ export function AddClientForm({
               >
                 <Input
                   id="closedLostAt"
-                  type="datetime-local"
+                  type="date"
                   {...form.register("closedLostAt")}
                   dir="ltr"
                   className="text-left"
@@ -690,6 +865,7 @@ export function AddClientForm({
             variant="outline"
             onClick={() => {
               setSavedId(null);
+              setSavedFlash(new Set());
               form.clearErrors("root");
               form.reset(
                 (clientId && initialValues
@@ -709,6 +885,7 @@ export function AddClientForm({
           </Button>
         </CardFooter>
       </form>
+      </ClientFormEditCueContext.Provider>
     </Card>
   );
 }
@@ -716,6 +893,7 @@ export function AddClientForm({
 function Field({
   label,
   htmlFor,
+  trackId,
   children,
   hint,
   error,
@@ -724,21 +902,39 @@ function Field({
 }: {
   label: string;
   htmlFor: string;
+  trackId?: string;
   children: React.ReactNode;
   hint?: string;
   error?: string;
   className?: string;
   required?: boolean;
 }) {
+  const cue = useClientFormEditCue(trackId);
   return (
     <div className={className ? `space-y-2 ${className}` : "space-y-2"}>
-      <Label htmlFor={htmlFor}>
+      <Label
+        htmlFor={htmlFor}
+        className="inline-flex w-full flex-wrap items-center gap-x-2 gap-y-1"
+      >
         {required ? (
           <span className="font-semibold text-destructive" aria-hidden>
             *
           </span>
         ) : null}{" "}
-        {label}
+        <span className="min-w-0 shrink">{label}</span>
+        {cue === "pending" ? (
+          <span
+            className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100"
+            title="لم يُحفَظ بعد"
+          >
+            بانتظار الحفظ
+          </span>
+        ) : null}
+        {cue === "saved" ? (
+          <span className="shrink-0 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+            ✓ تم الحفظ
+          </span>
+        ) : null}
       </Label>
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
@@ -765,6 +961,7 @@ function DynamicField({
       <Field
         label={def.labelAr}
         htmlFor={name}
+        trackId={name}
         required={def.isRequired}
         error={error}
       >
@@ -799,6 +996,7 @@ function DynamicField({
       <Field
         label={def.labelAr}
         htmlFor={name}
+        trackId={name}
         required={def.isRequired}
         error={error}
       >
@@ -845,6 +1043,7 @@ function DynamicField({
       <Field
         label={def.labelAr}
         htmlFor={name}
+        trackId={name}
         required={def.isRequired}
         error={error}
       >
@@ -864,6 +1063,7 @@ function DynamicField({
       <Field
         label={def.labelAr}
         htmlFor={name}
+        trackId={name}
         required={def.isRequired}
         error={error}
       >
@@ -882,6 +1082,7 @@ function DynamicField({
     <Field
       label={def.labelAr + (!def.isRequired ? " (اختياري)" : "")}
       htmlFor={name}
+      trackId={name}
       required={def.isRequired}
       error={error}
     >

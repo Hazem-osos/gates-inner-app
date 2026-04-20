@@ -13,7 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { aggregateClientsForScope } from "@/lib/data/client-aggregates";
-import { listClientsForUser } from "@/lib/data/clients-list";
+import {
+  buildClientsListWhere,
+  listClientsForUser,
+} from "@/lib/data/clients-list";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +24,6 @@ import {
   clientsImportTemplateHref,
   clientsListExportHref,
 } from "@/lib/export-excel-href";
-import { clientScopeWhere } from "@/lib/report-scope";
 import { statusLabelAr } from "@/lib/clients-form-values";
 import { ClientStatus } from "@prisma/client";
 
@@ -30,13 +32,15 @@ export const dynamic = "force-dynamic";
 export default async function ClientsListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sales?: string }>;
+  searchParams: Promise<{ sales?: string; q?: string }>;
 }) {
   const user = await requireSessionUser();
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
+  const qRaw = sp.q?.trim() ?? "";
+  const q = qRaw || undefined;
 
-  const clients = await listClientsForUser(user.role, user.id, salesKey);
+  const clients = await listClientsForUser(user.role, user.id, salesKey, q);
 
   const salesUsers =
     user.role === "ADMIN" || user.role === "MANAGER"
@@ -47,11 +51,12 @@ export default async function ClientsListPage({
         })
       : [];
 
-  const scopeWhere = clientScopeWhere({
-    role: user.role,
-    userId: user.id,
-    salesUserId: salesKey,
-  });
+  const scopeWhere = buildClientsListWhere(
+    user.role,
+    user.id,
+    salesKey,
+    q
+  );
 
   const [{ total, byStatus, byClassification }, classifications] =
     await Promise.all([
@@ -99,13 +104,51 @@ export default async function ClientsListPage({
       <SalesFilterLinks
         role={user.role}
         pathname="/clients"
-        searchParams={{}}
+        searchParams={q ? { q: qRaw } : {}}
         currentSales={salesKey}
       />
 
+      <form
+        method="get"
+        className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-end"
+        role="search"
+      >
+        {salesKey !== "all" ? (
+          <input type="hidden" name="sales" value={salesKey} />
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-1">
+          <label htmlFor="clients-q" className="text-xs font-medium text-muted-foreground">
+            بحث
+          </label>
+          <input
+            id="clients-q"
+            name="q"
+            type="search"
+            defaultValue={qRaw}
+            placeholder="اسم العميل، الشركة، أو الهاتف"
+            dir="rtl"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+        <button
+          type="submit"
+          className="h-9 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          بحث
+        </button>
+        {q ? (
+          <Link
+            href={salesKey !== "all" ? `/clients?sales=${salesKey}` : "/clients"}
+            className="h-9 shrink-0 self-end rounded-md border border-input px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 sm:self-auto"
+          >
+            مسح
+          </Link>
+        ) : null}
+      </form>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ExportToolbar
-          excelHref={clientsListExportHref({ sales: salesKey })}
+          excelHref={clientsListExportHref({ sales: salesKey, q: qRaw })}
         />
         <div className="flex flex-wrap gap-4 text-sm">
           <Link

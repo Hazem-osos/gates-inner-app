@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -11,6 +12,12 @@ type Props = {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** توسيع عرض لوحة الحوار (مثل جداول المعاينة) */
+  contentClassName?: string;
+  /** عند false لا يُغلق عند الضغط خارج الصندوق (على الخلفية) */
+  closeOnBackdrop?: boolean;
+  /** عند false لا يُغلق بمفتاح Escape */
+  closeOnEscape?: boolean;
 };
 
 export function SimpleDialog({
@@ -19,15 +26,18 @@ export function SimpleDialog({
   title,
   children,
   footer,
+  contentClassName,
+  closeOnBackdrop = true,
+  closeOnEscape = true,
 }: Props) {
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEscape) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
+  }, [open, onOpenChange, closeOnEscape]);
 
   useEffect(() => {
     if (!open) return;
@@ -47,11 +57,19 @@ export function SimpleDialog({
       aria-modal="true"
       aria-labelledby="simple-dialog-title"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false);
+        if (
+          closeOnBackdrop &&
+          e.target === e.currentTarget
+        ) {
+          onOpenChange(false);
+        }
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-lg"
+        className={cn(
+          "max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-lg",
+          contentClassName
+        )}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <h2 id="simple-dialog-title" className="mb-3 text-lg font-semibold">

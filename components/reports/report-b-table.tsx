@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
+import type { AuditWorkClientGroup } from "@/lib/audit/work-log-types";
 import {
   Table,
   TableBody,
@@ -266,21 +267,21 @@ export function ReportBTable({
   const [sortPrice, setSortPrice] = useState<SortTriState>(null);
   const [sortCall, setSortCall] = useState<SortTriState>(null);
 
+  /** أعمدة متابعة إضافية للعرض فقط — لا تُكتب في JSON حتى يملأ المستخدم الخانة */
+  const [followColExtra, setFollowColExtra] = useState(0);
+
   const [workOpen, setWorkOpen] = useState(false);
   const [auditFrom, setAuditFrom] = useState(todayInputDate());
   const [auditTo, setAuditTo] = useState(todayInputDate());
-  const [auditRows, setAuditRows] = useState<
-    {
-      id: string;
-      clientName: string;
-      phone: string;
-      action: string;
-      summary: string;
-      meta: unknown;
-      createdAt: string;
-    }[]
-  >([]);
+  const [auditGroups, setAuditGroups] = useState<AuditWorkClientGroup[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+
+  useEffect(() => {
+    if (!workOpen) return;
+    const t = todayInputDate();
+    setAuditFrom(t);
+    setAuditTo(t);
+  }, [workOpen]);
 
   const [gateDialogOpen, setGateDialogOpen] = useState(false);
   const [gateClientId, setGateClientId] = useState<string | null>(null);
@@ -506,14 +507,15 @@ export function ReportBTable({
   ]);
 
   const maxFollowCols = useMemo(() => {
-    let m = 7;
+    let m = 0;
     for (const r of merged) {
       const n = normalizeSlots(r.followUpSlots).length;
       if (n > m) m = n;
     }
-    /* حد أعلى ناعم فقط لأداء العرض — زر + يضيف أعمدة دون سقف ٧ حرفي */
-    return Math.min(Math.max(m, 1), 200);
-  }, [merged]);
+    const base = Math.max(m, 1);
+    /* عمود واحد على الأقل؛ + في الرأس يزيد followColExtra دون إنشاء slots وهمية */
+    return Math.min(base + followColExtra, 999);
+  }, [merged, followColExtra]);
 
   function cycleSort(
     cur: SortTriState,
@@ -593,18 +595,18 @@ export function ReportBTable({
       });
       const res = await fetch(`/api/audit-log?${p.toString()}`);
       const data = (await res.json()) as {
-        rows?: typeof auditRows;
+        groups?: AuditWorkClientGroup[];
         message?: string;
       };
       if (!res.ok) {
         toast.error(data.message ?? "فشل الجلب");
-        setAuditRows([]);
+        setAuditGroups([]);
       } else {
-        setAuditRows(data.rows ?? []);
+        setAuditGroups(data.groups ?? []);
       }
     } catch {
       toast.error("فشل الجلب");
-      setAuditRows([]);
+      setAuditGroups([]);
     } finally {
       setAuditLoading(false);
     }
@@ -662,11 +664,7 @@ export function ReportBTable({
         <Button
           type="button"
           className="bg-black text-white hover:bg-black/90"
-          onClick={() => {
-            setWorkOpen(true);
-            setAuditFrom(todayInputDate());
-            setAuditTo(todayInputDate());
-          }}
+          onClick={() => setWorkOpen(true)}
         >
           سجل العمل
         </Button>
@@ -750,6 +748,8 @@ export function ReportBTable({
         open={workOpen}
         onOpenChange={setWorkOpen}
         title="سجل العمل"
+        closeOnBackdrop={false}
+        closeOnEscape={false}
         footer={
           <>
             <Button type="button" variant="secondary" onClick={() => setWorkOpen(false)}>
@@ -761,83 +761,100 @@ export function ReportBTable({
           </>
         }
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="grid gap-1 text-xs">
+        <div className="grid gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 md:grid-cols-2 md:gap-6">
+          <label className="grid gap-2 text-xs font-medium text-foreground">
             من تاريخ
             <Input
               type="date"
               dir="ltr"
+              className="h-10 border-border/80 bg-background"
               value={auditFrom}
               onChange={(e) => setAuditFrom(e.target.value)}
             />
           </label>
-          <label className="grid gap-1 text-xs">
+          <label className="grid gap-2 text-xs font-medium text-foreground">
             إلى تاريخ
             <Input
               type="date"
               dir="ltr"
+              className="h-10 border-border/80 bg-background"
               value={auditTo}
               onChange={(e) => setAuditTo(e.target.value)}
             />
           </label>
         </div>
-        <div className="mt-4 max-h-[50vh] overflow-auto rounded border">
-          <table className="w-full border-collapse text-xs">
+        <div className="mt-5 max-h-[55vh] overflow-auto rounded-2xl border border-border/70 bg-gradient-to-b from-muted/30 to-background p-1 shadow-inner">
+          <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="border-s border-border/80 p-2 text-right first:border-s-0">
+              <tr className="bg-muted/70 text-xs font-semibold tracking-tight text-foreground">
+                <th className="sticky top-0 z-[1] w-[min(28%,12rem)] border-b border-border/80 p-3 text-right shadow-[0_1px_0_0_hsl(var(--border))]">
                   العميل
                 </th>
                 <th
-                  className="border-s border-border/80 p-2 text-left first:border-s-0"
+                  className="sticky top-0 z-[1] w-[min(22%,10rem)] border-b border-border/80 p-3 text-left shadow-[0_1px_0_0_hsl(var(--border))]"
                   dir="ltr"
                 >
                   الهاتف
                 </th>
-                <th className="border-s border-border/80 p-2 text-right first:border-s-0">
-                  الإجراء
-                </th>
-                <th
-                  className="border-s border-border/80 p-2 text-left first:border-s-0"
-                  dir="ltr"
-                >
-                  التوقيت
+                <th className="sticky top-0 z-[1] border-b border-border/80 p-3 text-right shadow-[0_1px_0_0_hsl(var(--border))]">
+                  سجل الإجراءات (مرتب بالزمن)
                 </th>
               </tr>
             </thead>
             <tbody>
-              {auditRows.map((row) => (
-                <tr key={row.id} className="border-b border-border/60">
-                  <td className="border-s border-border/80 p-2 first:border-s-0">
-                    {row.clientName}
-                  </td>
-                  <td className="border-s border-border/80 p-2 first:border-s-0" dir="ltr">
-                    {row.phone}
-                  </td>
-                  <td className="max-w-[240px] border-s border-border/80 p-2 whitespace-pre-wrap first:border-s-0">
-                    <span className="font-mono text-[10px]">{row.action}</span>
-                    {" — "}
-                    {row.summary}
-                    {row.meta != null ? (
-                      <span className="block text-[10px] text-muted-foreground">
-                        {typeof row.meta === "object"
-                          ? JSON.stringify(row.meta)
-                          : String(row.meta)}
-                      </span>
-                    ) : null}
+              {auditGroups.map((g, gi) => (
+                <tr
+                  key={g.clientId}
+                  className={cn(
+                    "align-top transition-colors",
+                    gi > 0 && "border-t-[10px] border-t-muted/40",
+                    gi % 2 === 0 ? "bg-background/50" : "bg-muted/20"
+                  )}
+                >
+                  <td className="border-b border-border/50 p-4 align-top font-semibold text-foreground first:border-s-0">
+                    {g.clientName}
                   </td>
                   <td
-                    className="border-s border-border/80 p-2 text-[10px] first:border-s-0"
+                    className="border-b border-border/50 p-4 align-top text-xs text-muted-foreground first:border-s-0"
                     dir="ltr"
                   >
-                    {formatDateTimeArabic(new Date(row.createdAt))}
+                    {g.phone}
+                  </td>
+                  <td className="border-b border-border/50 p-4 align-top first:border-s-0">
+                    <ul className="flex flex-col gap-4">
+                      {g.events.map((ev) => (
+                        <li
+                          key={ev.id}
+                          className="overflow-hidden rounded-xl border border-border/70 bg-card/95 shadow-md ring-1 ring-border/25"
+                        >
+                          <div className="border-b border-border/50 bg-muted/40 px-3 py-2">
+                            <p
+                              className="inline-flex items-center rounded-full bg-background/90 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground ring-1 ring-border/60"
+                              dir="ltr"
+                            >
+                              {formatDateTimeArabic(new Date(ev.createdAt))}
+                            </p>
+                          </div>
+                          <ul className="flex flex-col gap-2 p-3">
+                            {ev.lines.map((ln, i) => (
+                              <li
+                                key={i}
+                                className="rounded-lg border border-border/55 bg-background/90 px-3 py-2.5 text-xs leading-relaxed text-foreground shadow-[0_1px_0_0_hsl(var(--border)/0.35)]"
+                              >
+                                {ln}
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {auditRows.length === 0 && !auditLoading ? (
-            <p className="p-4 text-center text-muted-foreground">
+          {auditGroups.length === 0 && !auditLoading ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">
               لا توجد سجلات — اضغط موافق بعد اختيار الفترة.
             </p>
           ) : null}
@@ -882,30 +899,30 @@ export function ReportBTable({
 
       <div
         className={cn(
-          "sticky top-14 z-30 mb-2 rounded-md border bg-background/95 p-1.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
+          "sticky top-14 z-30 mb-2 rounded-md border bg-background/95 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
           toolbar !== "closed"
             ? "border-destructive/80 ring-1 ring-destructive/15"
             : "border-border/80"
         )}
       >
         <div
-          className="flex flex-col gap-1.5 lg:flex-row lg:items-start lg:gap-2"
+          className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-3"
           dir="rtl"
         >
           {toolbar !== "closed" ? (
             <div
               data-gate-exempt
-              className="min-w-0 flex-1 rounded border border-destructive bg-background px-1.5 py-1 dark:bg-background"
+              className="min-w-0 flex-1 rounded border border-destructive bg-background px-2 py-1.5 dark:bg-background"
             >
-              <p className="mb-0.5 text-[10px] font-semibold leading-tight text-destructive">
+              <p className="mb-1 text-xs font-semibold leading-tight text-destructive">
                 ⚠ تجاوزات التقرير
               </p>
-              <div className="flex flex-wrap items-center gap-0.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button
                   type="button"
                   size="sm"
                   className={cn(
-                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
                     violBtn(violation === "visit_overdue")
                   )}
                   onClick={() =>
@@ -920,7 +937,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   className={cn(
-                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
                     violBtn(violation === "days_over")
                   )}
                   onClick={() => {
@@ -935,7 +952,7 @@ export function ReportBTable({
                 <Input
                   type="number"
                   min={0}
-                  className="h-5 w-11 px-0.5 text-center text-[9px]"
+                  className="h-7 w-12 px-1 text-center text-xs"
                   disabled={!daysActive}
                   value={daysInput}
                   onChange={(e) => setDaysInput(e.target.value)}
@@ -945,7 +962,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   className={cn(
-                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
                     violBtn(violation === "follow_count")
                   )}
                   onClick={() => {
@@ -960,7 +977,7 @@ export function ReportBTable({
                 <Input
                   type="number"
                   min={0}
-                  className="h-5 w-11 px-0.5 text-center text-[9px]"
+                  className="h-7 w-12 px-1 text-center text-xs"
                   disabled={!followActive}
                   value={followInput}
                   onChange={(e) => setFollowInput(e.target.value)}
@@ -970,7 +987,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   className={cn(
-                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
                     violBtn(violation === "neglected")
                   )}
                   onClick={() =>
@@ -985,7 +1002,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   className={cn(
-                    "h-5 rounded px-1.5 py-0 text-[9px] font-medium leading-tight",
+                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
                     violBtn(violation === "no_answer")
                   )}
                   onClick={() =>
@@ -1000,7 +1017,7 @@ export function ReportBTable({
                   type="button"
                   size="sm"
                   variant="secondary"
-                  className="h-5 rounded px-1.5 py-0 text-[9px] leading-tight"
+                  className="h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight"
                   onClick={() => {
                     setViolation(null);
                     setDaysInput("");
@@ -1017,22 +1034,22 @@ export function ReportBTable({
           <aside
             data-gate-exempt
             className={cn(
-              "rounded border border-border bg-muted/25 px-1.5 py-1 dark:bg-muted/15",
+              "rounded border border-border bg-muted/25 px-2 py-1.5 dark:bg-muted/15",
               toolbar !== "closed"
-                ? "w-full shrink-0 lg:w-auto lg:min-w-[9.5rem]"
+                ? "w-full shrink-0 lg:w-auto lg:min-w-[11rem]"
                 : "mx-auto w-full max-w-[14rem]"
             )}
           >
-            <p className="mb-0.5 text-center text-[9px] font-medium leading-tight text-muted-foreground">
+            <p className="mb-1 text-center text-xs font-medium leading-tight text-muted-foreground">
               تلوين الصفوف
             </p>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-1.5">
               {REPORT_B_PALETTE.map(({ hex }) => (
-                <div key={hex} className="flex min-w-0 flex-col gap-px">
+                <div key={hex} className="flex min-w-0 flex-col gap-0.5">
                   <button
                     type="button"
                     title={hex}
-                    className={`mx-auto h-4 w-7 shrink-0 rounded-sm border shadow-sm transition ${
+                    className={`mx-auto h-5 w-8 shrink-0 rounded-sm border shadow-sm transition ${
                       selectedColor === hex
                         ? "border-primary ring-1 ring-primary"
                         : "border-border/60"
@@ -1043,7 +1060,7 @@ export function ReportBTable({
                     }
                   />
                   <Input
-                    className="h-5 min-h-5 px-0.5 text-[8px] leading-tight"
+                    className="h-6 min-h-6 px-1 text-[11px] leading-tight"
                     placeholder="وصف"
                     value={legends[hex] ?? ""}
                     onChange={(e) =>
@@ -1054,14 +1071,14 @@ export function ReportBTable({
                 </div>
               ))}
             </div>
-            <p className="mt-0.5 text-[8px] leading-snug text-muted-foreground">
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
               اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
               لإلغاء اختياره.
             </p>
           </aside>
         </div>
         {toolbar !== "closed" && (violationMessage() || visitBanner()) ? (
-          <div className="mt-1.5 space-y-0.5 border-t border-destructive/25 pt-1.5 text-[11px] leading-snug text-destructive dark:border-destructive/30">
+          <div className="mt-2 space-y-0.5 border-t border-destructive/25 pt-2 text-xs leading-snug text-destructive dark:border-destructive/30">
             {violationMessage() ? <p>{violationMessage()}</p> : null}
             {visitBanner() ? <p>{visitBanner()}</p> : null}
           </div>
@@ -1108,7 +1125,12 @@ export function ReportBTable({
                 <TableHead className="min-w-[110px]">هاتف</TableHead>
                 <TableHead className="min-w-[72px]">عرض سعر</TableHead>
                 <TableHead className="min-w-[120px]">تفصيل السعر</TableHead>
-                <TableHead className="min-w-[140px]">ملخص وموقف</TableHead>
+                <TableHead className="min-w-[10rem] max-w-[13rem] whitespace-normal text-start leading-tight">
+                  <span className="block font-semibold">ملخص المكالمة</span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                    والموقف الحالي
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[120px]">ملاحظات سيلز</TableHead>
                 <TableHead className="min-w-[8rem]">تصنيف</TableHead>
                 <TableHead className="min-w-[8rem]">منصة</TableHead>
@@ -1124,7 +1146,21 @@ export function ReportBTable({
                     <TableHead className="min-w-[9rem]">تاريخ {i + 1}</TableHead>
                   </Fragment>
                 ))}
-                <TableHead className="w-10">+</TableHead>
+                <TableHead className="w-12 px-1 text-center align-middle">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 min-w-7 px-0 font-semibold"
+                    title="إضافة عمود متابعة للجدول (لا يُنشئ متابعات فارغة في البيانات)"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFollowColExtra((c) => Math.min(c + 1, 998));
+                    }}
+                  >
+                    +
+                  </Button>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1542,10 +1578,67 @@ export function ReportBTable({
                         }}
                       >
                         <SelectTrigger
-                          className={reportBSelectTrigger}
+                          className={cn(
+                            reportBSelectTrigger,
+                            "max-w-full min-w-0 justify-between"
+                          )}
+                          dir="rtl"
                           title={classificationTooltip}
                         >
-                          <SelectValue placeholder="—" />
+                          <SelectValue placeholder="—">
+                            {(v) => {
+                              if (
+                                v == null ||
+                                v === "" ||
+                                v === "__none__"
+                              ) {
+                                return "—";
+                              }
+                              const fromList = classifications.find(
+                                (c) => c.id === String(v)
+                              );
+                              if (fromList) {
+                                const lab = sanitizeDisplayLabel(
+                                  fromList.label
+                                );
+                                return (
+                                  <span
+                                    className="flex min-w-0 flex-1 items-center gap-1.5"
+                                    dir="rtl"
+                                  >
+                                    <span
+                                      className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
+                                      style={{
+                                        backgroundColor: fromList.color,
+                                      }}
+                                      aria-hidden
+                                    />
+                                    <bdi className="min-w-0 truncate">
+                                      {lab}
+                                    </bdi>
+                                  </span>
+                                );
+                              }
+                              const lab = sanitizeDisplayLabel(
+                                r.classificationLabel ?? String(v)
+                              );
+                              const col =
+                                r.classificationColor ?? "#94a3b8";
+                              return (
+                                <span
+                                  className="flex min-w-0 flex-1 items-center gap-1.5"
+                                  dir="rtl"
+                                >
+                                  <span
+                                    className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
+                                    style={{ backgroundColor: col }}
+                                    aria-hidden
+                                  />
+                                  <bdi className="min-w-0 truncate">{lab}</bdi>
+                                </span>
+                              );
+                            }}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__" label="—">
@@ -1561,17 +1654,27 @@ export function ReportBTable({
                                   )
                                 : null;
                             const opts = extra ? [...base, extra] : base;
-                            return opts.map((c) => (
-                              <SelectItem key={c.id} value={c.id} label={c.label}>
-                                <span className="flex items-center gap-2">
-                                  <span
-                                    className="inline-block size-2.5 rounded-sm border"
-                                    style={{ backgroundColor: c.color }}
-                                  />
-                                  {c.label}
-                                </span>
-                              </SelectItem>
-                            ));
+                            return opts.map((c) => {
+                              const lab = sanitizeDisplayLabel(c.label);
+                              return (
+                                <SelectItem
+                                  key={c.id}
+                                  value={c.id}
+                                  label={lab}
+                                >
+                                  <span className="flex min-w-0 items-center gap-2">
+                                    <span
+                                      className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
+                                      style={{ backgroundColor: c.color }}
+                                      aria-hidden
+                                    />
+                                    <bdi className="min-w-0 truncate">
+                                      {lab}
+                                    </bdi>
+                                  </span>
+                                </SelectItem>
+                              );
+                            });
                           })()}
                         </SelectContent>
                       </Select>
@@ -1723,12 +1826,13 @@ export function ReportBTable({
                               value={slot?.note ?? ""}
                               onChange={(e) => {
                                 const next = [...slots];
-                                while (next.length <= i)
+                                while (next.length <= i) {
                                   next.push({
                                     order: next.length + 1,
                                     note: "",
                                     date: "",
                                   });
+                                }
                                 next[i] = {
                                   ...next[i],
                                   order: i + 1,
@@ -1758,12 +1862,13 @@ export function ReportBTable({
                               }
                               onChange={(e) => {
                                 const next = [...slots];
-                                while (next.length <= i)
+                                while (next.length <= i) {
                                   next.push({
                                     order: next.length + 1,
                                     note: "",
                                     date: "",
                                   });
+                                }
                                 next[i] = {
                                   ...next[i],
                                   order: i + 1,
@@ -1779,29 +1884,7 @@ export function ReportBTable({
                         </Fragment>
                       );
                     })}
-                    <TableCell>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2"
-                        disabled={savingRowId === r.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const next = [...slots];
-                          next.push({
-                            order: next.length + 1,
-                            note: "",
-                            date: new Date().toISOString(),
-                          });
-                          onField(r.id, r, {
-                            followUpSlots: slotsToJson(next),
-                          });
-                        }}
-                      >
-                        +
-                      </Button>
-                    </TableCell>
+                    <TableCell className="w-12 bg-muted/20" aria-hidden />
                   </TableRow>
                 );
               })}

@@ -4,14 +4,34 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 
+/** فلتر القائمة: نطاق السيلز + بحث اختياري بالاسم أو الشركة أو الهاتف. */
+export function buildClientsListWhere(
+  role: UserRole,
+  userId: string,
+  salesUserId?: string | null,
+  q?: string | null
+): Prisma.ClientWhereInput {
+  const base = clientScopeWhere({ role, userId, salesUserId });
+  const t = q?.trim();
+  if (!t) return base;
+  return {
+    ...base,
+    OR: [
+      { name: { contains: t } },
+      { company: { contains: t } },
+      { phone: { contains: t } },
+      { phone2: { contains: t } },
+    ],
+  };
+}
+
 export async function listClientsForUser(
   role: UserRole,
   userId: string,
-  salesUserId?: string | null
+  salesUserId?: string | null,
+  q?: string | null
 ) {
-  const where: Prisma.ClientWhereInput = {
-    ...clientScopeWhere({ role, userId, salesUserId }),
-  };
+  const where = buildClientsListWhere(role, userId, salesUserId, q);
 
   return prisma.client.findMany({
     where,

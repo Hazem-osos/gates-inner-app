@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ const reportLinks: NavLink[] = [
   { href: "/reports/closed", label: "عملاء مغلقة" },
   { href: "/reports/won", label: "تم البيع" },
   { href: "/reports/recommendations", label: "توصيات الإدارة" },
-  { href: "/reports/calls", label: "عملاء جدد / زيارات" },
+  { href: "/reports/calls", label: "عملاء جدد / المواعيد" },
   { href: "/reports/warming", label: "أدوات Warming" },
 ];
 
@@ -254,10 +254,27 @@ export function CrmNav({
           ) : null}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-3 border-s border-zinc-200/90 ps-3">
-          <span className="max-w-[14rem] truncate text-sm text-zinc-600">
-            مرحبا ({userName})
-          </span>
+        <div className="flex shrink-0 items-center gap-2.5 border-s border-zinc-200/90 ps-3 sm:gap-3">
+          <div
+            className="flex max-w-[min(16rem,calc(100vw-10rem))] items-center gap-2.5 rounded-2xl border border-zinc-200/70 bg-white/65 py-1.5 pe-3.5 ps-2 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_40px_-16px_rgba(15,23,42,0.12)] backdrop-blur-md supports-backdrop-filter:bg-white/55 dark:border-zinc-700/80 dark:bg-zinc-950/50 dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.45)] dark:supports-backdrop-filter:bg-zinc-950/40"
+            dir="rtl"
+            aria-label={`مرحباً ${userName}`}
+          >
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-zinc-50 shadow-inner ring-1 ring-zinc-950/20 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/10"
+              aria-hidden
+            >
+              <UserRound className="size-[1.125rem]" strokeWidth={1.75} />
+            </span>
+            <span className="min-w-0 text-start leading-none">
+              <span className="mb-0.5 block text-[0.6875rem] font-medium leading-none text-zinc-500 dark:text-zinc-400">
+                مرحباً
+              </span>
+              <span className="block truncate text-[0.9375rem] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+                {userName}
+              </span>
+            </span>
+          </div>
           <SignOutButton />
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { buildArabicAuditLinesFromPatch } from "@/lib/audit/report-patch-diff";
 import { prisma } from "@/lib/prisma";
 
 export type PatchResult = { ok: true } | { ok: false; message: string };
@@ -165,6 +166,10 @@ export async function patchClientReportFields(
       data,
     });
 
+    const auditLines = buildArabicAuditLinesFromPatch(client, patch);
+    const auditSummary =
+      auditLines.length > 0 ? auditLines.join(" — ") : "حفظ من التقرير";
+
     await prisma.auditLog.create({
       data: {
         userId: dbUserId,
@@ -173,8 +178,14 @@ export async function patchClientReportFields(
         entityId: clientId,
         action: "REPORT_CELL_EDIT",
         kind: "REPORT_CELL_EDIT",
-        summary: "تعديل من تقرير",
-        meta: patch as unknown as Prisma.InputJsonValue,
+        summary: auditSummary,
+        meta: {
+          v: 2,
+          lines:
+            auditLines.length > 0
+              ? auditLines
+              : ["حفظ من التقرير (لم يُكتشف فرق في الحقول المعروضة)"],
+        } as Prisma.InputJsonValue,
       },
     });
 
