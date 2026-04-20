@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   UsersRound,
   UserRound,
   UserX,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -149,26 +151,35 @@ function shortcutIsActive(pathname: string, href: string): boolean {
   return isActive(pathname, href);
 }
 
-function shortcutBtnClass(pathname: string, href: string) {
+function shortcutLinkClass(pathname: string, href: string) {
   const active = shortcutIsActive(pathname, href);
   return cn(
-    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border text-zinc-600 transition-colors duration-150",
+    "group relative flex shrink-0 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition-all duration-200 sm:px-3 sm:py-2.5",
     active
-      ? "border-slate-300/90 bg-slate-100 text-slate-900 shadow-sm ring-1 ring-slate-200/80"
-      : "border-transparent hover:border-zinc-200/90 hover:bg-zinc-50 hover:text-zinc-900"
+      ? "border-primary/25 bg-primary/[0.06] text-foreground shadow-sm ring-1 ring-primary/15 dark:bg-primary/10 dark:ring-primary/25"
+      : "border-transparent bg-background/60 text-muted-foreground hover:border-border/80 hover:bg-background hover:text-foreground hover:shadow-sm dark:bg-background/40"
   );
 }
 
 function navLinkClass(pathname: string, href: string, compact?: boolean) {
   const active = isActive(pathname, href);
   return cn(
-    compact ? "w-full px-2.5 py-2 text-[13px] leading-tight" : "inline-flex w-auto px-2.5 py-1.5 text-sm",
-    "flex items-center rounded-lg text-start transition-colors duration-150",
+    compact
+      ? "w-full rounded-lg px-3 py-2.5 text-[13px] leading-snug"
+      : "inline-flex w-auto rounded-lg px-3 py-2 text-sm font-medium",
+    "text-start transition-colors duration-150",
     active
-      ? "bg-slate-100 font-medium text-slate-900 ring-1 ring-slate-200/80"
-      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+      ? "bg-primary/10 text-foreground ring-1 ring-primary/20 dark:bg-primary/15"
+      : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
   );
 }
+
+const dropdownMotion = {
+  initial: { opacity: 0, y: -8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { type: "spring" as const, stiffness: 520, damping: 34 },
+};
 
 function NavMenuButton({
   label,
@@ -187,16 +198,16 @@ function NavMenuButton({
       onClick={onClick}
       aria-expanded={open}
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm transition-colors duration-150",
+        "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
         active || open
-          ? "bg-slate-100 font-medium text-slate-900 ring-1 ring-slate-200/80"
-          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+          ? "bg-primary/10 text-foreground ring-1 ring-primary/20 shadow-sm dark:bg-primary/15"
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
       )}
     >
       <span>{label}</span>
       <ChevronDown
         className={cn(
-          "size-3.5 shrink-0 text-zinc-400 transition-transform duration-200",
+          "size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-200",
           open && "rotate-180"
         )}
       />
@@ -257,139 +268,193 @@ export function CrmNav({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-md supports-backdrop-filter:bg-white/75">
-      <div className="mx-auto max-w-[1600px] px-4 pb-1.5 pt-2.5">
-        <div className="flex items-center gap-3">
-        <nav
-          className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-2"
-          aria-label="التطبيق"
-        >
-          {/* أساسي */}
-          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-zinc-200/70 bg-zinc-50/50 p-1">
-            {p.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={navLinkClass(pathname, l.href)}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-
-          {r.length > 0 ? (
-            <div ref={reportsRef} className="relative">
-              <NavMenuButton
-                label="التقارير"
-                open={reportsOpen}
-                active={reportsMenuActive}
-                onClick={() => {
-                  setReportsOpen((v) => !v);
-                  setSettingsOpen(false);
-                }}
-              />
-              {reportsOpen ? (
-                <div
-                  role="menu"
-                  className="absolute inset-s-0 top-[calc(100%+6px)] z-50 max-h-[min(70vh,420px)] w-[min(calc(100vw-2rem),20rem)] overflow-y-auto rounded-xl border border-zinc-200/90 bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/5"
-                >
-                  <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    تقارير
-                  </p>
-                  {r.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      role="menuitem"
-                      className={navLinkClass(pathname, l.href, true)}
-                      onClick={() => setReportsOpen(false)}
-                    >
-                      {l.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {t.length > 0 ? (
-            <div ref={settingsRef} className="relative">
-              <NavMenuButton
-                label="إعدادات"
-                open={settingsOpen}
-                active={settingsMenuActive}
-                onClick={() => {
-                  setSettingsOpen((v) => !v);
-                  setReportsOpen(false);
-                }}
-              />
-              {settingsOpen ? (
-                <div
-                  role="menu"
-                  className="absolute inset-s-0 top-[calc(100%+6px)] z-50 max-h-[min(70vh,320px)] w-[min(calc(100vw-2rem),18rem)] overflow-y-auto rounded-xl border border-zinc-200/90 bg-white p-1.5 shadow-lg ring-1 ring-zinc-950/5"
-                >
-                  <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    إعدادات وإدارة
-                  </p>
-                  {t.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      role="menuitem"
-                      className={navLinkClass(pathname, l.href, true)}
-                      onClick={() => setSettingsOpen(false)}
-                    >
-                      {l.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-2.5 border-s border-zinc-200/90 ps-3 sm:gap-3">
-          <div
-            className="flex max-w-[min(16rem,calc(100vw-10rem))] items-center gap-2.5 rounded-2xl border border-zinc-200/70 bg-white/65 py-1.5 pe-3.5 ps-2 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_40px_-16px_rgba(15,23,42,0.12)] backdrop-blur-md supports-backdrop-filter:bg-white/55 dark:border-zinc-700/80 dark:bg-zinc-950/50 dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.45)] dark:supports-backdrop-filter:bg-zinc-950/40"
-            dir="rtl"
-            aria-label={`مرحباً ${userName}`}
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/70">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+          <nav
+            className="flex min-h-10 min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-2.5"
+            aria-label="التطبيق"
           >
-            <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-zinc-50 shadow-inner ring-1 ring-zinc-950/20 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/10"
-              aria-hidden
+            <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border/60 bg-muted/25 p-1 shadow-sm dark:bg-muted/15">
+              {p.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={navLinkClass(pathname, l.href)}
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+
+            {r.length > 0 ? (
+              <div ref={reportsRef} className="relative">
+                <NavMenuButton
+                  label="التقارير"
+                  open={reportsOpen}
+                  active={reportsMenuActive}
+                  onClick={() => {
+                    setReportsOpen((v) => !v);
+                    setSettingsOpen(false);
+                  }}
+                />
+                <AnimatePresence>
+                  {reportsOpen ? (
+                    <motion.div
+                      key="reports-menu"
+                      role="menu"
+                      initial={dropdownMotion.initial}
+                      animate={dropdownMotion.animate}
+                      exit={dropdownMotion.exit}
+                      transition={dropdownMotion.transition}
+                      className="absolute start-0 top-[calc(100%+10px)] z-50 max-h-[min(70vh,440px)] w-[min(calc(100vw-2rem),20rem)] origin-top overflow-y-auto overscroll-contain rounded-2xl border border-border/80 bg-popover/95 p-2 shadow-xl shadow-black/5 ring-1 ring-border/30 backdrop-blur-xl dark:bg-popover dark:shadow-black/40"
+                    >
+                      <p className="px-3 pb-1 pt-2 text-xs font-semibold text-muted-foreground">
+                        التقارير والقوائم
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        {r.map((l) => (
+                          <Link
+                            key={l.href}
+                            href={l.href}
+                            role="menuitem"
+                            className={navLinkClass(pathname, l.href, true)}
+                            onClick={() => setReportsOpen(false)}
+                          >
+                            {l.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            ) : null}
+
+            {t.length > 0 ? (
+              <div ref={settingsRef} className="relative">
+                <NavMenuButton
+                  label="إعدادات"
+                  open={settingsOpen}
+                  active={settingsMenuActive}
+                  onClick={() => {
+                    setSettingsOpen((v) => !v);
+                    setReportsOpen(false);
+                  }}
+                />
+                <AnimatePresence>
+                  {settingsOpen ? (
+                    <motion.div
+                      key="settings-menu"
+                      role="menu"
+                      initial={dropdownMotion.initial}
+                      animate={dropdownMotion.animate}
+                      exit={dropdownMotion.exit}
+                      transition={dropdownMotion.transition}
+                      className="absolute start-0 top-[calc(100%+10px)] z-50 max-h-[min(70vh,360px)] w-[min(calc(100vw-2rem),18rem)] origin-top overflow-y-auto overscroll-contain rounded-2xl border border-border/80 bg-popover/95 p-2 shadow-xl shadow-black/5 ring-1 ring-border/30 backdrop-blur-xl dark:bg-popover dark:shadow-black/40"
+                    >
+                      <p className="px-3 pb-1 pt-2 text-xs font-semibold text-muted-foreground">
+                        الإعدادات والإدارة
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        {t.map((l) => (
+                          <Link
+                            key={l.href}
+                            href={l.href}
+                            role="menuitem"
+                            className={navLinkClass(pathname, l.href, true)}
+                            onClick={() => setSettingsOpen(false)}
+                          >
+                            {l.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            ) : null}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-2 border-border/70 ps-2 sm:gap-3 sm:border-s sm:ps-4">
+            <div
+              className="flex max-w-[min(17rem,calc(100vw-9rem))] items-center gap-2.5 rounded-2xl border border-border/70 bg-card/80 py-1.5 pe-3 ps-2 shadow-sm backdrop-blur-md dark:bg-card/60"
+              dir="rtl"
+              aria-label={`مرحباً ${userName}`}
             >
-              <UserRound className="size-[1.125rem]" strokeWidth={1.75} />
-            </span>
-            <span className="min-w-0 text-start leading-none">
-              <span className="mb-0.5 block text-[0.6875rem] font-medium leading-none text-zinc-500 dark:text-zinc-400">
-                مرحباً
+              <span
+                className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20"
+                aria-hidden
+              >
+                <UserRound className="size-[1.125rem]" strokeWidth={1.75} />
               </span>
-              <span className="block truncate text-[0.9375rem] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
-                {userName}
+              <span className="min-w-0 text-start leading-none">
+                <span className="mb-0.5 block text-[0.6875rem] font-medium leading-none text-muted-foreground">
+                  مرحباً
+                </span>
+                <span className="block truncate text-[0.9375rem] font-semibold leading-snug tracking-tight text-foreground">
+                  {userName}
+                </span>
               </span>
-            </span>
+            </div>
+            <SignOutButton />
           </div>
-          <SignOutButton />
-        </div>
         </div>
 
         {shortcuts.length > 0 ? (
-          <nav
-            className="mt-1.5 flex flex-wrap items-center gap-0.5 border-t border-zinc-200/70 pt-1.5"
-            aria-label="اختصارات سريعة"
-          >
-            {shortcuts.map(({ href, label, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                title={label}
-                aria-label={label}
-                className={shortcutBtnClass(pathname, href)}
+          <div className="border-t border-border/60 bg-gradient-to-b from-muted/15 to-transparent py-3 dark:from-muted/10">
+            <nav
+              className="flex items-stretch gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2.5 [&::-webkit-scrollbar]:hidden"
+              aria-label="اختصارات سريعة"
+            >
+              <div className="flex shrink-0 items-center gap-2 pe-1 text-muted-foreground sm:pe-2">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <Zap className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                </span>
+                <span className="hidden text-xs font-semibold tracking-tight text-foreground/90 sm:inline sm:max-w-[5.5rem] sm:leading-snug">
+                  وصول سريع
+                </span>
+              </div>
+              <div
+                role="list"
+                className="flex min-w-0 flex-1 items-stretch gap-1.5 sm:gap-2"
               >
-                <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
-              </Link>
-            ))}
-          </nav>
+                {shortcuts.map(({ href, label, Icon }) => {
+                  const shortcutActive = shortcutIsActive(pathname, href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      role="listitem"
+                      title={label}
+                      aria-current={shortcutActive ? "page" : undefined}
+                      className={shortcutLinkClass(pathname, href)}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 sm:size-10",
+                          shortcutActive
+                            ? "bg-primary/15 text-primary ring-1 ring-primary/20"
+                            : "bg-muted/60 text-muted-foreground ring-1 ring-border/50 group-hover:bg-background group-hover:text-foreground dark:bg-muted/40"
+                        )}
+                      >
+                        <Icon
+                          className="size-[1.125rem] sm:size-5"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 max-w-[7.5rem] text-[11px] font-semibold leading-tight text-foreground sm:max-w-[9rem] sm:text-xs">
+                          {label}
+                        </span>
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
         ) : null}
       </div>
     </header>

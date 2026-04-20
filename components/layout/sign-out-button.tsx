@@ -16,7 +16,7 @@ export function SignOutButton({ className }: Props) {
         variant="outline"
         size="sm"
         className={cn(
-          "shrink-0 rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-600 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900",
+          "shrink-0 rounded-xl border-border bg-background text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground",
           className
         )}
       >
