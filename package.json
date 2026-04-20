@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:wipe:keep-users-classifications": "npx tsx scripts/wipe-db-keep-users-classifications.ts",
+    "db:seed:core-labels": "npx tsx scripts/seed-core-field-labels.ts",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate"
   },

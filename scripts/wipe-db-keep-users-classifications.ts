@@ -2,6 +2,8 @@
  * يحذف كل بيانات CRM ما عدا:
  * - User (الحسابات)
  * - ClientClassification (التصنيفات)
+ * - CoreFieldLabel (تسميات الحقول)
+ * - CustomFieldDefinition (تعريفات الحقول المخصصة)
  *
  * التشغيل: npx tsx scripts/wipe-db-keep-users-classifications.ts
  */
@@ -25,8 +27,6 @@ async function main() {
       await tx.clientTransfer.deleteMany();
       await tx.auditLog.deleteMany();
       await tx.client.deleteMany();
-      await tx.customFieldDefinition.deleteMany();
-      await tx.coreFieldLabel.deleteMany();
     },
     { maxWait: 60_000, timeout: 300_000 }
   );
