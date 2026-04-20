@@ -31,10 +31,10 @@ const reportLinks: NavLink[] = [
   { href: "/reports/recommendations", label: "توصيات الإدارة" },
   { href: "/reports/calls", label: "عملاء جدد / المواعيد" },
   { href: "/reports/warming", label: "أدوات Warming" },
+  { href: "/reports/transferred", label: "عملاء منقولة" },
 ];
 
 const tailLinks: NavLink[] = [
-  { href: "/clients/transferred", label: "عملاء منقولة" },
   {
     href: "/settings/field-labels",
     label: "تصنيفات العملاء",

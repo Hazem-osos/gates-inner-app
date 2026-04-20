@@ -52,7 +52,7 @@ export async function transferClientToSalesAction(
       });
     });
     revalidatePath("/clients");
-    revalidatePath("/clients/transferred");
+    revalidatePath("/reports/transferred");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -77,6 +77,6 @@ export async function acknowledgeTransferredClientAction(
     where: { id: transferId },
     data: { acknowledgedAt: new Date() },
   });
-  revalidatePath("/clients/transferred");
+  revalidatePath("/reports/transferred");
   return { ok: true };
 }
