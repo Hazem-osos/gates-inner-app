@@ -29,6 +29,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ExpectedField } from "@/lib/import/expected-field";
+import {
+  compactNormalized,
+  normalizeArabicText,
+} from "@/lib/import/normalize-arabic-text";
 import { cn } from "@/lib/utils";
 
 const NONE_VALUE = "__none__";
@@ -45,23 +49,94 @@ export type DynamicExcelImporterProps = {
   className?: string;
 };
 
-function normalizeForMatch(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_\-\u200c\u200f\u0640]/g, "");
+const MIN_PARTIAL_LEN = 3;
+/** أدنى طول للمطابقة الجزئية على النص المدمج (بدون مسافات) لتقليل التطابق العرضي. */
+const MIN_PARTIAL_LEN_COMPACT = 4;
+
+function humanizeFieldKey(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .trim();
 }
 
-function scoreMatch(excelHeader: string, field: ExpectedField): number {
-  const h = normalizeForMatch(excelHeader);
-  const key = normalizeForMatch(field.key);
-  const lab = normalizeForMatch(field.label);
-  if (!h) return 0;
-  if (h === key) return 100;
-  if (h === lab) return 95;
-  if (key && (h.includes(key) || key.includes(h))) return 80;
-  if (lab && (h.includes(lab) || lab.includes(h))) return 75;
-  return 0;
+/**
+ * Step C: أحد النصين يحتوي الآخر (بعد التطبيع)، مع حد أدنى لطول الأقصر.
+ */
+function partialContainScore(
+  a: string,
+  b: string,
+  minShort: number
+): number {
+  if (!a || !b) return 0;
+  const shorter = a.length <= b.length ? a : b;
+  const longer = a.length <= b.length ? b : a;
+  if (shorter.length < minShort) return 0;
+  if (!longer.includes(shorter)) return 0;
+  return shorter.length * 800 + longer.length;
+}
+
+/**
+ * تقدير قوة التطابق بين عنوان عمود Excel وحقل متوقع.
+ * التسلسل: (A) تطابق تام للتسمية أو المفتاح — (B) تطابق تام لأحد aliases —
+ * (C) تطابق جزئي (احتواء) للتسمية / المفتاح / المرادفات، مع نسخة مدمجة للمسافات.
+ */
+function fieldMatchScore(excelHeader: string, field: ExpectedField): number {
+  const h = normalizeArabicText(excelHeader);
+  const hc = compactNormalized(excelHeader);
+  if (!h && !hc) return 0;
+
+  const labelN = normalizeArabicText(field.label);
+  const labelC = compactNormalized(field.label);
+  const keySrc = humanizeFieldKey(field.key);
+  const keyN = normalizeArabicText(keySrc);
+  const keyC = compactNormalized(keySrc);
+
+  let best = 0;
+
+  // Step A — exact label / key (normalized or compact-only)
+  if (labelN && h === labelN) {
+    best = Math.max(best, 1_000_000 + h.length);
+  } else if (labelC && hc === labelC) {
+    best = Math.max(best, 985_000 + hc.length);
+  }
+
+  if (keyN && h === keyN) {
+    best = Math.max(best, 970_000 + h.length);
+  } else if (keyC && hc === keyC) {
+    best = Math.max(best, 955_000 + hc.length);
+  }
+
+  // Step B — alias exact
+  for (const rawAlias of field.aliases ?? []) {
+    const aN = normalizeArabicText(rawAlias);
+    const aC = compactNormalized(rawAlias);
+    if (aN && h === aN) {
+      best = Math.max(best, 930_000 + h.length);
+    } else if (aC && hc === aC) {
+      best = Math.max(best, 915_000 + hc.length);
+    }
+  }
+
+  // Step C — partial (substring) both directions encoded as shorter ⊆ longer
+  const spacedCandidates = [labelN, keyN, ...(field.aliases ?? []).map(normalizeArabicText)].filter(
+    (s) => s.length > 0
+  );
+  for (const c of spacedCandidates) {
+    const p = partialContainScore(h, c, MIN_PARTIAL_LEN);
+    if (p > 0) best = Math.max(best, 400_000 + p);
+  }
+
+  const compactCandidates = [labelC, keyC, ...(field.aliases ?? []).map(compactNormalized)].filter(
+    (s) => s.length > 0
+  );
+  for (const c of compactCandidates) {
+    const p = partialContainScore(hc, c, MIN_PARTIAL_LEN_COMPACT);
+    if (p > 0) best = Math.max(best, 360_000 + p);
+  }
+
+  return best;
 }
 
 /**
@@ -85,12 +160,17 @@ function autoMapHeaders(
     let best: { header: string; score: number } | null = null;
     for (const header of headers) {
       if (!header || used.has(header)) continue;
-      const sc = scoreMatch(header, field);
-      if (sc > 0 && (!best || sc > best.score)) {
+      const sc = fieldMatchScore(header, field);
+      if (
+        sc > 0 &&
+        (!best ||
+          sc > best.score ||
+          (sc === best.score && header.length > best.header.length))
+      ) {
         best = { header, score: sc };
       }
     }
-    if (best && best.score >= 75) {
+    if (best) {
       mapping[field.key] = best.header;
       used.add(best.header);
     } else {

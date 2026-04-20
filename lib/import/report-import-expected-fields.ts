@@ -8,6 +8,14 @@ const ID_FIELD: ExpectedField = {
   key: "id",
   label: "معرّف العميل",
   required: true,
+  aliases: [
+    "رقم العميل",
+    "كود العميل",
+    "معرف العميل",
+    "id",
+    "client id",
+    "رقم التسلسل",
+  ],
 };
 
 const REPORT_BASE_FIELDS: ExpectedField[] = [
@@ -38,14 +46,31 @@ const RECOMMENDATION_FIELDS: ExpectedField[] = [
     key: "recommendation_id",
     label: "معرّف التوصية",
     required: true,
+    aliases: ["رقم التوصية", "معرف التوصية", "recommendation id", "id"],
   },
-  { key: "body", label: "نص التوصية", required: false },
-  { key: "actionTaken", label: "الإجراء المتخذ", required: false },
-  { key: "workDate", label: "تاريخ العمل", required: false },
+  {
+    key: "body",
+    label: "نص التوصية",
+    required: false,
+    aliases: ["التوصية", "محتوى التوصية", "body", "recommendation text"],
+  },
+  {
+    key: "actionTaken",
+    label: "الإجراء المتخذ",
+    required: false,
+    aliases: ["الإجراء المنفذ", "ما تم اتخاذه", "action taken"],
+  },
+  {
+    key: "workDate",
+    label: "تاريخ العمل",
+    required: false,
+    aliases: ["يوم العمل", "تاريخ التنفيذ", "work date"],
+  },
   {
     key: "recommendationDate",
     label: "تاريخ التوصية",
     required: false,
+    aliases: ["تاريخ إصدار التوصية", "recommendation date"],
   },
 ];
 
