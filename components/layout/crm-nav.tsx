@@ -78,21 +78,7 @@ type NavShortcut = {
   managerPlus?: boolean;
 };
 
-/** ألوان خفيفة لكل شريحة — تتكرر حسب الترتيب */
-const SHORTCUT_CHIP_CLASSES = [
-  "border-sky-400/45 bg-gradient-to-br from-sky-400/25 to-sky-700/10 text-sky-950 dark:border-sky-500/35 dark:from-sky-500/20 dark:to-sky-950/55 dark:text-sky-50",
-  "border-violet-400/45 bg-gradient-to-br from-violet-400/25 to-violet-700/10 text-violet-950 dark:border-violet-500/35 dark:from-violet-500/20 dark:to-violet-950/55 dark:text-violet-50",
-  "border-emerald-400/45 bg-gradient-to-br from-emerald-400/25 to-emerald-700/10 text-emerald-950 dark:border-emerald-500/35 dark:from-emerald-500/20 dark:to-emerald-950/55 dark:text-emerald-50",
-  "border-amber-400/45 bg-gradient-to-br from-amber-400/25 to-amber-700/10 text-amber-950 dark:border-amber-500/35 dark:from-amber-500/20 dark:to-amber-950/55 dark:text-amber-50",
-  "border-rose-400/45 bg-gradient-to-br from-rose-400/25 to-rose-700/10 text-rose-950 dark:border-rose-500/35 dark:from-rose-500/20 dark:to-rose-950/55 dark:text-rose-50",
-  "border-cyan-400/45 bg-gradient-to-br from-cyan-400/25 to-cyan-700/10 text-cyan-950 dark:border-cyan-500/35 dark:from-cyan-500/20 dark:to-cyan-950/55 dark:text-cyan-50",
-  "border-orange-400/45 bg-gradient-to-br from-orange-400/25 to-orange-700/10 text-orange-950 dark:border-orange-500/35 dark:from-orange-500/20 dark:to-orange-950/55 dark:text-orange-50",
-  "border-indigo-400/45 bg-gradient-to-br from-indigo-400/25 to-indigo-700/10 text-indigo-950 dark:border-indigo-500/35 dark:from-indigo-500/20 dark:to-indigo-950/55 dark:text-indigo-50",
-  "border-fuchsia-400/45 bg-gradient-to-br from-fuchsia-400/25 to-fuchsia-700/10 text-fuchsia-950 dark:border-fuchsia-500/35 dark:from-fuchsia-500/20 dark:to-fuchsia-950/55 dark:text-fuchsia-50",
-  "border-teal-400/45 bg-gradient-to-br from-teal-400/25 to-teal-700/10 text-teal-950 dark:border-teal-500/35 dark:from-teal-500/20 dark:to-teal-950/55 dark:text-teal-50",
-] as const;
-
-/** أيقونات سريعة تحت القائمة — شبكة ملتفة بدون تمرير أفقي */
+/** أيقونات سريعة تحت القائمة — شبكة ملتفة، التسمية تظهر عند التمرير فقط */
 const navShortcuts: NavShortcut[] = [
   { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
   { href: "/clients", label: "العملاء", Icon: Users },
@@ -406,49 +392,45 @@ export function CrmNav({
         </div>
 
         {shortcuts.length > 0 ? (
-          <div className="border-t border-border/60 bg-gradient-to-b from-muted/12 to-transparent py-1.5 dark:from-muted/8">
+          <div className="border-t border-border/50 bg-muted/20 py-1.5 dark:bg-muted/10">
             <nav
-              className="space-y-1"
+              className="flex flex-col gap-1"
               aria-label="اختصارات سريعة"
             >
-              <div className="flex items-center gap-1 px-0.5">
-                <span className="flex size-5 items-center justify-center rounded bg-primary/15 text-primary ring-1 ring-primary/20">
-                  <Zap className="size-2.5 shrink-0" strokeWidth={2.5} aria-hidden />
+              <div className="flex items-center gap-1.5 px-0.5 text-muted-foreground/70">
+                <span className="flex size-5 items-center justify-center rounded-md border border-border/60 bg-background/80 text-foreground/80 shadow-sm">
+                  <Zap className="size-2.5 shrink-0" strokeWidth={2} aria-hidden />
                 </span>
-                <span className="text-[10px] font-bold tracking-tight text-muted-foreground">
-                  وصول سريع
-                </span>
+                <span className="h-px flex-1 max-w-16 bg-border/80" aria-hidden />
               </div>
               <div
                 role="list"
-                className="grid grid-cols-4 gap-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12"
+                className="grid grid-cols-5 gap-0.5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12"
               >
-                {shortcuts.map(({ href, label, Icon }, index) => {
+                {shortcuts.map(({ href, label, Icon }) => {
                   const shortcutActive = shortcutIsActive(pathname, href);
-                  const chip =
-                    SHORTCUT_CHIP_CLASSES[
-                      index % SHORTCUT_CHIP_CLASSES.length
-                    ];
                   return (
                     <Link
                       key={href}
                       href={href}
                       role="listitem"
-                      title={label}
+                      aria-label={label}
                       aria-current={shortcutActive ? "page" : undefined}
                       className={cn(
-                        "group flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-md border bg-gradient-to-br px-0.5 py-1 text-center shadow-sm transition-transform duration-150 hover:z-[1] hover:scale-[1.02] hover:shadow-md",
-                        chip,
+                        "group relative flex h-8 w-full items-center justify-center rounded-md border border-border/50 bg-background/90 text-muted-foreground shadow-sm transition-[background-color,box-shadow,color,border-color] duration-200 hover:border-border hover:bg-muted/50 hover:text-foreground hover:shadow-md dark:bg-background/60 dark:hover:bg-muted/25",
                         shortcutActive &&
-                          "ring-2 ring-primary ring-offset-1 ring-offset-background dark:ring-offset-background"
+                          "border-primary/35 bg-primary/[0.07] text-primary shadow-sm ring-1 ring-primary/20 dark:bg-primary/10"
                       )}
                     >
                       <Icon
-                        className="size-3 shrink-0 opacity-90"
-                        strokeWidth={2.25}
+                        className="size-3.5 shrink-0 sm:size-4"
+                        strokeWidth={1.75}
                         aria-hidden
                       />
-                      <span className="line-clamp-2 w-full px-0.5 text-[9px] font-semibold leading-[1.15] sm:text-[10px]">
+                      <span
+                        className="pointer-events-none absolute start-1/2 top-[calc(100%+6px)] z-[60] -translate-x-1/2 whitespace-nowrap rounded-md border border-border/80 bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground opacity-0 shadow-lg ring-1 ring-black/5 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 dark:ring-white/10"
+                        role="tooltip"
+                      >
                         {label}
                       </span>
                     </Link>
