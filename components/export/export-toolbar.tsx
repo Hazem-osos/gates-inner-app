@@ -8,6 +8,12 @@ import { useState } from "react";
 import { ReportExcelImportDialog } from "@/components/import/report-excel-import-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { pdfFromExcelHref, reportImportExcelUrl } from "@/lib/export-excel-href";
+import {
+  REPORT_EXCEL_EXPORT_ICON_CLASS,
+  REPORT_EXCEL_EXPORT_LINK_CLASS,
+  REPORT_PDF_EXPORT_ICON_CLASS,
+  REPORT_PDF_EXPORT_LINK_CLASS,
+} from "@/lib/ui/report-export-import-classes";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -70,13 +76,10 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
         href={excelHref}
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
-          "gap-1.5 border-emerald-200/90 bg-emerald-50/90 text-emerald-900 shadow-sm hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-100 dark:hover:border-emerald-600 dark:hover:bg-emerald-900/55 dark:hover:text-emerald-50"
+          REPORT_EXCEL_EXPORT_LINK_CLASS
         )}
       >
-        <FileSpreadsheet
-          className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
-          aria-hidden
-        />
+        <FileSpreadsheet className={REPORT_EXCEL_EXPORT_ICON_CLASS} aria-hidden />
         تصدير Excel
       </Link>
       <Link
@@ -85,13 +88,10 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
         rel="noopener noreferrer"
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
-          "gap-1.5 border-rose-200/90 bg-rose-50/90 text-rose-900 shadow-sm hover:border-rose-300 hover:bg-rose-100 hover:text-rose-950 dark:border-rose-900/80 dark:bg-rose-950/40 dark:text-rose-100 dark:hover:border-rose-700 dark:hover:bg-rose-900/50 dark:hover:text-rose-50"
+          REPORT_PDF_EXPORT_LINK_CLASS
         )}
       >
-        <FileText
-          className="size-3.5 shrink-0 text-rose-600 dark:text-rose-400"
-          aria-hidden
-        />
+        <FileText className={REPORT_PDF_EXPORT_ICON_CLASS} aria-hidden />
         طباعة / PDF
       </Link>
       {importKind ? (
@@ -100,6 +100,7 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
           <label
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
+              REPORT_EXCEL_EXPORT_LINK_CLASS,
               busy ? "pointer-events-none opacity-60" : "cursor-pointer"
             )}
           >

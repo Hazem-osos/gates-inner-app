@@ -1,4 +1,4 @@
-import { FileDown, Upload } from "lucide-react";
+import { FileSpreadsheet, Upload } from "lucide-react";
 import Link from "next/link";
 
 import { TransferClientDialog } from "@/components/clients/transfer-client-dialog";
@@ -27,6 +27,12 @@ import {
 } from "@/lib/export-excel-href";
 import { statusLabelAr } from "@/lib/clients-form-values";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  REPORT_EXCEL_EXPORT_ICON_CLASS,
+  REPORT_EXCEL_EXPORT_LINK_CLASS,
+  REPORT_EXCEL_IMPORT_LINK_ICON_CLASS,
+  REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS,
+} from "@/lib/ui/report-export-import-classes";
 import { cn } from "@/lib/utils";
 import { ClientStatus } from "@prisma/client";
 
@@ -158,11 +164,11 @@ export default async function ClientsListPage({
             href={clientsImportTemplateHref()}
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "gap-1.5 border-teal-200/90 bg-teal-50/90 text-teal-900 shadow-sm hover:border-teal-300 hover:bg-teal-100 hover:text-teal-950 dark:border-teal-800 dark:bg-teal-950/45 dark:text-teal-100 dark:hover:border-teal-600 dark:hover:bg-teal-900/55 dark:hover:text-teal-50"
+              REPORT_EXCEL_EXPORT_LINK_CLASS
             )}
           >
-            <FileDown
-              className="size-3.5 shrink-0 text-teal-600 dark:text-teal-400"
+            <FileSpreadsheet
+              className={REPORT_EXCEL_EXPORT_ICON_CLASS}
               aria-hidden
             />
             تنزيل قالب Excel
@@ -171,11 +177,11 @@ export default async function ClientsListPage({
             href="/clients/import"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "gap-1.5 border-violet-200/90 bg-violet-50/90 text-violet-900 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-950 dark:border-violet-800 dark:bg-violet-950/45 dark:text-violet-100 dark:hover:border-violet-600 dark:hover:bg-violet-900/55 dark:hover:text-violet-50"
+              REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS
             )}
           >
             <Upload
-              className="size-3.5 shrink-0 text-violet-600 dark:text-violet-400"
+              className={REPORT_EXCEL_IMPORT_LINK_ICON_CLASS}
               aria-hidden
             />
             استيراد من Excel

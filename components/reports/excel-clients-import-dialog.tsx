@@ -2,6 +2,7 @@
 
 import { ClientsMappedImportDialog } from "@/components/import/clients-mapped-import-dialog";
 import type { ImportType } from "@/lib/import/excel-client-import";
+import { REPORT_EXCEL_IMPORT_SOLID_CLASS } from "@/lib/ui/report-export-import-classes";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -16,10 +17,7 @@ export function ExcelClientsImportDialog({ importType, className }: Props) {
       importType={importType}
       triggerBadge={importType === "not-b" ? "NB" : "B"}
       triggerLabel="استيراد من Excel"
-      className={cn(
-        "border-0 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700",
-        className
-      )}
+      className={cn(REPORT_EXCEL_IMPORT_SOLID_CLASS, className)}
     />
   );
 }

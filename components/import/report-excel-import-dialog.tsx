@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
 import { Button } from "@/components/ui/button";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { REPORT_EXCEL_IMPORT_SOLID_CLASS } from "@/lib/ui/report-export-import-classes";
+import { cn } from "@/lib/utils";
 import { getReportImportExpectedFields } from "@/lib/import/report-import-expected-fields";
 
 type Props = {
@@ -29,7 +31,7 @@ export function ReportExcelImportDialog({
         type="button"
         variant="secondary"
         size="sm"
-        className={triggerClassName}
+        className={cn(REPORT_EXCEL_IMPORT_SOLID_CLASS, triggerClassName)}
         onClick={() => setOpen(true)}
       >
         استيراد (تعيين أعمدة)
