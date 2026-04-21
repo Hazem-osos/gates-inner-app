@@ -2,13 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
-import {
-  BarChart3,
-  CalendarDays,
-  Sparkles,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { BarChart3, Sparkles, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -61,12 +55,6 @@ const SHORTCUTS: Omit<Shortcut, "accent">[] = [
     label: "قاعدة العملاء",
     description: "قائمة وبحث العملاء",
     icon: Users,
-  },
-  {
-    href: "/dashboard#dashboard-today-followups",
-    label: "متابعات اليوم",
-    description: "انتقال سريع لجدول المتابعات",
-    icon: CalendarDays,
   },
   {
     href: "/reports/b",
@@ -134,7 +122,7 @@ export function DashboardShortcuts() {
       </div>
 
       <motion.ul
-        className="grid w-full grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5"
+        className="grid w-full grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
