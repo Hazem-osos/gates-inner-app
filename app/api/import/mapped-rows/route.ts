@@ -5,7 +5,9 @@ import type { UserRole } from "@prisma/client";
 
 import { processReportImportRows } from "@/lib/import/process-report-import-rows";
 
+export const runtime = "nodejs";
 export const maxDuration = 120;
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const session = await getSessionUser();

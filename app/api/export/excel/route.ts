@@ -4,6 +4,11 @@ import * as XLSX from "xlsx";
 import { buildExportPayload } from "@/lib/export/build-export-data";
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 
+/** تقارير كبيرة — يتجنب انتهاء المهلة (مثل Vercel الافتراضي 10s) */
+export const runtime = "nodejs";
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
+
 /** أعمدة مقروءة في Excel */
 function applyReadableGrid(ws: XLSX.WorkSheet) {
   const ref = ws["!ref"];

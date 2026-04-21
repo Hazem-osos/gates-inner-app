@@ -400,6 +400,17 @@ export async function buildExportPayload(
     }
   }
 
+  if (kind === "report-closed") {
+    const classKeyClosed = sp.get("class")?.trim();
+    if (classKeyClosed && classKeyClosed !== "all") {
+      clients = clients.filter(
+        (c) =>
+          c.classificationId === classKeyClosed ||
+          c.notBClassification === classKeyClosed
+      );
+    }
+  }
+
   if (kind === "report-won") {
     const from = sp.get("from")?.trim();
     const to = sp.get("to")?.trim();
