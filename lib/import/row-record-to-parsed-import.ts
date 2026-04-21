@@ -7,6 +7,7 @@ import {
   type ParsedImportRow,
   type ParseRowResult,
 } from "@/lib/import/excel-client-import";
+import { MAX_FOLLOW_UP_SLOTS_EXCEL } from "@/lib/import/follow-up-slot-columns";
 
 function parseYesCellFlat(raw: unknown): boolean | null {
   const s = cellStr(raw).toLowerCase();
@@ -23,7 +24,7 @@ function nullIfEmpty(s: string): string | null {
 
 /**
  * يحوّل صفاً مسطّحاً (مفاتيح = أسماء الحقول بعد التعيين) إلى نفس شكل استيراد العملاء.
- * لا يبني `followUpSlots` من أعمدة ديناميكية — يقرأ JSON من الحقل `followUpSlots` إن وُجد.
+ * يقرأ `followUpSlots` من JSON و/أو من أعمدة «متابعة N — نص/تاريخ».
  */
 export function rowRecordToParsedImportRow(
   row: Record<string, unknown>,
@@ -58,7 +59,7 @@ export function rowRecordToParsedImportRow(
     }
   }
   const columnSlots: ParsedImportRow["followUpSlots"] = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= MAX_FOLLOW_UP_SLOTS_EXCEL; i++) {
     const note = cellStr(row[`followUpSlot${i}Note`]);
     const dateRaw = row[`followUpSlot${i}Date`];
     const date = parseExcelDateCell(dateRaw);

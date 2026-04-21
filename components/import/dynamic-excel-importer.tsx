@@ -431,10 +431,11 @@ export function DynamicExcelImporter({
               className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
               role="note"
             >
-              <span className="font-semibold">المتابعات:</span> اربط عمود «متابعات
-              (JSON)» أو أزواج «متابعة ١–٥ — نص/تاريخ» من Excel لتُستورد في شبكة
-              المتابعات. عند استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B
-              يُحدَّث إلى B وتُمسَح حقول التصنيف الفرعي Not B.
+              <span className="font-semibold">المتابعات:</span> اربط أعمدة «متابعة
+              ١ — نص» و«متابعة ١ — تاريخ» لكل خانة (حتى ٣٠)، أو عمود JSON قديم
+              «متابعات (JSON)». تصدير التقرير يولّد نفس الأعمدة تلقائياً. عند
+              استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B يُحدَّث إلى B
+              وتُمسَح حقول التصنيف الفرعي Not B.
             </div>
             <ul className="flex flex-col gap-4">
               {expectedFields.map((field) => {

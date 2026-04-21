@@ -53,7 +53,8 @@ function parseIsoDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function normalizeSlotsSimple(raw: unknown): { note: string; date: string }[] {
+/** تطبيع مصفوفة المتابعات من JSON — للتصدير والفلاتر */
+export function normalizeSlotsSimple(raw: unknown): { note: string; date: string }[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item) => {
     const o = item as Record<string, unknown>;
