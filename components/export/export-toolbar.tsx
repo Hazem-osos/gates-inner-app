@@ -81,7 +81,7 @@ export function ExportToolbar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-end gap-2",
+        "flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap",
         className
       )}
     >

@@ -14,8 +14,9 @@ export type ReportToolbarExportsConfig = {
   reportMappedImportKind?: string;
 };
 
+/** صف واحد على الشاشات العريضة؛ محاذاة عمودية مع فلتر السيلز */
 export const REPORT_FILTER_EXPORTS_BAR_CLASS =
-  "sticky top-14 z-20 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90 lg:flex-nowrap lg:items-center";
+  "sticky top-14 z-20 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90 lg:flex-nowrap lg:items-center lg:gap-y-0";
 
 export function ReportPageExportsToolbar({
   config,
@@ -33,7 +34,7 @@ export function ReportPageExportsToolbar({
     <div
       data-gate-exempt
       className={cn(
-        "flex min-h-10 min-w-0 max-w-full flex-wrap items-center justify-end gap-2 sm:min-h-0",
+        "flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-2 self-center",
         className
       )}
       dir="rtl"
