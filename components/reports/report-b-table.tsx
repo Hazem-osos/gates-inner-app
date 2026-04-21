@@ -132,6 +132,7 @@ type Props = {
   /** داخل بطاقة الفلاتر: تصدير Excel / PDF واستيراد التقرير وعملاء Excel */
   toolbarExports?: {
     excelHref: string;
+    /** استيراد سريع (ملف) — يُخفى تلقائياً إذا وُجد `clientsMappedImport` لتفادي زرّي استيراد */
     importKind?: string;
     clientsMappedImport?: "b" | "not-b";
   };
@@ -245,6 +246,11 @@ export function ReportBTable({
   auditReportKey,
   toolbarExports,
 }: Props) {
+  const toolbarImportKind =
+    toolbarExports?.clientsMappedImport != null
+      ? undefined
+      : toolbarExports?.importKind;
+
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
@@ -697,7 +703,7 @@ export function ReportBTable({
               >
                 <ExportToolbar
                   excelHref={toolbarExports.excelHref}
-                  importKind={toolbarExports.importKind}
+                  importKind={toolbarImportKind}
                   className="justify-end"
                 />
               </div>
@@ -719,7 +725,7 @@ export function ReportBTable({
             ) : null}
             <ExportToolbar
               excelHref={toolbarExports.excelHref}
-              importKind={toolbarExports.importKind}
+              importKind={toolbarImportKind}
               className="justify-end"
             />
           </div>
