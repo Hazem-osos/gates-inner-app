@@ -14,7 +14,7 @@ import {
   useTransition,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -616,17 +616,24 @@ export function ReportBTable({
     return "bg-blue-600 text-white hover:bg-blue-700";
   }
 
-  function violBtn(active: boolean): string {
-    return active
-      ? "bg-red-900 text-white hover:bg-red-950"
-      : "bg-red-600 text-white hover:bg-red-700";
+  function violChip(active: boolean): string {
+    return cn(
+      "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-all",
+      active
+        ? "border-destructive bg-destructive text-destructive-foreground shadow-sm ring-2 ring-destructive/25 hover:bg-destructive/90"
+        : "border border-destructive/35 bg-background text-destructive hover:border-destructive/55 hover:bg-destructive/10"
+    );
   }
 
   const notBClassifications = classifications.filter((c) => !c.isBRow);
 
   return (
     <div className="flex flex-col gap-4">
-      <div data-gate-exempt className="flex flex-wrap items-center gap-2">
+      <div
+        data-gate-exempt
+        className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
+        dir="rtl"
+      >
         {currentUserId ? (
           <ReportWorkLogDialog
             reportKey={resolvedAuditReportKey}
@@ -636,7 +643,7 @@ export function ReportBTable({
         {toolbar !== "closed" ? (
           <Input
             placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
-            className="h-9 max-w-md"
+            className="h-10 min-w-[12rem] flex-1 max-w-xl rounded-xl border-border/70 bg-background/90 text-sm shadow-inner"
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
             dir="rtl"
@@ -645,75 +652,85 @@ export function ReportBTable({
       </div>
 
       {toolbar !== "closed" ? (
-        <>
-      <div data-gate-exempt className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          className={sortBtnClass(sortDays)}
-          onClick={() =>
-            cycleSort(sortDays, setSortDays, () => {
-              setSortPrice(null);
-              setSortCall(null);
-            })
-          }
+        <div
+          data-gate-exempt
+          className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
+          dir="rtl"
         >
-          ترتيب بعدد الأيام
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          className={sortBtnClass(sortPrice)}
-          onClick={() =>
-            cycleSort(sortPrice, setSortPrice, () => {
-              setSortDays(null);
-              setSortCall(null);
-            })
-          }
-        >
-          ترتيب بعرض السعر
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          className={sortBtnClass(sortCall)}
-          onClick={() =>
-            cycleSort(sortCall, setSortCall, () => {
-              setSortDays(null);
-              setSortPrice(null);
-            })
-          }
-        >
-          ترتيب بتاريخ الاتصال
-        </Button>
-      </div>
-
-      <div data-gate-exempt className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={visitExtra === "scheduled" ? "default" : "outline"}
-          onClick={() =>
-            setVisitExtra((v) =>
-              v === "scheduled" ? "none" : "scheduled"
-            )
-          }
-        >
-          عرض المحدد تاريخ زيارة لهم فقط
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={visitExtra === "visited" ? "default" : "outline"}
-          onClick={() =>
-            setVisitExtra((v) => (v === "visited" ? "none" : "visited"))
-          }
-        >
-          العملاء التي تمت زيارتهم فعلياً
-        </Button>
-      </div>
-
-        </>
+          <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
+            ترتيب الأعمدة
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortDays))}
+              onClick={() =>
+                cycleSort(sortDays, setSortDays, () => {
+                  setSortPrice(null);
+                  setSortCall(null);
+                })
+              }
+            >
+              ترتيب بعدد الأيام
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortPrice))}
+              onClick={() =>
+                cycleSort(sortPrice, setSortPrice, () => {
+                  setSortDays(null);
+                  setSortCall(null);
+                })
+              }
+            >
+              ترتيب بعرض السعر
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortCall))}
+              onClick={() =>
+                cycleSort(sortCall, setSortCall, () => {
+                  setSortDays(null);
+                  setSortPrice(null);
+                })
+              }
+            >
+              ترتيب بتاريخ الاتصال
+            </Button>
+          </div>
+          <p className="mb-2 mt-4 text-xs font-semibold tracking-wide text-muted-foreground">
+            فلتر الزيارة
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="lg"
+              variant={visitExtra === "scheduled" ? "default" : "outline"}
+              className="h-9 rounded-xl px-3 text-sm"
+              onClick={() =>
+                setVisitExtra((v) =>
+                  v === "scheduled" ? "none" : "scheduled"
+                )
+              }
+            >
+              عرض المحدد تاريخ زيارة لهم فقط
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant={visitExtra === "visited" ? "default" : "outline"}
+              className="h-9 rounded-xl px-3 text-sm"
+              onClick={() =>
+                setVisitExtra((v) => (v === "visited" ? "none" : "visited"))
+              }
+            >
+              العملاء التي تمت زيارتهم فعلياً
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <SimpleDialog
@@ -752,32 +769,43 @@ export function ReportBTable({
 
       <div
         className={cn(
-          "sticky top-14 z-30 mb-2 rounded-md border bg-background/95 p-2 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90 dark:border-border/60",
+          "sticky top-14 z-30 mb-3 rounded-2xl border bg-card/90 p-4 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 dark:border-border/50",
           toolbar !== "closed"
-            ? "border-destructive/80 ring-1 ring-destructive/15"
-            : "border-border/80"
+            ? "border-destructive/25 shadow-[0_8px_30px_-12px_hsl(var(--destructive)/0.35)] ring-1 ring-destructive/10"
+            : "border-border/70"
         )}
       >
         <div
-          className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-3"
+          className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-4"
           dir="rtl"
         >
           {toolbar !== "closed" ? (
             <div
               data-gate-exempt
-              className="min-w-0 flex-1 rounded border border-destructive bg-background px-2 py-1.5 dark:bg-background"
+              className="min-w-0 flex-1 overflow-hidden rounded-xl border border-destructive/20 bg-gradient-to-br from-destructive/[0.06] via-background to-background shadow-sm dark:from-destructive/10 dark:via-background"
             >
-              <p className="mb-1 text-xs font-semibold leading-tight text-destructive">
-                ⚠ تجاوزات التقرير
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-start gap-3 border-b border-destructive/15 px-4 py-3">
+                <span
+                  className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/12 text-destructive shadow-inner dark:bg-destructive/20"
+                  aria-hidden
+                >
+                  <AlertTriangle className="size-5" strokeWidth={2.25} />
+                </span>
+                <div className="min-w-0 pt-0.5">
+                  <p className="text-base font-semibold leading-tight text-destructive">
+                    تجاوزات التقرير
+                  </p>
+                  <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                    اختر نوع التجاوز أو أدخل رقماً بجانب الزر المناسب، ثم راقب
+                    شريط الحالة أسفل الصندوق.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 p-3 sm:gap-2.5">
                 <Button
                   type="button"
-                  size="sm"
-                  className={cn(
-                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
-                    violBtn(violation === "visit_overdue")
-                  )}
+                  variant="ghost"
+                  className={violChip(violation === "visit_overdue")}
                   onClick={() =>
                     setViolation((v) =>
                       v === "visit_overdue" ? null : "visit_overdue"
@@ -786,63 +814,60 @@ export function ReportBTable({
                 >
                   تجاوز ميعاد الزيارة
                 </Button>
+                <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className={violChip(violation === "days_over")}
+                    onClick={() => {
+                      setViolation((x) =>
+                        x === "days_over" ? null : "days_over"
+                      );
+                      setDaysActive(true);
+                    }}
+                  >
+                    تجاوز عدد أيام
+                  </Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
+                    disabled={!daysActive}
+                    value={daysInput}
+                    onChange={(e) => setDaysInput(e.target.value)}
+                    dir="ltr"
+                    aria-label="عدد الأيام للتجاوز"
+                  />
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className={violChip(violation === "follow_count")}
+                    onClick={() => {
+                      setViolation((x) =>
+                        x === "follow_count" ? null : "follow_count"
+                      );
+                      setFollowActive(true);
+                    }}
+                  >
+                    تجاوز عدد متابعات
+                  </Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
+                    disabled={!followActive}
+                    value={followInput}
+                    onChange={(e) => setFollowInput(e.target.value)}
+                    dir="ltr"
+                    aria-label="عدد المتابعات للتجاوز"
+                  />
+                </div>
                 <Button
                   type="button"
-                  size="sm"
-                  className={cn(
-                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
-                    violBtn(violation === "days_over")
-                  )}
-                  onClick={() => {
-                    setViolation((x) =>
-                      x === "days_over" ? null : "days_over"
-                    );
-                    setDaysActive(true);
-                  }}
-                >
-                  تجاوز عدد أيام
-                </Button>
-                <Input
-                  type="number"
-                  min={0}
-                  className="h-7 w-12 px-1 text-center text-xs"
-                  disabled={!daysActive}
-                  value={daysInput}
-                  onChange={(e) => setDaysInput(e.target.value)}
-                  dir="ltr"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className={cn(
-                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
-                    violBtn(violation === "follow_count")
-                  )}
-                  onClick={() => {
-                    setViolation((x) =>
-                      x === "follow_count" ? null : "follow_count"
-                    );
-                    setFollowActive(true);
-                  }}
-                >
-                  تجاوز عدد متابعات
-                </Button>
-                <Input
-                  type="number"
-                  min={0}
-                  className="h-7 w-12 px-1 text-center text-xs"
-                  disabled={!followActive}
-                  value={followInput}
-                  onChange={(e) => setFollowInput(e.target.value)}
-                  dir="ltr"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className={cn(
-                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
-                    violBtn(violation === "neglected")
-                  )}
+                  variant="ghost"
+                  className={violChip(violation === "neglected")}
                   onClick={() =>
                     setViolation((v) =>
                       v === "neglected" ? null : "neglected"
@@ -853,11 +878,8 @@ export function ReportBTable({
                 </Button>
                 <Button
                   type="button"
-                  size="sm"
-                  className={cn(
-                    "h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight",
-                    violBtn(violation === "no_answer")
-                  )}
+                  variant="ghost"
+                  className={violChip(violation === "no_answer")}
                   onClick={() =>
                     setViolation((v) =>
                       v === "no_answer" ? null : "no_answer"
@@ -868,9 +890,8 @@ export function ReportBTable({
                 </Button>
                 <Button
                   type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 rounded-md px-2.5 py-1 text-xs font-medium leading-tight"
+                  variant="outline"
+                  className="h-9 shrink-0 rounded-xl border-dashed px-3 text-sm text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
                   onClick={() => {
                     setViolation(null);
                     setDaysInput("");
@@ -887,16 +908,16 @@ export function ReportBTable({
           <aside
             data-gate-exempt
             className={cn(
-              "rounded border border-border bg-muted/25 px-2 py-1.5 dark:bg-muted/15",
+              "rounded-xl border border-border/60 bg-muted/20 p-3 shadow-sm dark:bg-muted/15",
               toolbar !== "closed"
-                ? "w-full shrink-0 lg:w-auto lg:min-w-[11rem]"
+                ? "w-full shrink-0 lg:w-auto lg:min-w-[12rem]"
                 : "mx-auto w-full max-w-[14rem]"
             )}
           >
-            <p className="mb-1 text-center text-xs font-medium leading-tight text-muted-foreground">
+            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-muted-foreground">
               تلوين الصفوف
             </p>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-4 gap-2">
               {REPORT_B_PALETTE.map(({ hex }) => (
                 <div key={hex} className="flex min-w-0 flex-col gap-0.5">
                   <button
@@ -924,16 +945,23 @@ export function ReportBTable({
                 </div>
               ))}
             </div>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
               اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
               لإلغاء اختياره.
             </p>
           </aside>
         </div>
         {toolbar !== "closed" && (violationMessage() || visitBanner()) ? (
-          <div className="mt-2 space-y-0.5 border-t border-destructive/25 pt-2 text-xs leading-snug text-destructive dark:border-destructive/30">
-            {violationMessage() ? <p>{violationMessage()}</p> : null}
-            {visitBanner() ? <p>{visitBanner()}</p> : null}
+          <div
+            className="mt-4 space-y-1.5 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm leading-relaxed text-destructive dark:bg-destructive/10"
+            role="status"
+          >
+            {violationMessage() ? (
+              <p className="font-medium">{violationMessage()}</p>
+            ) : null}
+            {visitBanner() ? (
+              <p className="text-destructive/90">{visitBanner()}</p>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -76,7 +76,10 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
             aria-current={active ? "page" : undefined}
             title={label}
             className={cn(
-              "group relative flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 dark:text-slate-400",
+              "group relative flex shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 dark:text-slate-400",
+              ribbonMark
+                ? "size-10 min-h-10 min-w-10"
+                : "size-9 min-h-9 min-w-9",
               "hover:text-slate-700 dark:hover:text-slate-200",
               tint.wrap,
               tint.icon,
@@ -86,12 +89,7 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
           >
             {ribbonMark ? (
               <span
-                className={cn(
-                  "select-none font-bold leading-none text-current",
-                  ribbonMark.length >= 2
-                    ? "text-[8px] tracking-tighter"
-                    : "text-sm tracking-tight"
-                )}
+                className="select-none whitespace-nowrap text-sm font-black leading-none tracking-tight text-current"
                 aria-hidden
               >
                 {ribbonMark}

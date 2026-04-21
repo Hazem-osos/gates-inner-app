@@ -39,16 +39,23 @@ export async function GET() {
   const dumpPath = join(tmpdir(), `crm-backup-${randomUUID()}.sql`);
 
   try {
+    /** Prefer MySQL 8.x client if server is 8.x: mysqldump 9+ probes INFORMATION_SCHEMA.LIBRARY tables missing on older servers. */
+    const mysqldumpBin =
+      process.env.MYSQLDUMP_PATH?.trim() ||
+      process.env.MYSQLDUMP_BIN?.trim() ||
+      "mysqldump";
+
     const args = [
       `--defaults-file=${cnfPath}`,
       "--single-transaction",
+      "--set-gtid-purged=OFF",
       "--routines",
       "--triggers",
       "--no-tablespaces",
       cfg.database,
     ];
 
-    const proc = spawn("mysqldump", args, {
+    const proc = spawn(mysqldumpBin, args, {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
     });

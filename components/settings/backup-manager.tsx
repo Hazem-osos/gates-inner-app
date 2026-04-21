@@ -118,6 +118,22 @@ export function BackupManager() {
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
             تصدير قاعدة البيانات الحالية إلى ملف SQL يمكن حفظه خارج الخادم.
+            يُمرَّر{" "}
+            <code className="rounded bg-muted px-1">--set-gtid-purged=OFF</code>{" "}
+            لتفادي تحذيرات GTID عند الاستيراد لاحقاً خارج نفس طوبولوجيا النسخ
+            المتماثل.
+          </p>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+            إذا ظهر خطأ يذكر{" "}
+            <code className="rounded bg-muted px-1">LIBRARIES</code> في{" "}
+            <code className="rounded bg-muted px-1">information_schema</code>،
+            فعادةً سببه أن أداة{" "}
+            <code className="rounded bg-muted px-1">mysqldump</code> من إصدار 9
+            أو أحدث تُشغَّل ضد خادم MySQL 8 (مثل قواعد DigitalOcean). ثبّت عميل
+            MySQL 8.x ووجّه المتغير{" "}
+            <code className="rounded bg-muted px-1">MYSQLDUMP_PATH</code> في بيئة
+            التشغيل إلى مسار <code className="rounded bg-muted px-1">mysqldump</code>{" "}
+            الخاص به، أو استخدم نفس إصدار العميل تقريباً كإصدار الخادم.
           </p>
           <Button
             type="button"

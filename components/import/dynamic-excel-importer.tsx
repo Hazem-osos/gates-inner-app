@@ -411,14 +411,30 @@ export function DynamicExcelImporter({
             <p className="mb-3 text-sm font-medium text-foreground">
               ربط الأعمدة
             </p>
-            <p className="mb-3 text-xs text-muted-foreground">
-              تم اقتراح تطابق تلقائي يمكنك تعديله من القوائم.
+            <p className="mb-2 text-xs leading-relaxed text-muted-foreground">
+              تم اقتراح تطابق تلقائي يمكنك تعديله من القوائم. لكل حقل يظهر أسفل
+              القائمة اسم عمود Excel الفعلي المرتبط به بعد اختيارك.
             </p>
-            <ul className="flex flex-col gap-3">
-              {expectedFields.map((field) => (
+            <div
+              className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+              role="note"
+            >
+              <span className="font-semibold text-primary">رقم الهاتف (مطلوب):</span>{" "}
+              في الصف الأول من ملفك ابحث عن عنوان عمود يشبه:{" "}
+              <span className="font-medium">
+                هاتف، جوال، تليفون، تلفون، رقم الهاتف، رقم التليفون، رقم
+                الجوال، موبايل، mobile، phone
+              </span>{" "}
+              ثم اختره من القائمة بجانب «رقم الهاتف».
+            </div>
+            <ul className="flex flex-col gap-4">
+              {expectedFields.map((field) => {
+                const mappedHeader = mapping[field.key]?.trim() ?? "";
+                const selectValue = mappedHeader ? mappedHeader : NONE_VALUE;
+                return (
                 <li
                   key={field.key}
-                  className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4"
+                  className="flex flex-col gap-1.5 rounded-lg border border-border/50 bg-muted/10 p-3 sm:flex-row sm:items-start sm:gap-4"
                 >
                   <Label
                     className="min-w-[8rem] shrink-0 text-sm font-medium sm:pt-2"
@@ -429,8 +445,9 @@ export function DynamicExcelImporter({
                       <span className="ms-1 text-destructive">*</span>
                     ) : null}
                   </Label>
+                  <div className="min-w-0 flex-1 space-y-1.5">
                   <Select
-                    value={mapping[field.key]?.trim() ? mapping[field.key] : NONE_VALUE}
+                    value={selectValue}
                     onValueChange={(v: string | null) => {
                       const next = v === NONE_VALUE || !v ? "" : v;
                       setMapping((prev) => ({ ...prev, [field.key]: next }));
@@ -441,11 +458,18 @@ export function DynamicExcelImporter({
                       className="h-9 w-full min-w-0 sm:max-w-md"
                       size="sm"
                     >
-                      <SelectValue placeholder="اختر عموداً من الملف" />
+                      <SelectValue placeholder="اختر عموداً من الملف">
+                        {(v: string | null) => {
+                          if (v == null || v === "" || v === NONE_VALUE) {
+                            return "لا ربط — تجاهل هذا الحقل";
+                          }
+                          return String(v);
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE_VALUE} label="تجاهل">
-                        تجاهل
+                      <SelectItem value={NONE_VALUE} label="لا ربط — تجاهل هذا الحقل">
+                        لا ربط — تجاهل هذا الحقل
                       </SelectItem>
                       {headers.map((h) => (
                         <SelectItem key={h} value={h} label={h}>
@@ -454,8 +478,30 @@ export function DynamicExcelImporter({
                       ))}
                     </SelectContent>
                   </Select>
+                  <p
+                    className="text-[11px] leading-snug text-muted-foreground"
+                    aria-live="polite"
+                  >
+                    {mappedHeader ? (
+                      <>
+                        عمود Excel المرتبط:{" "}
+                        <span className="font-semibold text-foreground">
+                          «{mappedHeader}»
+                        </span>{" "}
+                        ← حقل التطبيق:{" "}
+                        <span className="font-medium">{field.label}</span>
+                      </>
+                    ) : (
+                      <>
+                        لم يُختر عمود من ملف Excel — اختر عنوان العمود من القائمة
+                        لربطه بـ «{field.label}».
+                      </>
+                    )}
+                  </p>
+                  </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
 
