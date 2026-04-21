@@ -392,12 +392,12 @@ export function CrmNav({
         </div>
 
         {shortcuts.length > 0 ? (
-          <div className="border-t border-border/50 bg-muted/20 py-1.5 dark:bg-muted/10">
+          <div className="border-t border-border/50 bg-muted/20 py-0.5 dark:bg-muted/10">
             <nav
-              className="flex flex-col gap-1"
+              className="flex flex-col gap-0.5"
               aria-label="اختصارات سريعة"
             >
-              <div className="flex items-center gap-1.5 px-0.5 text-muted-foreground/70">
+              <div className="flex items-center gap-1 px-0.5 text-muted-foreground/70">
                 <span className="flex size-5 items-center justify-center rounded-md border border-border/60 bg-background/80 text-foreground/80 shadow-sm">
                   <Zap className="size-2.5 shrink-0" strokeWidth={2} aria-hidden />
                 </span>
