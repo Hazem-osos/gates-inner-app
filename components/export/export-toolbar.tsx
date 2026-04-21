@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { FileSpreadsheet, FileText, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,8 @@ import { pdfFromExcelHref, reportImportExcelUrl } from "@/lib/export-excel-href"
 import {
   REPORT_EXCEL_EXPORT_ICON_CLASS,
   REPORT_EXCEL_EXPORT_LINK_CLASS,
+  REPORT_EXCEL_IMPORT_LINK_ICON_CLASS,
+  REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS,
   REPORT_PDF_EXPORT_ICON_CLASS,
   REPORT_PDF_EXPORT_LINK_CLASS,
 } from "@/lib/ui/report-export-import-classes";
@@ -98,7 +100,7 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
           <label
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              REPORT_EXCEL_EXPORT_LINK_CLASS,
+              REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS,
               busy ? "pointer-events-none opacity-60" : "cursor-pointer"
             )}
           >
@@ -109,7 +111,11 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
               disabled={busy}
               onChange={onQuickImport}
             />
-            {busy ? "جاري الاستيراد…" : "استيراد Excel"}
+            <Upload
+              className={REPORT_EXCEL_IMPORT_LINK_ICON_CLASS}
+              aria-hidden
+            />
+            {busy ? "جاري الاستيراد…" : "استيراد من Excel"}
           </label>
         </>
       ) : null}

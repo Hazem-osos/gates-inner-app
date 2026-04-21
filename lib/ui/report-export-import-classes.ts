@@ -1,5 +1,5 @@
 /**
- * ألوان موحّدة لتصدير Excel، طباعة/PDF، واستيراد Excel (كصفحة تقرير B).
+ * ألوان موحّدة لتصدير Excel، طباعة/PDF، واستيراد Excel (زر الاستيراد أزرق داكن موحّد).
  * تُدمج مع `buttonVariants({ variant: "outline" | "secondary", size: "sm" })` حيث يلزم.
  */
 
@@ -18,17 +18,18 @@ export const REPORT_PDF_EXPORT_ICON_CLASS =
   "size-3.5 shrink-0 text-rose-600 dark:text-rose-400";
 
 /**
- * زر «استيراد من Excel» (ممتلئ) — يُدمج مع `buttonVariants({ variant: "secondary", size: "sm" })`.
+ * زر «استيراد من Excel» (ممتلئ، أزرق داكن — موحّد مع أزرار التقرير).
+ * يُدمج مع `buttonVariants({ variant: "secondary", size: "sm" })`.
  */
 export const REPORT_EXCEL_IMPORT_SOLID_CLASS =
-  "border-0 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 hover:text-white dark:bg-emerald-600 dark:hover:bg-emerald-500";
+  "border-0 bg-blue-600 font-semibold text-white shadow-sm hover:bg-blue-700 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-500";
 
 /**
  * رابط بنفس ألوان استيراد Excel (مثل صفحة العملاء → استيراد من Excel).
  * يُدمج مع `buttonVariants({ variant: "outline", size: "sm" })` ثم يُستبدل المظهر بـ solid عبر هذه الطبقة أو استخدم `default` + هذا النص.
  */
 export const REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS =
-  "gap-1.5 border-0 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:text-white dark:bg-emerald-600 dark:hover:bg-emerald-500";
+  "gap-1.5 border-0 bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:text-white dark:bg-blue-600 dark:hover:bg-blue-500";
 
 export const REPORT_EXCEL_IMPORT_LINK_ICON_CLASS =
   "size-3.5 shrink-0 text-white";
