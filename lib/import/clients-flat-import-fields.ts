@@ -1,13 +1,14 @@
 import type { ExpectedField } from "@/lib/import/expected-field";
 import {
+  MAX_FOLLOW_UP_SLOTS_EXCEL,
   followUpSlotDateHeaderAliases,
   followUpSlotDateHeaderAr,
   followUpSlotNoteHeaderAliases,
   followUpSlotNoteHeaderAr,
 } from "@/lib/import/follow-up-slot-columns";
 
-/** استيراد عملاء جدد — صف مسطّح؛ خانة ١ للربط اليدوي، وباقي الأعمدة تُكتشف تلقائياً من العناوين. */
-export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] = [
+/** حقول الاستيراد من الهاتف حتى «متابعة تالية» — قبل JSON والمتابعات الديناميكية */
+export const CLIENTS_FLAT_IMPORT_FIELDS_BASE: ExpectedField[] = [
   {
     key: "phone",
     label: "رقم الهاتف",
@@ -197,24 +198,16 @@ export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] = [
       "next follow up",
     ],
   },
-  {
-    key: "followUpSlots",
-    label: "متابعات (JSON، اختياري — قديم)",
-    required: false,
-    aliases: ["متابعات", "follow ups json", "followups"],
-  },
-  {
-    key: "followUpSlot1Note",
-    label: followUpSlotNoteHeaderAr(1),
-    required: false,
-    aliases: followUpSlotNoteHeaderAliases(1),
-  },
-  {
-    key: "followUpSlot1Date",
-    label: followUpSlotDateHeaderAr(1),
-    required: false,
-    aliases: followUpSlotDateHeaderAliases(1),
-  },
+];
+
+const FOLLOW_UP_SLOTS_JSON_FIELD: ExpectedField = {
+  key: "followUpSlots",
+  label: "متابعات (JSON، اختياري — قديم)",
+  required: false,
+  aliases: ["متابعات", "follow ups json", "followups"],
+};
+
+const CLIENTS_FLAT_IMPORT_FIELDS_TAIL: ExpectedField[] = [
   {
     key: "clientType",
     label: "نوع العميل (TB/TU/TC…)",
@@ -228,3 +221,47 @@ export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] = [
     aliases: ["عدد الأيام", "أيام", "days"],
   },
 ];
+
+function followUpPairFieldsForIndex(i: number): ExpectedField[] {
+  return [
+    {
+      key: `followUpSlot${i}Note`,
+      label: followUpSlotNoteHeaderAr(i),
+      required: false,
+      aliases: followUpSlotNoteHeaderAliases(i),
+    },
+    {
+      key: `followUpSlot${i}Date`,
+      label: followUpSlotDateHeaderAr(i),
+      required: false,
+      aliases: followUpSlotDateHeaderAliases(i),
+    },
+  ];
+}
+
+/**
+ * قائمة حقول الاستيراد: أزواج «متابعة N — نص/تاريخ» حسب العدد المطلوب (١…٣٠).
+ * تُستخدم مع زر «إضافة متابعة» واكتشاف العناوين من الملف.
+ */
+export function buildClientsFlatImportFields(
+  followUpPairCount: number
+): ExpectedField[] {
+  const n = Math.min(
+    Math.max(1, Math.floor(followUpPairCount) || 1),
+    MAX_FOLLOW_UP_SLOTS_EXCEL
+  );
+  const slotPairs: ExpectedField[] = [];
+  for (let i = 1; i <= n; i++) {
+    slotPairs.push(...followUpPairFieldsForIndex(i));
+  }
+  return [
+    ...CLIENTS_FLAT_IMPORT_FIELDS_BASE,
+    FOLLOW_UP_SLOTS_JSON_FIELD,
+    ...slotPairs,
+    ...CLIENTS_FLAT_IMPORT_FIELDS_TAIL,
+  ];
+}
+
+/** افتراضياً خانة متابعة واحدة — للتوافق مع الاستيراد البسيط */
+export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] =
+  buildClientsFlatImportFields(1);

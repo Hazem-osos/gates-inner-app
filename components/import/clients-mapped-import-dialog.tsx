@@ -4,10 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
+import { ClientsDynamicExcelImport } from "@/components/import/clients-dynamic-excel-import";
 import { Button } from "@/components/ui/button";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
-import { CLIENTS_FLAT_IMPORT_FIELDS } from "@/lib/import/clients-flat-import-fields";
 import type { ImportType } from "@/lib/import/excel-client-import";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +26,8 @@ export function ClientsMappedImportDialog({
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  /** إعادة تهيئة حالة المتابعات عند إغلاق النافذة */
+  const [importSession, setImportSession] = useState(0);
 
   return (
     <>
@@ -53,7 +54,10 @@ export function ClientsMappedImportDialog({
 
       <SimpleDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setImportSession((k) => k + 1);
+        }}
         title={
           importType === "not-b"
             ? "استيراد عملاء Not B"
@@ -63,9 +67,9 @@ export function ClientsMappedImportDialog({
         footer={null}
       >
         <div className="max-h-[min(85vh,900px)] overflow-y-auto pe-1">
-          <DynamicExcelImporter
+          <ClientsDynamicExcelImport
+            key={importSession}
             title="تعيين الأعمدة ثم تأكيد الاستيراد"
-            expectedFields={CLIENTS_FLAT_IMPORT_FIELDS}
             onImport={async (mappedData) => {
               const r = await fetch("/api/import/clients-mapped", {
                 method: "POST",

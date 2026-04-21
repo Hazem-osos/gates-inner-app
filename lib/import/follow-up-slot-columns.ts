@@ -86,3 +86,13 @@ export function parseFollowUpSlotColumnHeader(header: string): {
 
   return null;
 }
+
+/** أعلى رقم خانة متابعة يظهر في عناوين الملف (متابعة 3 — نص، …) */
+export function maxFollowUpSlotIndexFromHeaders(headers: string[]): number {
+  let max = 0;
+  for (const h of headers) {
+    const p = parseFollowUpSlotColumnHeader(h);
+    if (p && p.slotIndex > max) max = p.slotIndex;
+  }
+  return max;
+}

@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { Upload } from "lucide-react";
 import {
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useState,
@@ -48,6 +49,10 @@ export type DynamicExcelImporterProps = {
   /** عنوان اختياري فوق منطقة الرفع */
   title?: string;
   className?: string;
+  /** بعد قراءة صف العناوين بنجاح — لاكتشاف عدد أعمدة المتابعات وغيرها */
+  onHeadersParsed?: (headers: string[]) => void;
+  /** عند مسح الملف أو فشل القراءة */
+  onFileCleared?: () => void;
 };
 
 const MIN_PARTIAL_LEN = 3;
@@ -236,6 +241,8 @@ export function DynamicExcelImporter({
   onImport,
   title = "استيراد من Excel",
   className,
+  onHeadersParsed,
+  onFileCleared,
 }: DynamicExcelImporterProps) {
   const fileInputId = useId();
   const [parseError, setParseError] = useState<string | null>(null);
@@ -254,6 +261,24 @@ export function DynamicExcelImporter({
     });
     return m;
   }, [headers]);
+
+  /** عند إضافة حقول متابعة جديدة: اقتراح تطابق للأعمدة الجديدة دون مسح الربط اليدوي */
+  useEffect(() => {
+    if (headers.length === 0) return;
+    setMapping((prev) => {
+      const auto = autoMapHeaders(headers, expectedFields);
+      const next = { ...prev };
+      let changed = false;
+      for (const f of expectedFields) {
+        const k = f.key;
+        if (!next[k]?.trim() && auto[k]?.trim()) {
+          next[k] = auto[k];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [expectedFields, headers]);
 
   const validationError = useMemo(() => {
     const missing = expectedFields.filter(
@@ -280,17 +305,19 @@ export function DynamicExcelImporter({
           setDataRows([]);
           setMapping({});
           setParseError(error ?? "لم يُعثر على صف عناوين.");
+          onFileCleared?.();
           return;
         }
         const body = matrix.slice(1) as unknown[][];
         setHeaders(h);
         setDataRows(body);
         setMapping(autoMapHeaders(h, expectedFields));
+        onHeadersParsed?.(h);
       };
       reader.onerror = () => setParseError("فشل تحميل الملف.");
       reader.readAsArrayBuffer(file);
     },
-    [expectedFields]
+    [expectedFields, onHeadersParsed, onFileCleared]
   );
 
   const onFileInput = (e: ChangeEvent<HTMLInputElement>) => {
@@ -361,6 +388,7 @@ export function DynamicExcelImporter({
     setMapping({});
     setFileLabel(null);
     setParseError(null);
+    onFileCleared?.();
   };
 
   return (
@@ -449,11 +477,11 @@ export function DynamicExcelImporter({
               className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
               role="note"
             >
-              <span className="font-semibold">المتابعات:</span> اربط «متابعة ١ —
-              نص/تاريخ» إن رغبت؛ أعمدة «متابعة ٢، ٣…» من ملف التصدير تُستورد
-              تلقائياً عند تطابق العنوان دون ربط يدوي. يمكن أيضاً عمود JSON قديم
-              «متابعات». عند استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B
-              يُحدَّث إلى B وتُمسَح حقول التصنيف الفرعي Not B.
+              <span className="font-semibold">المتابعات:</span> اربط أزواج «نص +
+              تاريخ» لكل خانة؛ استخدم «إضافة متابعة» أسفل المنطقة إن وُجد لإظهار
+              المزيد. العناوين من تصدير التقرير تُكتشف تلقائياً، ويمكن عمود JSON
+              «متابعات». عند استيراد B، عميل بنفس الهاتف Not B يُحدَّث إلى B
+              وتُمسَح حقول Not B الفرعية.
             </div>
             <ul className="flex flex-col gap-4">
               {expectedFields.map((field) => {
