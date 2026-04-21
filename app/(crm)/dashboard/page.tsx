@@ -77,10 +77,7 @@ export default async function DashboardPage() {
         subtitle={`مرحباً ${user.name} — متابعاتك وتنبيهاتك.`}
       />
 
-      <ExportToolbar
-        importKind="dashboard-followups"
-        excelHref={dashboardFollowupsExportHref()}
-      />
+      <ExportToolbar excelHref={dashboardFollowupsExportHref()} />
 
       <DashboardShortcuts />
 
