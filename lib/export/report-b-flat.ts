@@ -2,6 +2,7 @@ import type { ReportClientPatchInput } from "@/app/actions/report-client-patch";
 import type { ReportBRow } from "@/components/reports/report-b-table";
 import { formatExportDateOnly } from "@/lib/date-arabic";
 import {
+  normalizeExcelPhone,
   parseExcelDateCell,
   parsePhones,
 } from "@/lib/import/excel-client-import";
@@ -181,6 +182,18 @@ function cellStr(row: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+/** أول قيمة خام من الصف (للحفاظ على `number` من Excel قبل تحويلها لنص). */
+function rawPhoneFromRow(
+  row: Record<string, unknown>,
+  keys: string[]
+): unknown {
+  for (const k of keys) {
+    if (!(k in row)) continue;
+    return row[k];
+  }
+  return undefined;
+}
+
 function cellStrAllowEmpty(row: Record<string, unknown>, keys: string[]): string | undefined {
   for (const k of keys) {
     if (!(k in row)) continue;
@@ -291,12 +304,13 @@ function parseFollowUpSlotsForReportPatch(
 export function normalizedPrimaryPhoneFromReportRow(
   row: Record<string, unknown>
 ): string {
-  const raw = cellStr(row, [
+  const raw = rawPhoneFromRow(row, [
     "phone",
     "الهاتف",
     REPORT_B_EXPORT_HEADER_AR_BASE.phone,
   ]);
-  return parsePhones(raw).phone;
+  if (raw === undefined || raw === null) return "";
+  return normalizeExcelPhone(raw) ?? "";
 }
 
 /** يحوّل خلية تاريخ من Excel (رقم تسلسل، نص، ISO) إلى ISO لـ `patchClientReportFields`. */
@@ -349,10 +363,35 @@ export function excelRowToReportClientPatch(
     "الاسم",
     REPORT_B_EXPORT_HEADER_AR_BASE.name,
   ]);
-  assignStr(patch, "phone", row, ["phone", "الهاتف", REPORT_B_EXPORT_HEADER_AR_BASE.phone]);
-  assignStr(patch, "phone2", row, ["phone2", "هاتف_ثاني", "هاتف ثاني", REPORT_B_EXPORT_HEADER_AR_BASE.phone2], {
-    allowEmpty: true,
-  });
+
+  const phoneRaw = rawPhoneFromRow(row, [
+    "phone",
+    "الهاتف",
+    REPORT_B_EXPORT_HEADER_AR_BASE.phone,
+  ]);
+  if (phoneRaw !== undefined && phoneRaw !== null) {
+    if (typeof phoneRaw === "string" && phoneRaw.trim() === "") {
+      /* عمود موجود لكنه فارغ — لا نمسح الهاتف من استيراد جزئي */
+    } else {
+      const np = normalizeExcelPhone(phoneRaw);
+      if (np) patch.phone = np;
+    }
+  }
+  const phone2Raw = rawPhoneFromRow(row, [
+    "phone2",
+    "هاتف_ثاني",
+    "هاتف ثاني",
+    REPORT_B_EXPORT_HEADER_AR_BASE.phone2,
+  ]);
+  if (phone2Raw !== undefined && phone2Raw !== null) {
+    if (phone2Raw === "" || (typeof phone2Raw === "string" && phone2Raw.trim() === "")) {
+      patch.phone2 = null;
+    } else {
+      const n2 = normalizeExcelPhone(phone2Raw);
+      if (n2) patch.phone2 = n2;
+    }
+  }
+
   assignStr(patch, "company", row, ["company", "الشركة", REPORT_B_EXPORT_HEADER_AR_BASE.company], { allowEmpty: true });
   assignStr(patch, "position", row, ["position", "وظيفة", REPORT_B_EXPORT_HEADER_AR_BASE.position], { allowEmpty: true });
   assignStr(patch, "address", row, ["address", "عنوان", REPORT_B_EXPORT_HEADER_AR_BASE.address], { allowEmpty: true });

@@ -57,5 +57,10 @@ export async function POST(req: Request) {
     updated: out.updated,
     processed: out.processed,
     errors: out.errors,
+    results: {
+      updated: out.updated,
+      processed: out.processed,
+      errors: out.errors,
+    },
   });
 }

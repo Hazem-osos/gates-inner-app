@@ -187,6 +187,22 @@ export function parsePhones(raw: unknown): { phone: string; phone2: string | nul
   return { phone: p1, phone2: p2 || null };
 }
 
+/**
+ * Normalizes a phone from Excel / JSON before Prisma `findFirst` / updates.
+ * - Coerces values to text, strips non-digits (spaces, dashes, +, etc.), handles Arabic-Indic digits.
+ * - Excel numeric cells & `"1012345678.0"`-style strings are handled inside `parsePhones`.
+ * - Egyptian mobiles: if digits match common mobile shape after Excel dropped the leading `0`
+ *   (e.g. 10 digits starting with `10`/`11`/`12`/`15`), a leading `0` is restored via `parsePhones`/`normalizeEgypt`.
+ *
+ * @returns Canonical mobile digit string, or `null` if fewer than 8 digits.
+ */
+export function normalizeExcelPhone(rawPhone: unknown): string | null {
+  const { phone } = parsePhones(rawPhone);
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  return phone;
+}
+
 export function parseDiscount(raw: unknown): {
   allowedDiscount: string | null;
   salesNoteAppend: string | null;
