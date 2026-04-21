@@ -1,7 +1,6 @@
 import { requireSessionUser } from "@/lib/auth-helpers";
 
 import { HeaderSystem } from "@/components/layout/header-system";
-import { HEADER_SYSTEM_OFFSET_CLASS } from "@/lib/layout/crm-header-config";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +17,7 @@ export default async function CrmLayout({
         role={user.role}
         userName={user.name.trim() || user.email || "—"}
       />
-      <main className={`flex-1 ${HEADER_SYSTEM_OFFSET_CLASS}`}>
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }

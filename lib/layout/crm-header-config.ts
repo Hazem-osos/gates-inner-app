@@ -19,10 +19,6 @@ import {
 
 import type { UserRole } from "@prisma/client";
 
-/** `h-14` + `h-11` + حدود — لـ `padding-top` على `main` تحت الهيدر الثابت */
-export const HEADER_SYSTEM_OFFSET_CLASS =
-  "pt-[calc(3.5rem+2.75rem+1px)]";
-
 export type CrmRibbonShortcut = {
   href: string;
   label: string;
