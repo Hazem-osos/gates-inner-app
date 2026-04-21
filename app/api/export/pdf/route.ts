@@ -4,7 +4,7 @@ import { buildExportPayload } from "@/lib/export/build-export-data";
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 function escapeHtml(s: string): string {

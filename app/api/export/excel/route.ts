@@ -4,9 +4,9 @@ import * as XLSX from "xlsx";
 import { buildExportPayload } from "@/lib/export/build-export-data";
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 
-/** تقارير كبيرة — يتجنب انتهاء المهلة (مثل Vercel الافتراضي 10s) */
+/** تقارير كبيرة — يتجنب انتهاء المهلة عند البروكسي/الاستضافة */
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 /** أعمدة مقروءة في Excel */
@@ -60,7 +60,12 @@ export async function GET(req: Request) {
     if (!wb.Workbook) wb.Workbook = {};
     wb.Workbook.Views = [{ RTL: true }];
 
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    const buf = XLSX.write(wb, {
+      type: "buffer",
+      bookType: "xlsx",
+      bookSST: true,
+      compression: true,
+    }) as Buffer;
 
     const asciiName = `${kind.replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`;
 

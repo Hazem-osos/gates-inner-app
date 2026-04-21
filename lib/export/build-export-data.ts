@@ -5,7 +5,7 @@ import { formatExportDateOnly, todayInputDate } from "@/lib/date-arabic";
 import { listClientsForUser } from "@/lib/data/clients-list";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
 import type { ReportSortDir, ReportSortKey } from "@/lib/data/report-queries";
-import { listClientsForReport } from "@/lib/data/report-queries";
+import { listClientsForReportExport } from "@/lib/data/report-queries";
 import { reportBRowToExportRecord } from "@/lib/export/report-b-flat";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { passesNeglected } from "@/lib/report-b-utils";
@@ -248,7 +248,8 @@ export async function buildExportPayload(
   if (kind === "dashboard-followups") {
     const followupClients = await listClientsForDashboardFollowups(
       user.role,
-      user.id
+      user.id,
+      { forExport: true }
     );
     const rowsAll = followupClients.map(clientEntityToReportBRow);
     const todayStart = startOfDay(new Date());
@@ -379,7 +380,7 @@ export async function buildExportPayload(
   const sortDir: ReportSortDir =
     spDir === "asc" || spDir === "desc" ? spDir : "desc";
 
-  let clients = await listClientsForReport({
+  let clients = await listClientsForReportExport({
     role: user.role,
     userId: user.id,
     salesUserId,

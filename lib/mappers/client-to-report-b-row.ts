@@ -1,5 +1,6 @@
 import type { Client, ClientClassification, User } from "@prisma/client";
 import type { ReportBRow } from "@/components/reports/report-b-table";
+import type { ClientReportExportRow } from "@/lib/data/report-queries";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
 
 type ClientWithReportInc = Client & {
@@ -12,7 +13,9 @@ type ClientWithReportInc = Client & {
     | null;
 };
 
-export function clientEntityToReportBRow(c: ClientWithReportInc): ReportBRow {
+export function clientEntityToReportBRow(
+  c: ClientWithReportInc | ClientReportExportRow
+): ReportBRow {
   return {
     id: c.id,
     name: c.name,

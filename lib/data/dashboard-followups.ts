@@ -1,27 +1,45 @@
-import type { UserRole } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 import { ClientStatus } from "@prisma/client";
 
+import { clientReportExportSelect } from "@/lib/data/report-queries";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 
 export async function listClientsForDashboardFollowups(
   role: UserRole,
-  userId: string
+  userId: string,
+  opts?: { forExport?: boolean }
 ) {
   const scope = clientScopeWhere({ role, userId, salesUserId: undefined });
-  return prisma.client.findMany({
+  const orderBy: Prisma.ClientOrderByWithRelationInput[] = [
+    { nextFollowUpAt: "asc" },
+    { id: "asc" },
+  ];
+
+  const base = {
     where: {
       ...scope,
-      status: { in: [ClientStatus.B, ClientStatus.NOT_B] },
+      status: { in: [ClientStatus.B, ClientStatus.NOT_B] as ClientStatus[] },
       nextFollowUpAt: { not: null },
     },
+    take: 1000,
+    orderBy,
+  };
+
+  if (opts?.forExport) {
+    return prisma.client.findMany({
+      ...base,
+      select: clientReportExportSelect,
+    });
+  }
+
+  return prisma.client.findMany({
+    ...base,
     include: {
       assignedUser: { select: { id: true, name: true } },
       classification: {
         select: { id: true, label: true, color: true, isBRow: true },
       },
     },
-    take: 1000,
-    orderBy: [{ nextFollowUpAt: "asc" }, { id: "asc" }],
   });
 }

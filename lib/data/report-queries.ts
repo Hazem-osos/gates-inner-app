@@ -4,6 +4,54 @@ import { clientScopeWhere } from "@/lib/report-scope";
 import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@prisma/client";
 
+/**
+ * حقول مطلوبة لتصدير Excel/PDF فقط — يقلّل حجم الصف المقروء من MySQL
+ * (يستثني customFields وحقولاً غير مستخدمة في التقرير).
+ */
+export const clientReportExportSelect = {
+  id: true,
+  name: true,
+  phone: true,
+  phone2: true,
+  company: true,
+  position: true,
+  address: true,
+  quotePrice: true,
+  quoteDetail: true,
+  status: true,
+  adPlatform: true,
+  sourceAdName: true,
+  initialCallDate: true,
+  nextFollowUpAt: true,
+  notBClassification: true,
+  classificationId: true,
+  activity: true,
+  managementRecommendationText: true,
+  managementRecommendationDate: true,
+  currentSituation: true,
+  qqAnswer: true,
+  callSummary: true,
+  salesNotes: true,
+  clientWarmingText: true,
+  visitAppointmentScheduled: true,
+  visitAppointmentDate: true,
+  presentingEmployeeName: true,
+  followUpSlots: true,
+  finalStatusNote: true,
+  closedLostAt: true,
+  lossReason: true,
+  saleDate: true,
+  contractValue: true,
+  assignedUser: { select: { id: true, name: true } },
+  classification: {
+    select: { id: true, label: true, color: true, isBRow: true },
+  },
+} satisfies Prisma.ClientSelect;
+
+export type ClientReportExportRow = Prisma.ClientGetPayload<{
+  select: typeof clientReportExportSelect;
+}>;
+
 export type ReportSortKey =
   | "days"
   | "quotePrice"
@@ -12,7 +60,7 @@ export type ReportSortKey =
 
 export type ReportSortDir = "asc" | "desc";
 
-export async function listClientsForReport(args: {
+type ReportListArgs = {
   role: UserRole;
   userId: string;
   /** للمدير/الأدمن: «all» أو معرف السيلز */
@@ -22,7 +70,9 @@ export async function listClientsForReport(args: {
   sort?: ReportSortKey;
   sortDir?: ReportSortDir;
   take?: number;
-}) {
+};
+
+function buildReportClientsListQuery(args: ReportListArgs) {
   const take = args.take ?? 500;
   const statuses = Array.isArray(args.status) ? args.status : [args.status];
 
@@ -71,12 +121,32 @@ export async function listClientsForReport(args: {
 
   orderBy.push({ id: "asc" });
 
+  return { where, orderBy, take };
+}
+
+export async function listClientsForReport(args: ReportListArgs) {
+  const { where, orderBy, take } = buildReportClientsListQuery(args);
+
   return prisma.client.findMany({
     where,
     include: {
       assignedUser: { select: { id: true, name: true } },
       classification: { select: { id: true, label: true, color: true, isBRow: true } },
     },
+    orderBy,
+    take,
+  });
+}
+
+/** نفس فلترة تقرير الواجهة لكن بدون JSON/حقول ثقيلة — لتصدير Excel/PDF الكبير */
+export async function listClientsForReportExport(
+  args: ReportListArgs
+): Promise<ClientReportExportRow[]> {
+  const { where, orderBy, take } = buildReportClientsListQuery(args);
+
+  return prisma.client.findMany({
+    where,
+    select: clientReportExportSelect,
     orderBy,
     take,
   });
