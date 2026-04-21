@@ -7,13 +7,11 @@ import {
   LayoutDashboard,
   PhoneCall,
   SlidersHorizontal,
-  Table2,
   Tags,
   Trophy,
   Type,
   UserPlus,
   Users,
-  UsersRound,
   UserX,
 } from "lucide-react";
 
@@ -22,7 +20,10 @@ import type { UserRole } from "@prisma/client";
 export type CrmRibbonShortcut = {
   href: string;
   label: string;
-  Icon: LucideIcon;
+  /** أيقونة Lucide — تُتجاهل إن وُجد `ribbonMark` */
+  Icon?: LucideIcon;
+  /** بدل الأيقونة: نص قصير داخل المربع (مثل B، NB) */
+  ribbonMark?: string;
   adminOnly?: boolean;
   managerPlus?: boolean;
 };
@@ -32,8 +33,8 @@ export const CRM_RIBBON_SHORTCUTS: CrmRibbonShortcut[] = [
   { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
   { href: "/clients", label: "العملاء", Icon: Users },
   { href: "/clients/new", label: "إضافة عميل", Icon: UserPlus },
-  { href: "/reports/b", label: "تقرير عملاء B", Icon: Table2 },
-  { href: "/reports/not-b", label: "تقرير Not B", Icon: UsersRound },
+  { href: "/reports/b", label: "تقرير عملاء B", ribbonMark: "B" },
+  { href: "/reports/not-b", label: "تقرير Not B", ribbonMark: "NB" },
   { href: "/reports/closed", label: "عملاء مغلقة", Icon: UserX },
   { href: "/reports/won", label: "تم البيع", Icon: Trophy },
   {

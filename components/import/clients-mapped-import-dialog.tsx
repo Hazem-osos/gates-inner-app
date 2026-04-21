@@ -14,12 +14,15 @@ import { cn } from "@/lib/utils";
 type Props = {
   importType: ImportType;
   triggerLabel?: string;
+  /** شارة قصيرة بجانب النص (مثل B، NB) */
+  triggerBadge?: string;
   className?: string;
 };
 
 export function ClientsMappedImportDialog({
   importType,
   triggerLabel = "استيراد Excel",
+  triggerBadge,
   className,
 }: Props) {
   const router = useRouter();
@@ -31,9 +34,20 @@ export function ClientsMappedImportDialog({
         type="button"
         variant="secondary"
         size="sm"
-        className={cn(className)}
+        className={cn("gap-1.5", className)}
         onClick={() => setOpen(true)}
       >
+        {triggerBadge ? (
+          <span
+            className={cn(
+              "flex size-5 shrink-0 items-center justify-center rounded border border-white/35 bg-white/15 font-bold leading-none text-white",
+              triggerBadge.length >= 2 ? "text-[8px]" : "text-[11px]"
+            )}
+            aria-hidden
+          >
+            {triggerBadge}
+          </span>
+        ) : null}
         {triggerLabel}
       </Button>
 

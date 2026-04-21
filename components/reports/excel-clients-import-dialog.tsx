@@ -14,6 +14,7 @@ export function ExcelClientsImportDialog({ importType, className }: Props) {
   return (
     <ClientsMappedImportDialog
       importType={importType}
+      triggerBadge={importType === "not-b" ? "NB" : "B"}
       triggerLabel="استيراد من Excel"
       className={cn(
         "border-0 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700",

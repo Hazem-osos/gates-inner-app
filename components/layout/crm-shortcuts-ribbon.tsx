@@ -65,7 +65,7 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
       className="flex h-11 items-center gap-1 overflow-x-auto border-t border-border/50 bg-muted/20 dark:bg-muted/10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       aria-label="اختصارات سريعة"
     >
-      {shortcuts.map(({ href, label, Icon }, index) => {
+      {shortcuts.map(({ href, label, Icon, ribbonMark }, index) => {
         const active = crmRibbonShortcutIsActive(pathname, href);
         const tint = RIBBON_HOVER_TINTS[index % RIBBON_HOVER_TINTS.length]!;
         return (
@@ -84,11 +84,25 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
                 "bg-slate-100 text-slate-900 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-700"
             )}
           >
-            <Icon
-              className="size-[1.05rem] shrink-0 sm:size-4"
-              strokeWidth={1.85}
-              aria-hidden
-            />
+            {ribbonMark ? (
+              <span
+                className={cn(
+                  "select-none font-bold leading-none text-current",
+                  ribbonMark.length >= 2
+                    ? "text-[8px] tracking-tighter"
+                    : "text-sm tracking-tight"
+                )}
+                aria-hidden
+              >
+                {ribbonMark}
+              </span>
+            ) : Icon ? (
+              <Icon
+                className="size-[1.05rem] shrink-0 sm:size-4"
+                strokeWidth={1.85}
+                aria-hidden
+              />
+            ) : null}
             <span
               className="pointer-events-none absolute start-1/2 top-[calc(100%+8px)] z-[60] -translate-x-1/2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-800 opacity-0 shadow-md ring-1 ring-slate-950/5 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:ring-white/10"
               role="tooltip"
