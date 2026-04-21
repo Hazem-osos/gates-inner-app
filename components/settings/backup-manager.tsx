@@ -152,7 +152,9 @@ export function BackupManager() {
           <p className="mb-3 text-xs text-muted-foreground">
             رفع ملف SQL يُنفَّذ على نفس قاعدة البيانات المعرّفة في{" "}
             <code className="rounded bg-muted px-1">DATABASE_URL</code>. قد يُستبدل
-            المحتوى الحالي (جداول/بيانات) حسب محتوى الملف.
+            المحتوى الحالي (جداول/بيانات) حسب محتوى الملف. يتطلب أداة{" "}
+            <code className="rounded bg-muted px-1">mysql</code> متاحة (PATH) أو عيّن{" "}
+            <code className="rounded bg-muted px-1">MYSQL_PATH</code>.
           </p>
           <input
             ref={fileRef}

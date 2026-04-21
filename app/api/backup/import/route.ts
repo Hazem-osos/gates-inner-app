@@ -15,6 +15,7 @@ import {
   safeUnlink,
 } from "@/lib/db/mysql-client-defaults-file";
 import { parseMysqlDatabaseUrl } from "@/lib/db/parse-mysql-database-url";
+import { resolveMysqlClientBin } from "@/lib/db/resolve-mysql-client-bins";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -70,11 +71,34 @@ export async function POST(req: Request) {
     const buf = Buffer.from(await file.arrayBuffer());
     await writeFile(sqlPath, buf, { mode: 0o600 });
 
+    const mysqlBin = resolveMysqlClientBin();
     const args = [`--defaults-file=${cnfPath}`, cfg.database];
-    const proc = spawn("mysql", args, {
+    const proc = spawn(mysqlBin, args, {
       stdio: ["pipe", "pipe", "pipe"],
       env: process.env,
     });
+
+    try {
+      await Promise.race([
+        once(proc, "spawn"),
+        once(proc, "error").then(([err]) => Promise.reject(err)),
+      ]);
+    } catch (spawnErr: unknown) {
+      const code =
+        spawnErr && typeof spawnErr === "object" && "code" in spawnErr
+          ? (spawnErr as { code?: string }).code
+          : undefined;
+      if (code === "ENOENT") {
+        return NextResponse.json(
+          {
+            message:
+              "لم يُعثر على mysql. ثبّت عميل MySQL أو عيّن MYSQL_PATH لمسار التنفيذي الكامل لـ mysql.",
+          },
+          { status: 500 }
+        );
+      }
+      throw spawnErr;
+    }
 
     let stderr = "";
     proc.stderr?.setEncoding("utf8");
@@ -118,6 +142,20 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error("backup import", e);
+    const code =
+      e && typeof e === "object" && "code" in e
+        ? (e as { code?: string }).code
+        : undefined;
+    const msg = e instanceof Error ? e.message : "";
+    if (code === "ENOENT" || /ENOENT/i.test(msg)) {
+      return NextResponse.json(
+        {
+          message:
+            "لم يُعثر على mysql. ثبّت عميل MySQL أو عيّن MYSQL_PATH لمسار التنفيذي الكامل.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       {
         message:

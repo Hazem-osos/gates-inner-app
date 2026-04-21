@@ -16,6 +16,7 @@ import {
   safeUnlink,
 } from "@/lib/db/mysql-client-defaults-file";
 import { parseMysqlDatabaseUrl } from "@/lib/db/parse-mysql-database-url";
+import { resolveMysqldumpBin } from "@/lib/db/resolve-mysql-client-bins";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -40,10 +41,7 @@ export async function GET() {
 
   try {
     /** Prefer MySQL 8.x client if server is 8.x: mysqldump 9+ probes INFORMATION_SCHEMA.LIBRARY tables missing on older servers. */
-    const mysqldumpBin =
-      process.env.MYSQLDUMP_PATH?.trim() ||
-      process.env.MYSQLDUMP_BIN?.trim() ||
-      "mysqldump";
+    const mysqldumpBin = resolveMysqldumpBin();
 
     const args = [
       `--defaults-file=${cnfPath}`,
@@ -59,6 +57,29 @@ export async function GET() {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
     });
+
+    try {
+      await Promise.race([
+        once(proc, "spawn"),
+        once(proc, "error").then(([err]) => Promise.reject(err)),
+      ]);
+    } catch (spawnErr: unknown) {
+      const code =
+        spawnErr && typeof spawnErr === "object" && "code" in spawnErr
+          ? (spawnErr as { code?: string }).code
+          : undefined;
+      await safeUnlink(dumpPath);
+      if (code === "ENOENT") {
+        return NextResponse.json(
+          {
+            message:
+              "لم يُعثر على mysqldump. ثبّت عميل MySQL (على macOS: brew install mysql-client) أو عيّن MYSQLDUMP_PATH لمسار التنفيذي الكامل لـ mysqldump.",
+          },
+          { status: 500 }
+        );
+      }
+      throw spawnErr;
+    }
 
     if (!proc.stdout) {
       await safeUnlink(dumpPath);
@@ -129,6 +150,20 @@ export async function GET() {
   } catch (e) {
     await safeUnlink(dumpPath);
     console.error("backup export", e);
+    const code =
+      e && typeof e === "object" && "code" in e
+        ? (e as { code?: string }).code
+        : undefined;
+    const msg = e instanceof Error ? e.message : "";
+    if (code === "ENOENT" || /ENOENT/i.test(msg)) {
+      return NextResponse.json(
+        {
+          message:
+            "لم يُعثر على mysqldump. ثبّت عميل MySQL أو عيّن MYSQLDUMP_PATH لمسار التنفيذي الكامل.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       {
         message:
