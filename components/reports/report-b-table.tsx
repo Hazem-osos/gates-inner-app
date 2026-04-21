@@ -38,6 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { ExportToolbar } from "@/components/export/export-toolbar";
+import { ExcelClientsImportDialog } from "@/components/reports/excel-clients-import-dialog";
 import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   Table,
@@ -127,6 +129,12 @@ type Props = {
   toolbar?: "full" | "closed";
   /** مفتاح تقرير سجل العمل (تصفية AuditLog) — مثل report-dashboard-followups */
   auditReportKey?: string;
+  /** داخل بطاقة الفلاتر: تصدير Excel / PDF واستيراد التقرير وعملاء Excel */
+  toolbarExports?: {
+    excelHref: string;
+    importKind?: string;
+    clientsMappedImport?: "b" | "not-b";
+  };
 };
 
 type FollowSlot = { order: number; note: string; date: string };
@@ -218,6 +226,7 @@ export function ReportBTable({
   rowStyleReportType = "b",
   toolbar = "full",
   auditReportKey,
+  toolbarExports,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -276,6 +285,9 @@ export function ReportBTable({
   const [sortDays, setSortDays] = useState<SortTriState>(null);
   const [sortPrice, setSortPrice] = useState<SortTriState>(null);
   const [sortCall, setSortCall] = useState<SortTriState>(null);
+  const [sortFollowUp, setSortFollowUp] = useState<SortTriState>(null);
+  /** فلتر «تجاوز ميعاد الزيارة» — نُظهره مع أزرار ترتيب الأعمدة */
+  const [visitOverdueOnly, setVisitOverdueOnly] = useState(false);
 
   /** أعمدة متابعة إضافية للعرض فقط — لا تُكتب في JSON حتى يملأ المستخدم الخانة */
   const [followColExtra, setFollowColExtra] = useState(0);
@@ -445,8 +457,7 @@ export function ReportBTable({
   );
 
   const filteredByViolation = useMemo(() => {
-    return merged.filter((r) => {
-      if (violation === "visit_overdue") return passesVisitOverdue(r);
+    const list = merged.filter((r) => {
       if (violation === "days_over") {
         const n = Number(daysInput);
         if (!Number.isFinite(n)) return false;
@@ -461,7 +472,9 @@ export function ReportBTable({
       if (violation === "no_answer") return passesNoAnswerFilter(r.followUpSlots);
       return true;
     });
-  }, [merged, violation, daysInput, followInput]);
+    if (!visitOverdueOnly) return list;
+    return list.filter((r) => passesVisitOverdue(r));
+  }, [merged, violation, daysInput, followInput, visitOverdueOnly]);
 
   const filteredVisit = useMemo(() => {
     if (visitExtra === "scheduled")
@@ -483,10 +496,14 @@ export function ReportBTable({
     }
     const base = searched.filter((r) => !hiddenIds.has(r.id));
     let out = base;
-    const tri: [typeof sortDays, "days" | "quotePrice" | "initialCallDate"][] = [
+    const tri: [
+      SortTriState,
+      "days" | "quotePrice" | "initialCallDate" | "nextFollowUpAt",
+    ][] = [
       [sortDays, "days"],
       [sortPrice, "quotePrice"],
       [sortCall, "initialCallDate"],
+      [sortFollowUp, "nextFollowUpAt"],
     ];
     for (const [st, key] of tri) {
       if (st) {
@@ -503,6 +520,7 @@ export function ReportBTable({
     sortDays,
     sortPrice,
     sortCall,
+    sortFollowUp,
   ]);
 
   const maxFollowCols = useMemo(() => {
@@ -580,9 +598,12 @@ export function ReportBTable({
     }
   }
 
+  function visitOverdueFilterMessage(): string | null {
+    if (!visitOverdueOnly) return null;
+    return "يعرض العملاء التي تجاوز ميعاد زيارتهم ولم يُسجَّل موظف عارض";
+  }
+
   function violationMessage(): string | null {
-    if (violation === "visit_overdue")
-      return "يعرض العملاء التي تجاوز ميعاد زيارتهم ولم يُسجَّل موظف عارض";
     if (violation === "days_over") {
       const n = Number(daysInput);
       return Number.isFinite(n)
@@ -649,6 +670,18 @@ export function ReportBTable({
             dir="rtl"
           />
         ) : null}
+        {toolbar === "closed" && toolbarExports ? (
+          <>
+            <div className="h-px w-full shrink-0 basis-full bg-border/50" aria-hidden />
+            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2">
+              <ExportToolbar
+                excelHref={toolbarExports.excelHref}
+                importKind={toolbarExports.importKind}
+                className="w-full justify-start"
+              />
+            </div>
+          </>
+        ) : null}
       </div>
 
       {toolbar !== "closed" ? (
@@ -669,6 +702,7 @@ export function ReportBTable({
                 cycleSort(sortDays, setSortDays, () => {
                   setSortPrice(null);
                   setSortCall(null);
+                  setSortFollowUp(null);
                 })
               }
             >
@@ -682,6 +716,7 @@ export function ReportBTable({
                 cycleSort(sortPrice, setSortPrice, () => {
                   setSortDays(null);
                   setSortCall(null);
+                  setSortFollowUp(null);
                 })
               }
             >
@@ -695,10 +730,37 @@ export function ReportBTable({
                 cycleSort(sortCall, setSortCall, () => {
                   setSortDays(null);
                   setSortPrice(null);
+                  setSortFollowUp(null);
                 })
               }
             >
               ترتيب بتاريخ الاتصال
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="ghost"
+              className={violChip(visitOverdueOnly)}
+              onClick={() => setVisitOverdueOnly((v) => !v)}
+            >
+              تجاوز ميعاد الزيارة
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className={cn(
+                "h-9 rounded-xl px-3 text-sm",
+                sortBtnClass(sortFollowUp)
+              )}
+              onClick={() =>
+                cycleSort(sortFollowUp, setSortFollowUp, () => {
+                  setSortDays(null);
+                  setSortPrice(null);
+                  setSortCall(null);
+                })
+              }
+            >
+              ترتيب بتاريخ المتابعة التالية
             </Button>
           </div>
           <p className="mb-2 mt-4 text-xs font-semibold tracking-wide text-muted-foreground">
@@ -730,6 +792,26 @@ export function ReportBTable({
               العملاء التي تمت زيارتهم فعلياً
             </Button>
           </div>
+          {toolbarExports ? (
+            <>
+              <div className="my-3 h-px bg-border/60" aria-hidden />
+              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
+                تصدير واستيراد
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {toolbarExports.clientsMappedImport ? (
+                  <ExcelClientsImportDialog
+                    importType={toolbarExports.clientsMappedImport}
+                  />
+                ) : null}
+                <ExportToolbar
+                  excelHref={toolbarExports.excelHref}
+                  importKind={toolbarExports.importKind}
+                  className="justify-start"
+                />
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
 
@@ -802,18 +884,6 @@ export function ReportBTable({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 p-3 sm:gap-2.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={violChip(violation === "visit_overdue")}
-                  onClick={() =>
-                    setViolation((v) =>
-                      v === "visit_overdue" ? null : "visit_overdue"
-                    )
-                  }
-                >
-                  تجاوز ميعاد الزيارة
-                </Button>
                 <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
                   <Button
                     type="button"
@@ -898,6 +968,7 @@ export function ReportBTable({
                     setFollowInput("");
                     setDaysActive(false);
                     setFollowActive(false);
+                    setVisitOverdueOnly(false);
                   }}
                 >
                   إلغاء كل الفلاتر
@@ -951,13 +1022,19 @@ export function ReportBTable({
             </p>
           </aside>
         </div>
-        {toolbar !== "closed" && (violationMessage() || visitBanner()) ? (
+        {toolbar !== "closed" &&
+        (violationMessage() ||
+          visitOverdueFilterMessage() ||
+          visitBanner()) ? (
           <div
             className="mt-4 space-y-1.5 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm leading-relaxed text-destructive dark:bg-destructive/10"
             role="status"
           >
             {violationMessage() ? (
               <p className="font-medium">{violationMessage()}</p>
+            ) : null}
+            {visitOverdueFilterMessage() ? (
+              <p className="font-medium">{visitOverdueFilterMessage()}</p>
             ) : null}
             {visitBanner() ? (
               <p className="text-destructive/90">{visitBanner()}</p>

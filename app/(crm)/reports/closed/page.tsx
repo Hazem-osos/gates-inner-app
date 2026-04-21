@@ -1,10 +1,7 @@
-import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
-import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
-import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
@@ -49,7 +46,7 @@ export default async function ReportClosedPage({
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
 
-  const filterActive = salesKey !== "all" || Boolean(sort);
+  const filterActive = salesKey !== "all";
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
@@ -62,33 +59,8 @@ export default async function ReportClosedPage({
       <SalesFilterLinks
         role={user.role}
         pathname="/reports/closed"
-        searchParams={{
-          ...(sort ? { sort } : {}),
-          ...(dir !== "desc" ? { dir } : {}),
-        }}
+        searchParams={{}}
         currentSales={salesKey}
-      />
-
-      <form
-        method="get"
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 bg-muted/20 p-4"
-      >
-        {salesKey !== "all" ? (
-          <input type="hidden" name="sales" value={salesKey} />
-        ) : null}
-        <ReportSortControls defaultSort={sort} defaultDir={dir} />
-        <Button type="submit" size="sm" variant="secondary">
-          تطبيق الترتيب
-        </Button>
-      </form>
-
-      <ExportToolbar
-        importKind="report-closed"
-        excelHref={reportExportExcelHref({
-          kind: "report-closed",
-          sales: salesKey,
-          ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-        })}
       />
 
       <ReportRecordsCount count={rows.length} />
@@ -109,6 +81,14 @@ export default async function ReportClosedPage({
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
         toolbar="closed"
+        toolbarExports={{
+          excelHref: reportExportExcelHref({
+            kind: "report-closed",
+            sales: salesKey,
+            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+          }),
+          importKind: "report-closed",
+        }}
       />
     </div>
   );

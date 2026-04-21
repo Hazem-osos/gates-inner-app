@@ -1,11 +1,7 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { ExportToolbar } from "@/components/export/export-toolbar";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
-import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
-import { ExcelClientsImportDialog } from "@/components/reports/excel-clients-import-dialog";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
-import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
@@ -59,36 +55,9 @@ export default async function ReportBPage({
       <SalesFilterLinks
         role={user.role}
         pathname="/reports/b"
-        searchParams={{
-          ...(sort ? { sort } : {}),
-          ...(dir !== "desc" ? { dir } : {}),
-        }}
+        searchParams={{}}
         currentSales={salesKey}
       />
-
-      <form
-        method="get"
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 bg-muted/20 p-4"
-      >
-        {salesKey !== "all" ? (
-          <input type="hidden" name="sales" value={salesKey} />
-        ) : null}
-        <ReportSortControls defaultSort={sort} defaultDir={dir} />
-        <Button type="submit" size="sm" variant="secondary">
-          تطبيق الترتيب
-        </Button>
-      </form>
-
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ExcelClientsImportDialog importType="b" />
-        <ExportToolbar
-          excelHref={reportExportExcelHref({
-            kind: "report-b",
-            sales: salesKey,
-            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-          })}
-        />
-      </div>
 
       <ReportRecordsCount count={rows.length} />
 
@@ -97,6 +66,15 @@ export default async function ReportBPage({
         classifications={classifications}
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
+        toolbarExports={{
+          excelHref: reportExportExcelHref({
+            kind: "report-b",
+            sales: salesKey,
+            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+          }),
+          importKind: "report-b",
+          clientsMappedImport: "b",
+        }}
       />
     </div>
   );

@@ -35,7 +35,6 @@ export const NO_RESPONSE_SNIPPETS = [
 
 export type ViolationKind =
   | null
-  | "visit_overdue"
   | "days_over"
   | "follow_count"
   | "neglected"
@@ -142,9 +141,15 @@ function compareIdStable(a: { id: string }, b: { id: string }): number {
   return a.id.localeCompare(b.id);
 }
 
+export type ReportBSortColumnKey =
+  | "days"
+  | "quotePrice"
+  | "initialCallDate"
+  | "nextFollowUpAt";
+
 export function sortRows<T extends ReportBFilterRow & { id: string }>(
   rows: T[],
-  key: "days" | "quotePrice" | "initialCallDate",
+  key: ReportBSortColumnKey,
   dir: Exclude<SortTriState, null>
 ): T[] {
   const mult = dir === "asc" ? 1 : -1;
@@ -165,6 +170,10 @@ export function sortRows<T extends ReportBFilterRow & { id: string }>(
       const pa = parseFloat(a.quotePrice ?? "") || 0;
       const pb = parseFloat(b.quotePrice ?? "") || 0;
       cmp = (pa - pb) * mult;
+    } else if (key === "nextFollowUpAt") {
+      const ta = parseIsoDate(a.nextFollowUpAt)?.getTime() ?? 0;
+      const tb = parseIsoDate(b.nextFollowUpAt)?.getTime() ?? 0;
+      cmp = (ta - tb) * mult;
     } else {
       const ta = parseIsoDate(a.initialCallDate)?.getTime() ?? 0;
       const tb = parseIsoDate(b.initialCallDate)?.getTime() ?? 0;

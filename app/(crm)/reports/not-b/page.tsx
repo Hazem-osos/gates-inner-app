@@ -1,10 +1,7 @@
-import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
-import { ExcelClientsImportDialog } from "@/components/reports/excel-clients-import-dialog";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
-import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
@@ -84,8 +81,6 @@ export default async function ReportNotBPage({
         pathname="/reports/not-b"
         searchParams={{
           ...(sp.q ? { q: sp.q } : {}),
-          ...(sort ? { sort } : {}),
-          ...(dir !== "desc" ? { dir } : {}),
           ...(classKey && classKey !== "all"
             ? { class: classKey }
             : {}),
@@ -119,7 +114,6 @@ export default async function ReportNotBPage({
           className="h-9 min-w-[180px] rounded-md border border-input bg-background px-2 text-sm"
           dir="rtl"
         />
-        <ReportSortControls defaultSort={sort} defaultDir={dir} />
         <Button type="submit" size="sm" variant="secondary">
           تطبيق
         </Button>
@@ -132,19 +126,6 @@ export default async function ReportNotBPage({
         {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ExcelClientsImportDialog importType="not-b" />
-        <ExportToolbar
-          excelHref={reportExportExcelHref({
-            kind: "report-not-b",
-            sales: salesKey,
-            q: sp.q,
-            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-            class: classKey && classKey !== "all" ? classKey : undefined,
-          })}
-        />
-      </div>
-
       <ReportRecordsCount count={rows.length} />
 
       <ReportBTable
@@ -153,6 +134,17 @@ export default async function ReportNotBPage({
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
         rowStyleReportType="not-b"
+        toolbarExports={{
+          excelHref: reportExportExcelHref({
+            kind: "report-not-b",
+            sales: salesKey,
+            q: sp.q,
+            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+            class: classKey && classKey !== "all" ? classKey : undefined,
+          }),
+          importKind: "report-not-b",
+          clientsMappedImport: "not-b",
+        }}
       />
     </div>
   );
