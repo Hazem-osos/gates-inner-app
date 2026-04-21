@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
@@ -312,6 +313,20 @@ export function ReportBTable({
         view: "menu" | "close" | "notb" | "won";
       }
   >(null);
+
+  /** تمييز الصف النشط عند النقر على أي خلية (يُزال بالنقر خارج الجدول أو على صف آخر) */
+  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onDocPointerDown = (e: PointerEvent) => {
+      const root = reportBScrollRef.current;
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (!root?.contains(t)) setFocusedRowId(null);
+    };
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+  }, []);
 
   const storageKey = `crm-b-palette-legends-${currentUserId || "anon"}`;
   useEffect(() => {
@@ -1111,13 +1126,27 @@ export function ReportBTable({
                 const bgStyle = rowBg
                   ? { backgroundColor: hexToRgba(rowBg, 0.22) }
                   : undefined;
+                const rowHighlightStyle: CSSProperties | undefined =
+                  rowBg || focusedRowId === r.id
+                    ? {
+                        ...bgStyle,
+                        ...(focusedRowId === r.id
+                          ? {
+                              boxShadow:
+                                "inset 0 0 0 9999px rgba(16, 185, 129, 0.13)",
+                            }
+                          : {}),
+                      }
+                    : undefined;
 
                 return (
                   <TableRow
                     key={r.id}
                     data-gate-row={gateClientId === r.id ? r.id : undefined}
-                    className="cursor-pointer align-top"
-                    style={bgStyle}
+                    data-focused-row={focusedRowId === r.id ? "true" : undefined}
+                    className="cursor-pointer align-top transition-shadow duration-200"
+                    style={rowHighlightStyle}
+                    onPointerDownCapture={() => setFocusedRowId(r.id)}
                     onClick={(e) => {
                       if (gateInvalid && gateClientId === r.id) {
                         e.preventDefault();
