@@ -60,18 +60,6 @@ function importStatusOk(kind: string, status: ClientStatus): boolean {
   return true;
 }
 
-/**
- * تقييد بحالة العميل عند البحث بالهاتف **فقط** في استيراد تقرير العملاء المغلقة
- * (`report-closed`). باقي التقارير تُطابق العميل بالرقم دون تصفية الحالة — ثم يُتحقق من
- * `importStatusOk` بعد الإيجاد.
- */
-function phoneLookupStatusWhere(kind: string): Prisma.ClientWhereInput | null {
-  if (kind === "report-closed") {
-    return { status: ClientStatus.LOST };
-  }
-  return null;
-}
-
 function matchesNormalizedPhone(
   needleDigits: string,
   storedField: string | null
@@ -96,19 +84,12 @@ function digitOnlyVariants(variants: string[]): string[] {
   ];
 }
 
-function mysqlPhoneLookupStatusFilter(kind: string): Prisma.Sql {
-  if (kind === "report-closed") {
-    return Prisma.sql`AND c.status = ${ClientStatus.LOST}`;
-  }
-  return Prisma.empty;
-}
-
 /**
  * مطابقة أرقام بعد إزالة أي رموز من الحقل (مسافات، +، …) — MySQL 8+.
+ * لا يُصفّى بحالة العميل — البحث بالهاتف فقط (حتى يُوجد عميل بـ B/Not B ثم يُحدَّث لاحقاً).
  */
 async function findClientsByMysqlDigitVariants(
-  digitVariants: string[],
-  kind: string
+  digitVariants: string[]
 ): Promise<
   Array<{
     id: string;
@@ -120,7 +101,6 @@ async function findClientsByMysqlDigitVariants(
 > {
   if (digitVariants.length === 0) return [];
   try {
-    const statusSql = mysqlPhoneLookupStatusFilter(kind);
     const rows = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -132,9 +112,7 @@ async function findClientsByMysqlDigitVariants(
     >`
       SELECT c.id, c.status, c.assignedUserId, c.phone, c.phone2
       FROM Client c
-      WHERE 1 = 1
-      ${statusSql}
-      AND (
+      WHERE (
         REGEXP_REPLACE(COALESCE(c.phone, ''), '[^0-9]', '') IN (${Prisma.join(digitVariants)})
         OR REGEXP_REPLACE(COALESCE(c.phone2, ''), '[^0-9]', '') IN (${Prisma.join(digitVariants)})
       )
@@ -216,7 +194,6 @@ function finalizePhoneRows(
  */
 async function findClientRowByImportPhone(
   needle: string,
-  kind: string,
   _sessionRole: UserRole,
   _dbUserId: string,
   rowNum: number,
@@ -240,14 +217,8 @@ async function findClientRowByImportPhone(
     needle
   );
 
-  const statusPart = phoneLookupStatusWhere(kind);
-  const baseWhere: Prisma.ClientWhereInput = {
-    ...(statusPart ?? {}),
-  };
-
   const exact = await prisma.client.findFirst({
     where: {
-      ...baseWhere,
       OR: variants.flatMap((v) => [{ phone: v }, { phone2: v }]),
     },
     select: { id: true, status: true, assignedUserId: true },
@@ -258,7 +229,7 @@ async function findClientRowByImportPhone(
   if (d.length < 8) return { client: null };
 
   const digitVars = digitOnlyVariants(variants);
-  const rawRows = await findClientsByMysqlDigitVariants(digitVars, kind);
+  const rawRows = await findClientsByMysqlDigitVariants(digitVars);
   const fromRaw = finalizePhoneRows(rawRows, needle, d, rowNum, errors);
   if (fromRaw.client || fromRaw.skipGenericNotFoundMessage) {
     return fromRaw;
@@ -278,7 +249,6 @@ async function findClientRowByImportPhone(
 
   const candidates = await prisma.client.findMany({
     where: {
-      ...baseWhere,
       OR: orContains,
     },
     select: {
@@ -491,7 +461,6 @@ export async function processReportImportRows(
         }
         const phoneLookup = await findClientRowByImportPhone(
           phone,
-          kind,
           sessionRole,
           dbUserId,
           rowNum,
@@ -514,7 +483,10 @@ export async function processReportImportRows(
       }
 
       const clientId = client.id;
-      if (!importStatusOk(kind, client.status)) {
+      if (
+        kind !== "report-closed" &&
+        !importStatusOk(kind, client.status)
+      ) {
         errors.push(`صف ${rowNum}: حالة العميل لا تطابق نوع التقرير`);
         continue;
       }
@@ -530,7 +502,8 @@ export async function processReportImportRows(
       );
       if (
         keys.length === 0 &&
-        !(kind === "report-won" && (cv !== "" || sd !== ""))
+        !(kind === "report-won" && (cv !== "" || sd !== "")) &&
+        kind !== "report-closed"
       ) {
         errors.push(
           `صف ${rowNum}: لا حقول للتحديث — راجع ربط أعمدة Excel (لا تُرسل قيماً فارغة لكل الحقول أو احذف الصف الفارغ)`
@@ -545,6 +518,19 @@ export async function processReportImportRows(
         });
         if (!res.ok) {
           errors.push(`صف ${rowNum}: ${res.message}`);
+          continue;
+        }
+      }
+
+      if (kind === "report-closed") {
+        try {
+          await prisma.client.update({
+            where: { id: clientId },
+            data: { status: ClientStatus.LOST },
+          });
+        } catch (e) {
+          console.error(e);
+          errors.push(`صف ${rowNum}: فشل تعيين حالة «مغلق» للعميل`);
           continue;
         }
       }
