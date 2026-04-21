@@ -686,107 +686,113 @@ export function ReportBTable({
           className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
           dir="rtl"
         >
-          <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
-            ترتيب الأعمدة
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="lg"
-              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortDays))}
-              onClick={() =>
-                cycleSort(sortDays, setSortDays, () => {
-                  setSortPrice(null);
-                  setSortCall(null);
-                  setSortFollowUp(null);
-                })
-              }
-            >
-              ترتيب بعدد الأيام
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortPrice))}
-              onClick={() =>
-                cycleSort(sortPrice, setSortPrice, () => {
-                  setSortDays(null);
-                  setSortCall(null);
-                  setSortFollowUp(null);
-                })
-              }
-            >
-              ترتيب بعرض السعر
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortCall))}
-              onClick={() =>
-                cycleSort(sortCall, setSortCall, () => {
-                  setSortDays(null);
-                  setSortPrice(null);
-                  setSortFollowUp(null);
-                })
-              }
-            >
-              ترتيب بتاريخ الاتصال
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="ghost"
-              className={violChip(visitOverdueOnly)}
-              onClick={() => setVisitOverdueOnly((v) => !v)}
-            >
-              تجاوز ميعاد الزيارة
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              className={cn(
-                "h-9 rounded-xl px-3 text-sm",
-                sortBtnClass(sortFollowUp)
-              )}
-              onClick={() =>
-                cycleSort(sortFollowUp, setSortFollowUp, () => {
-                  setSortDays(null);
-                  setSortPrice(null);
-                  setSortCall(null);
-                })
-              }
-            >
-              ترتيب بتاريخ المتابعة التالية
-            </Button>
-          </div>
-          <p className="mb-2 mt-4 text-xs font-semibold tracking-wide text-muted-foreground">
-            فلتر الزيارة
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="lg"
-              variant={visitExtra === "scheduled" ? "default" : "outline"}
-              className="h-9 rounded-xl px-3 text-sm"
-              onClick={() =>
-                setVisitExtra((v) =>
-                  v === "scheduled" ? "none" : "scheduled"
-                )
-              }
-            >
-              عرض المحدد تاريخ زيارة لهم فقط
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant={visitExtra === "visited" ? "default" : "outline"}
-              className="h-9 rounded-xl px-3 text-sm"
-              onClick={() =>
-                setVisitExtra((v) => (v === "visited" ? "none" : "visited"))
-              }
-            >
-              العملاء التي تمت زيارتهم فعلياً
-            </Button>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+            <div className="min-w-0 flex-1">
+              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
+                ترتيب الأعمدة
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortDays))}
+                  onClick={() =>
+                    cycleSort(sortDays, setSortDays, () => {
+                      setSortPrice(null);
+                      setSortCall(null);
+                      setSortFollowUp(null);
+                    })
+                  }
+                >
+                  ترتيب بعدد الأيام
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortPrice))}
+                  onClick={() =>
+                    cycleSort(sortPrice, setSortPrice, () => {
+                      setSortDays(null);
+                      setSortCall(null);
+                      setSortFollowUp(null);
+                    })
+                  }
+                >
+                  ترتيب بعرض السعر
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className={cn("h-9 rounded-xl px-3 text-sm", sortBtnClass(sortCall))}
+                  onClick={() =>
+                    cycleSort(sortCall, setSortCall, () => {
+                      setSortDays(null);
+                      setSortPrice(null);
+                      setSortFollowUp(null);
+                    })
+                  }
+                >
+                  ترتيب بتاريخ الاتصال
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="ghost"
+                  className={violChip(visitOverdueOnly)}
+                  onClick={() => setVisitOverdueOnly((v) => !v)}
+                >
+                  تجاوز ميعاد الزيارة
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className={cn(
+                    "h-9 rounded-xl px-3 text-sm",
+                    sortBtnClass(sortFollowUp)
+                  )}
+                  onClick={() =>
+                    cycleSort(sortFollowUp, setSortFollowUp, () => {
+                      setSortDays(null);
+                      setSortPrice(null);
+                      setSortCall(null);
+                    })
+                  }
+                >
+                  ترتيب بتاريخ المتابعة التالية
+                </Button>
+              </div>
+            </div>
+            <div className="flex w-full shrink-0 flex-col lg:max-w-[min(100%,26rem)] lg:items-end">
+              <p className="mb-2 w-full text-xs font-semibold tracking-wide text-muted-foreground lg:text-end">
+                فلتر الزيارة
+              </p>
+              <div className="flex w-full flex-wrap items-center gap-2 lg:justify-end">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant={visitExtra === "scheduled" ? "default" : "outline"}
+                  className="h-9 rounded-xl px-3 text-sm"
+                  onClick={() =>
+                    setVisitExtra((v) =>
+                      v === "scheduled" ? "none" : "scheduled"
+                    )
+                  }
+                >
+                  عرض المحدد تاريخ زيارة لهم فقط
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant={visitExtra === "visited" ? "default" : "outline"}
+                  className="h-9 rounded-xl px-3 text-sm"
+                  onClick={() =>
+                    setVisitExtra((v) => (v === "visited" ? "none" : "visited"))
+                  }
+                >
+                  العملاء التي تمت زيارتهم فعلياً
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
