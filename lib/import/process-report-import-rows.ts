@@ -5,8 +5,8 @@ import {
   excelRowToReportClientPatch,
   normalizedPrimaryPhoneFromReportRow,
 } from "@/lib/export/report-b-flat";
-import { parseExcelDateCell } from "@/lib/import/excel-client-import";
-import { canAccessClient } from "@/lib/report-scope";
+import { parseExcelDateCell, parsePhones } from "@/lib/import/excel-client-import";
+import { canAccessClient, clientScopeWhere } from "@/lib/report-scope";
 import { prisma } from "@/lib/prisma";
 
 function cellStr(row: Record<string, unknown>, keys: string[]): string {
@@ -57,6 +57,151 @@ function importStatusOk(kind: string, status: ClientStatus): boolean {
     return status === ClientStatus.B || status === ClientStatus.NOT_B;
   }
   return true;
+}
+
+/** نفس نطاق التقارير + حالة التقرير — يقلّل تطابق الهاتف مع عملاء خارج القائمة */
+function importKindStatusWhere(kind: string): Prisma.ClientWhereInput | null {
+  switch (kind) {
+    case "report-b":
+      return { status: ClientStatus.B };
+    case "report-not-b":
+      return { status: ClientStatus.NOT_B };
+    case "report-closed":
+      return { status: ClientStatus.LOST };
+    case "report-won":
+      return { status: ClientStatus.WON };
+    case "dashboard-followups":
+      return { status: { in: [ClientStatus.B, ClientStatus.NOT_B] } };
+    default:
+      return null;
+  }
+}
+
+function matchesNormalizedPhone(
+  needleDigits: string,
+  storedField: string | null
+): boolean {
+  if (!storedField) return false;
+  const a = needleDigits.replace(/\D/g, "");
+  const b = parsePhones(storedField).phone.replace(/\D/g, "");
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const take = Math.min(a.length, b.length, 11);
+  return take >= 8 && a.slice(-take) === b.slice(-take);
+}
+
+/**
+ * مطابقة هاتف ثم صف واحد: مطابقة نصية ثم بحث مرن (آخر 10 أرقام + مقارنة بعد التطبيع).
+ */
+async function findClientRowByImportPhone(
+  needle: string,
+  kind: string,
+  sessionRole: UserRole,
+  dbUserId: string,
+  rowNum: number,
+  errors: string[]
+): Promise<{
+  client: {
+    id: string;
+    status: ClientStatus;
+    assignedUserId: string | null;
+  } | null;
+  /** تم إرسال رسالة خطأ بالفعل (مثل تعدد المطابقات) */
+  skipGenericNotFoundMessage?: boolean;
+}> {
+  const variants = phoneVariantsForDbLookup(needle);
+  if (variants.length === 0) return { client: null };
+
+  const scope = clientScopeWhere({
+    role: sessionRole,
+    userId: dbUserId,
+    salesUserId: undefined,
+  });
+  const statusPart = importKindStatusWhere(kind);
+
+  const baseWhere: Prisma.ClientWhereInput = {
+    ...scope,
+    ...(statusPart ?? {}),
+  };
+
+  const exact = await prisma.client.findFirst({
+    where: {
+      ...baseWhere,
+      OR: variants.flatMap((v) => [{ phone: v }, { phone2: v }]),
+    },
+    select: { id: true, status: true, assignedUserId: true },
+  });
+  if (exact) return { client: exact };
+
+  const d = needle.replace(/\D/g, "");
+  if (d.length < 8) return { client: null };
+
+  const tail10 = d.slice(-10);
+  const tail9 = d.slice(-9);
+
+  const orContains: Prisma.ClientWhereInput[] = [
+    { phone: { contains: tail10 } },
+    { phone2: { contains: tail10 } },
+  ];
+  if (tail9 !== tail10 && tail9.length >= 8) {
+    orContains.push({ phone: { contains: tail9 } });
+    orContains.push({ phone2: { contains: tail9 } });
+  }
+
+  const candidates = await prisma.client.findMany({
+    where: {
+      ...baseWhere,
+      OR: orContains,
+    },
+    select: {
+      id: true,
+      status: true,
+      assignedUserId: true,
+      phone: true,
+      phone2: true,
+    },
+    take: 150,
+  });
+
+  const matches = candidates.filter(
+    (c) =>
+      matchesNormalizedPhone(needle, c.phone) ||
+      (c.phone2 ? matchesNormalizedPhone(needle, c.phone2) : false)
+  );
+
+  if (matches.length === 1) {
+    const m = matches[0]!;
+    return {
+      client: {
+        id: m.id,
+        status: m.status,
+        assignedUserId: m.assignedUserId,
+      },
+    };
+  }
+  if (matches.length > 1) {
+    const exactDigit = matches.filter(
+      (c) =>
+        parsePhones(c.phone).phone.replace(/\D/g, "") === d ||
+        (c.phone2 &&
+          parsePhones(c.phone2).phone.replace(/\D/g, "") === d)
+    );
+    if (exactDigit.length === 1) {
+      const m = exactDigit[0]!;
+      return {
+        client: {
+          id: m.id,
+          status: m.status,
+          assignedUserId: m.assignedUserId,
+        },
+      };
+    }
+    errors.push(
+      `صف ${rowNum}: أكثر من عميل (${matches.length}) يطابق نفس الرقم — نقِّ بيانات التقرير أو راجع الأرقام`
+    );
+    return { client: null, skipGenericNotFoundMessage: true };
+  }
+  return { client: null };
 }
 
 export type ProcessReportImportContext = {
@@ -250,24 +395,29 @@ export async function processReportImportRows(
         });
       } else {
         const phone = normalizedPrimaryPhoneFromReportRow(row);
-        const variants = phoneVariantsForDbLookup(phone);
-        if (variants.length === 0) {
+        if (!phone.replace(/\D/g, "") || phone.replace(/\D/g, "").length < 8) {
           errors.push(`صف ${rowNum}: رقم هاتف غير صالح بعد التطبيع`);
           continue;
         }
-        client = await prisma.client.findFirst({
-          where: {
-            OR: variants.flatMap((v) => [{ phone: v }, { phone2: v }]),
-          },
-          select: { id: true, status: true, assignedUserId: true },
-        });
+        const phoneLookup = await findClientRowByImportPhone(
+          phone,
+          kind,
+          sessionRole,
+          dbUserId,
+          rowNum,
+          errors
+        );
+        client = phoneLookup.client;
+        if (!client && phoneLookup.skipGenericNotFoundMessage) {
+          continue;
+        }
       }
 
       if (!client) {
         errors.push(
           parsed.clientId
             ? `صف ${rowNum}: عميل غير موجود`
-            : `صف ${rowNum}: لا يوجد عميل بهذا الهاتف`
+            : `صف ${rowNum}: لا يوجد عميل بهذا الهاتف ضمن هذا التقرير. ثبّت عمود «هاتف» من التصدير أو تأكد أن الرقم مطابق للقاعدة (نفس صيغة الملف المصدَّر).`
         );
         continue;
       }

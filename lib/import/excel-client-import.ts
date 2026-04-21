@@ -39,6 +39,17 @@ function normalizeArabicHeader(s: string): string {
     .toLowerCase();
 }
 
+/** أرقام عربية شرقية (٠–٩) → ASCII — شائع في Excel العربي */
+function toAsciiDigitsFromArabicIndic(s: string): string {
+  const indic = "٠١٢٣٤٥٦٧٨٩";
+  let o = "";
+  for (const ch of s) {
+    const i = indic.indexOf(ch);
+    o += i >= 0 ? String(i) : ch;
+  }
+  return o;
+}
+
 export function cellStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "string") return v.trim();
@@ -144,7 +155,7 @@ export function parseFirstQuotedPriceString(raw: unknown): string | null {
 }
 
 export function parsePhones(raw: unknown): { phone: string; phone2: string | null } {
-  const s = cellStr(raw);
+  const s = toAsciiDigitsFromArabicIndic(cellStr(raw));
   if (!s) return { phone: "", phone2: null };
   const parts = s
     .split(/[/／]/)
