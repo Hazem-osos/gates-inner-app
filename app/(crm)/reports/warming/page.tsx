@@ -147,7 +147,7 @@ export default async function ReportWarmingPage({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ReportWorkLogDialog reportKey="report-warming" userId={workLogUserId} />
         <ExportToolbar
-          importKind="warming"
+          mappedReportKind="warming"
           excelHref={warmingExportExcelHref({
             mode,
             sales: salesKey,

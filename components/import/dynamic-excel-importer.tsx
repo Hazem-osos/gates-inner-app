@@ -53,6 +53,11 @@ export type DynamicExcelImporterProps = {
   onHeadersParsed?: (headers: string[]) => void;
   /** عند مسح الملف أو فشل القراءة */
   onFileCleared?: () => void;
+  /**
+   * clients: تلميحات استيراد عملاء جدد (هاتف، متابعات، B/Not B).
+   * report: تحديث صفوف من تصدير التقرير (معرّف عميل/توصية وغيره).
+   */
+  mappingHelpMode?: "clients" | "report";
 };
 
 const MIN_PARTIAL_LEN = 3;
@@ -243,6 +248,7 @@ export function DynamicExcelImporter({
   className,
   onHeadersParsed,
   onFileCleared,
+  mappingHelpMode = "clients",
 }: DynamicExcelImporterProps) {
   const fileInputId = useId();
   const [parseError, setParseError] = useState<string | null>(null);
@@ -461,28 +467,54 @@ export function DynamicExcelImporter({
               تم اقتراح تطابق تلقائي يمكنك تعديله من القوائم. لكل حقل يظهر أسفل
               القائمة اسم عمود Excel الفعلي المرتبط به بعد اختيارك.
             </p>
-            <div
-              className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-foreground"
-              role="note"
-            >
-              <span className="font-semibold text-primary">رقم الهاتف (مطلوب):</span>{" "}
-              في الصف الأول من ملفك ابحث عن عنوان عمود يشبه:{" "}
-              <span className="font-medium">
-                هاتف، جوال، تليفون، تلفون، رقم الهاتف، رقم التليفون، رقم
-                الجوال، موبايل، mobile، phone
-              </span>{" "}
-              ثم اختره من القائمة بجانب «رقم الهاتف».
-            </div>
-            <div
-              className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
-              role="note"
-            >
-              <span className="font-semibold">المتابعات:</span> اربط أزواج «نص +
-              تاريخ» لكل خانة؛ استخدم «إضافة متابعة» أسفل المنطقة إن وُجد لإظهار
-              المزيد. العناوين من تصدير التقرير تُكتشف تلقائياً، ويمكن عمود JSON
-              «متابعات». عند استيراد B، عميل بنفس الهاتف Not B يُحدَّث إلى B
-              وتُمسَح حقول Not B الفرعية.
-            </div>
+            {mappingHelpMode === "report" ? (
+              <>
+                <div
+                  className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+                  role="note"
+                >
+                  <span className="font-semibold text-primary">
+                    الحقول المطلوبة (*):
+                  </span>{" "}
+                  اربط أعمدة ملف التصدير من نفس التقرير لكل حقل يظهر بجانبه نجمة؛
+                  غالباً «معرّف العميل» أو id، أو معرّف التوصية في تقرير
+                  التوصيات.
+                </div>
+                <div
+                  className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+                  role="note"
+                >
+                  <span className="font-semibold">تحديث الصفوف:</span> يُحدَّث فقط
+                  ما وُجد له عمود مربوط؛ غير المربوط يُتجاهل. يُفضّل تصدير Excel من
+                  نفس الصفحة ثم التعديل وإعادة الاستيراد.
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+                  role="note"
+                >
+                  <span className="font-semibold text-primary">رقم الهاتف (مطلوب):</span>{" "}
+                  في الصف الأول من ملفك ابحث عن عنوان عمود يشبه:{" "}
+                  <span className="font-medium">
+                    هاتف، جوال، تليفون، تلفون، رقم الهاتف، رقم التليفون، رقم
+                    الجوال، موبايل، mobile، phone
+                  </span>{" "}
+                  ثم اختره من القائمة بجانب «رقم الهاتف».
+                </div>
+                <div
+                  className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+                  role="note"
+                >
+                  <span className="font-semibold">المتابعات:</span> اربط أزواج «نص +
+                  تاريخ» لكل خانة؛ استخدم «إضافة متابعة» أسفل المنطقة إن وُجد لإظهار
+                  المزيد. العناوين من تصدير التقرير تُكتشف تلقائياً، ويمكن عمود JSON
+                  «متابعات». عند استيراد B، عميل بنفس الهاتف Not B يُحدَّث إلى B
+                  وتُمسَح حقول Not B الفرعية.
+                </div>
+              </>
+            )}
             <ul className="flex flex-col gap-4">
               {expectedFields.map((field) => {
                 const mappedHeader = mapping[field.key]?.trim() ?? "";

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { ReportMappedImportDialog } from "@/components/reports/report-mapped-import-dialog";
 import { pdfFromExcelHref, reportImportExcelUrl } from "@/lib/export-excel-href";
 import {
   REPORT_EXCEL_EXPORT_ICON_CLASS,
@@ -21,29 +22,40 @@ type Props = {
   excelHref: string;
   className?: string;
   /**
-   * نوع التقرير لمسار الاستيراد — يجب أن يطابق أعمدة ملف التصدير من نفس الصفحة.
-   * أمثلة: report-b، report-not-b، report-closed، report-won، warming، report-calls، report-recommendations، dashboard-followups
+   * نوع التقرير لمسار الاستيراد السريع — يجب أن يطابق أعمدة ملف التصدير من نفس الصفحة.
+   * أمثلة: report-b، report-not-b، dashboard-followups
    */
   importKind?: string;
+  /**
+   * استيراد بنافذة «تعيين الأعمدة» ثم `/api/import/mapped-rows` — يُلغي الاستيراد السريع.
+   */
+  mappedReportKind?: string;
 };
 
-/** تصدير Excel، معاينة طباعة/PDF، واستيراد Excel يحدّث قاعدة البيانات عند تمرير `importKind` */
-export function ExportToolbar({ excelHref, className, importKind }: Props) {
+/** تصدير Excel، معاينة طباعة/PDF، واستيراد Excel يحدّث قاعدة البيانات عند تمرير `importKind` أو `mappedReportKind` */
+export function ExportToolbar({
+  excelHref,
+  className,
+  importKind,
+  mappedReportKind,
+}: Props) {
   const router = useRouter();
   const pdfHref = pdfFromExcelHref(excelHref);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const quickImportKind = mappedReportKind ? undefined : importKind;
+
   async function onQuickImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !importKind) return;
+    if (!file || !quickImportKind) return;
     setBusy(true);
     setMsg(null);
     try {
       const fd = new FormData();
       fd.set("file", file);
-      const r = await fetch(reportImportExcelUrl(importKind), {
+      const r = await fetch(reportImportExcelUrl(quickImportKind), {
         method: "POST",
         body: fd,
       });
@@ -73,6 +85,9 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
         className
       )}
     >
+      {mappedReportKind ? (
+        <ReportMappedImportDialog kind={mappedReportKind} />
+      ) : null}
       <Link
         href={excelHref}
         className={cn(
@@ -95,7 +110,7 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
         <FileText className={REPORT_PDF_EXPORT_ICON_CLASS} aria-hidden />
         طباعة / PDF
       </Link>
-      {importKind ? (
+      {quickImportKind ? (
         <>
           <label
             className={cn(

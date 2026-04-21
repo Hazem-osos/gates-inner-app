@@ -60,7 +60,7 @@ export default async function ReportClosedPage({
       sales: salesKey,
       ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
     }),
-    importKind: "report-closed",
+    reportMappedImportKind: "report-closed",
   };
 
   return (

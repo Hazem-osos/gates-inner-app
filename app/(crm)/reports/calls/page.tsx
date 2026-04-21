@@ -195,7 +195,7 @@ export default async function CallsReportPage({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ReportWorkLogDialog reportKey="report-calls" userId={workLogUserId} />
         <ExportToolbar
-          importKind="report-calls"
+          mappedReportKind="report-calls"
           excelHref={callsReportExportExcelHref({
             from: fromStr,
             to: toStr,

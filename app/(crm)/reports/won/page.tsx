@@ -180,7 +180,7 @@ async function ReportWonContent({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ReportWorkLogDialog reportKey="report-won" userId={workLogUserId} />
         <ExportToolbar
-          importKind="report-won"
+          mappedReportKind="report-won"
           excelHref={reportExportExcelHref({
             kind: "report-won",
             sales: salesKey,

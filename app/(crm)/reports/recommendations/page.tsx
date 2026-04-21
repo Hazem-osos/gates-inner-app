@@ -135,7 +135,7 @@ export default async function RecommendationsReportPage({
           userId={workLogUserId}
         />
         <ExportToolbar
-          importKind="report-recommendations"
+          mappedReportKind="report-recommendations"
           excelHref={recommendationsExportExcelHref({
             filter,
             sales: salesKey,
