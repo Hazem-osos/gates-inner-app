@@ -152,7 +152,15 @@ export function parsePhones(raw: unknown): { phone: string; phone2: string | nul
     .filter(Boolean);
 
   function digitize(p: string) {
-    return p.replace(/[^\d]/g, "");
+    const t = p.trim();
+    /** Excel يعرض أحياناً أرقاماً ككسر: "1012345678.0" فيصبح بعد إزالة غير الأرقام ١١ خانة خاطئ */
+    if (/^\d+\.\d+$/.test(t)) {
+      const n = Number(t.replace(/,/g, ""));
+      if (Number.isFinite(n) && n >= 1e6 && n < 1e13) {
+        return String(Math.round(n)).replace(/[^\d]/g, "");
+      }
+    }
+    return t.replace(/[^\d]/g, "");
   }
 
   function normalizeEgypt(digits: string): string {

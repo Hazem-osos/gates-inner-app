@@ -20,6 +20,21 @@ function cellStr(row: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+/** مطابقات شائعة لأرقام مصرية مُخزَّنة بصيغ مختلفة عن تصدير Excel */
+function phoneVariantsForDbLookup(normalizedDigits: string): string[] {
+  const d = normalizedDigits.replace(/\D/g, "");
+  if (!d || d.length < 8) return [];
+  const out = new Set<string>();
+  out.add(d);
+  if (d.startsWith("0") && d.length >= 10) out.add(d.slice(1));
+  if (!d.startsWith("0") && /^1\d{8,10}$/.test(d)) out.add(`0${d}`);
+  if (d.startsWith("01") && d.length === 11) {
+    out.add(`20${d.slice(1)}`);
+    out.add(`+20${d.slice(1)}`);
+  }
+  return [...out];
+}
+
 function boolFromCell(v: string): boolean | undefined {
   const t = v.trim().toLowerCase();
   if (!t) return undefined;
@@ -230,8 +245,15 @@ export async function processReportImportRows(
         });
       } else {
         const phone = normalizedPrimaryPhoneFromReportRow(row);
+        const variants = phoneVariantsForDbLookup(phone);
+        if (variants.length === 0) {
+          errors.push(`صف ${rowNum}: رقم هاتف غير صالح بعد التطبيع`);
+          continue;
+        }
         client = await prisma.client.findFirst({
-          where: { OR: [{ phone }, { phone2: phone }] },
+          where: {
+            OR: variants.flatMap((v) => [{ phone: v }, { phone2: v }]),
+          },
           select: { id: true, status: true, assignedUserId: true },
         });
       }

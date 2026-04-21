@@ -17,6 +17,7 @@ import {
 import { normalizeSlotsSimple } from "@/lib/report-b-utils";
 
 const REPORT_B_EXPORT_BASE_KEYS = [
+  "id",
   "name",
   "phone",
   "phone2",
@@ -69,6 +70,7 @@ const REPORT_B_EXPORT_HEADER_AR_BASE: Record<
   (typeof REPORT_B_EXPORT_BASE_KEYS)[number],
   string
 > = {
+  id: "معرّف عميل",
   name: "اسم المسئول",
   phone: "هاتف",
   phone2: "هاتف ثاني",
@@ -122,6 +124,7 @@ function boolToCell(v: boolean | null | undefined): string {
 export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> {
   const slots = normalizeSlotsSimple(r.followUpSlots);
   const byKey: Record<string, string> = {
+    id: r.id,
     name: r.name,
     phone: r.phone,
     phone2: r.phone2 ?? "",
@@ -323,7 +326,7 @@ function isoDateFromReportRow(
 
 /**
  * يحوّل صف Excel (بعد sheet_to_json) إلى معرّف عميل (إن وُجد) + patch للحقول القابلة للتحديث من التقرير.
- * بدون `id` في الصف يُستنتج العميل من عمود **هاتف** عند الاستيراد (انظر `processReportImportRows`).
+ * يُفضّل عمود **معرّف عميل** من التصدير؛ بدون مُعرّف يُستنتج العميل من عمود **هاتف** (انظر `processReportImportRows`).
  * يُحدَّث الحقل فقط إذا وُجد عمود مطابق في الملف (استيراد جزئي عند حذف أعمدة من القالب).
  */
 export function excelRowToReportClientPatch(
@@ -334,6 +337,8 @@ export function excelRowToReportClientPatch(
     "معرف",
     "client_id",
     "معرف_العميل",
+    "معرّف عميل",
+    "معرف عميل",
   ]);
   const phoneDigits = normalizedPrimaryPhoneFromReportRow(row);
   if (!clientId && (!phoneDigits || phoneDigits.length < 8)) {
