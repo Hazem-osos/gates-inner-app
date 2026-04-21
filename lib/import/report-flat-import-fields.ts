@@ -47,7 +47,7 @@ function followUpPairFieldsForReport(i: number): ExpectedField[] {
 }
 
 /**
- * حقول استيراد تقرير (تحديث صفوف) مع أزواج متابعة ديناميكية بدل ٣٠ خانة دفعة واحدة.
+ * حقول استيراد تقرير (تحديث صفوف) مع أزواج متابعة ديناميكية بدل إدراج كل الخانات دفعة واحدة.
  * يبدأ بزوج واحد + زر «إضافة متابعة» في الواجهة.
  */
 export function buildReportFlatImportFields(

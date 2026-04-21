@@ -2,7 +2,7 @@
  * أعمدة متابعة مسطّحة في Excel (نص + تاريخ لكل خانة).
  * حد معقول للملفات؛ يمكن زيادته عند الحاجة.
  */
-export const MAX_FOLLOW_UP_SLOTS_EXCEL = 30;
+export const MAX_FOLLOW_UP_SLOTS_EXCEL = 100;
 
 export function followUpSlotNoteKey(i: number): string {
   return `followUpSlot${i}Note`;

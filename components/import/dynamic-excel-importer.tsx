@@ -353,7 +353,7 @@ export function DynamicExcelImporter({
         const idx = headerIndex.get(excelHeader);
         out[f.key] = idx !== undefined ? cellAt(row, idx) : "";
       }
-      /** أعمدة «متابعة N — نص/تاريخ» من تصدير التقرير تُربط تلقائياً دون إدراج ٣٠ خانة في القائمة */
+      /** أعمدة «متابعة N — نص/تاريخ» من تصدير التقرير تُربط تلقائياً دون إدراج كل الخانات في القائمة */
       for (const h of headers) {
         const parsed = parseFollowUpSlotColumnHeader(h);
         if (!parsed) continue;

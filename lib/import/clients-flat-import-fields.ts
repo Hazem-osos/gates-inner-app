@@ -240,7 +240,7 @@ function followUpPairFieldsForIndex(i: number): ExpectedField[] {
 }
 
 /**
- * قائمة حقول الاستيراد: أزواج «متابعة N — نص/تاريخ» حسب العدد المطلوب (١…٣٠).
+ * قائمة حقول الاستيراد: أزواج «متابعة N — نص/تاريخ» حسب العدد المطلوب (ضمن الحد الأقصى للمتابعات في Excel).
  * تُستخدم مع زر «إضافة متابعة» واكتشاف العناوين من الملف.
  */
 export function buildClientsFlatImportFields(
