@@ -124,7 +124,7 @@ type Props = {
   /** مطلوب لسجل العمل وسجل لوحة الألوان */
   currentUserId?: string;
   /** لـ PATCH تلوين الصف (مثلاً not-b) */
-  rowStyleReportType?: "b" | "not-b";
+  rowStyleReportType?: "b" | "not-b" | "closed";
   /** تقرير المغلقة: شبكة كاملة بدون أدوات الفلترة العلوية من تقرير B */
   toolbar?: "full" | "closed";
   /** مفتاح تقرير سجل العمل (تصفية AuditLog) — مثل report-dashboard-followups */
@@ -501,9 +501,6 @@ export function ReportBTable({
   }, [filteredVisit, searchQ]);
 
   const visibleRows = useMemo(() => {
-    if (toolbar === "closed") {
-      return merged.filter((r) => !hiddenIds.has(r.id));
-    }
     const base = searched.filter((r) => !hiddenIds.has(r.id));
     let out = base;
     const tri: [
@@ -523,7 +520,6 @@ export function ReportBTable({
     }
     return out;
   }, [
-    toolbar,
     merged,
     searched,
     hiddenIds,
@@ -671,19 +667,16 @@ export function ReportBTable({
             userId={currentUserId}
           />
         ) : null}
-        {toolbar !== "closed" ? (
-          <Input
-            placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
-            className="h-10 min-w-[12rem] flex-1 max-w-xl rounded-xl border-border/70 bg-background/90 text-sm shadow-inner"
-            value={searchQ}
-            onChange={(e) => setSearchQ(e.target.value)}
-            dir="rtl"
-          />
-        ) : null}
+        <Input
+          placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
+          className="h-10 min-w-[12rem] flex-1 max-w-xl rounded-xl border-border/70 bg-background/90 text-sm shadow-inner"
+          value={searchQ}
+          onChange={(e) => setSearchQ(e.target.value)}
+          dir="rtl"
+        />
       </div>
 
-      {toolbar !== "closed" ? (
-        <div
+      <div
           data-gate-exempt
           className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
           dir="rtl"
@@ -797,7 +790,6 @@ export function ReportBTable({
             </div>
           </div>
         </div>
-      ) : null}
 
       <SimpleDialog
         open={gateDialogOpen}
@@ -836,16 +828,13 @@ export function ReportBTable({
       <div
         className={cn(
           "sticky top-14 z-30 mb-3 rounded-2xl border bg-card/90 p-4 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 dark:border-border/50",
-          toolbar !== "closed"
-            ? "border-destructive/25 shadow-[0_8px_30px_-12px_hsl(var(--destructive)/0.35)] ring-1 ring-destructive/10"
-            : "border-border/70"
+          "border-destructive/25 shadow-[0_8px_30px_-12px_hsl(var(--destructive)/0.35)] ring-1 ring-destructive/10"
         )}
       >
         <div
           className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-4"
           dir="rtl"
         >
-          {toolbar !== "closed" ? (
             <div
               data-gate-exempt
               className="min-w-0 flex-1 overflow-hidden rounded-xl border border-destructive/20 bg-gradient-to-br from-destructive/[0.06] via-background to-background shadow-sm dark:from-destructive/10 dark:via-background"
@@ -959,15 +948,9 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
-          ) : null}
           <aside
             data-gate-exempt
-            className={cn(
-              "rounded-xl border border-border/60 bg-muted/20 p-3 shadow-sm dark:bg-muted/15",
-              toolbar !== "closed"
-                ? "w-full shrink-0 lg:w-auto lg:min-w-[12rem]"
-                : "mx-auto w-full max-w-[14rem]"
-            )}
+            className="w-full shrink-0 rounded-xl border border-border/60 bg-muted/20 p-3 shadow-sm dark:bg-muted/15 lg:w-auto lg:min-w-[12rem]"
           >
             <p className="mb-2 text-center text-xs font-semibold tracking-wide text-muted-foreground">
               تلوين الصفوف
@@ -1006,8 +989,7 @@ export function ReportBTable({
             </p>
           </aside>
         </div>
-        {toolbar !== "closed" &&
-        (violationMessage() ||
+        {(violationMessage() ||
           visitOverdueFilterMessage() ||
           visitBanner()) ? (
           <div

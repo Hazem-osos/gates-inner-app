@@ -5,13 +5,17 @@ import { revalidatePath } from "next/cache";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { buildArabicAuditLinesFromPatch } from "@/lib/audit/report-patch-diff";
+import { parseExcelDateCell } from "@/lib/import/excel-client-import";
 import { prisma } from "@/lib/prisma";
 
 export type PatchResult = { ok: true } | { ok: false; message: string };
 
-function parseDt(s: string): Date | null {
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+/** تواريخ من تقرير / Excel — يدعم ISO، يوم/شهر/سنة، وتسلسل Excel */
+function parsePatchDateTime(raw: string | undefined | null): Date | null {
+  if (raw === undefined || raw === null) return null;
+  const t = String(raw).trim();
+  if (t === "") return null;
+  return parseExcelDateCell(t);
 }
 
 function parseOptionalDecimal(v: string | undefined): Prisma.Decimal | null {
@@ -49,6 +53,9 @@ export type ReportClientPatchInput = {
   qqAnswer?: boolean | null;
   followUpSlots?: unknown;
   classificationId?: string | null;
+  initialCallDate?: string | null;
+  lossReason?: string | null;
+  closedLostAt?: string | null;
 };
 
 function normalizeFollowSlots(raw: unknown): Prisma.InputJsonValue {
@@ -129,16 +136,25 @@ export async function patchClientReportFields(
     }
     if (patch.managementRecommendationDate !== undefined) {
       const s = patch.managementRecommendationDate?.trim();
-      data.managementRecommendationDate =
-        s && s !== "" ? parseDt(s) : null;
+      if (!s) data.managementRecommendationDate = null;
+      else {
+        const d = parsePatchDateTime(s);
+        if (!d) {
+          return { ok: false, message: "تاريخ توصية الإدارة غير صالح." };
+        }
+        data.managementRecommendationDate = d;
+      }
     }
 
     if (patch.nextFollowUpAt !== undefined) {
       const t = patch.nextFollowUpAt.trim();
       if (t === "") {
-        return { ok: false, message: "تاريخ المتابعة التالي لا يمكن أن يكون فارغاً." };
+        return {
+          ok: false,
+          message: "تاريخ المتابعة التالي لا يمكن أن يكون فارغاً.",
+        };
       }
-      const n = parseDt(t);
+      const n = parsePatchDateTime(t);
       if (!n) return { ok: false, message: "تاريخ متابعة غير صالح." };
       data.nextFollowUpAt = n;
     }
@@ -147,9 +163,35 @@ export async function patchClientReportFields(
       data.visitAppointmentScheduled = patch.visitAppointmentScheduled;
     }
     if (patch.visitAppointmentDate !== undefined) {
-      data.visitAppointmentDate = patch.visitAppointmentDate
-        ? parseDt(patch.visitAppointmentDate)
-        : null;
+      const s = patch.visitAppointmentDate?.trim() ?? "";
+      if (!s) data.visitAppointmentDate = null;
+      else {
+        const d = parsePatchDateTime(s);
+        if (!d) return { ok: false, message: "تاريخ زيارة غير صالح." };
+        data.visitAppointmentDate = d;
+      }
+    }
+
+    if (patch.initialCallDate !== undefined) {
+      const s = patch.initialCallDate?.trim() ?? "";
+      if (!s) data.initialCallDate = null;
+      else {
+        const d = parsePatchDateTime(s);
+        if (!d) return { ok: false, message: "تاريخ اتصال غير صالح." };
+        data.initialCallDate = d;
+      }
+    }
+
+    if (patch.lossReason !== undefined) data.lossReason = patch.lossReason;
+
+    if (patch.closedLostAt !== undefined) {
+      const s = patch.closedLostAt?.trim() ?? "";
+      if (!s) data.closedLostAt = null;
+      else {
+        const d = parsePatchDateTime(s);
+        if (!d) return { ok: false, message: "تاريخ الإغلاق غير صالح." };
+        data.closedLostAt = d;
+      }
     }
 
     if (patch.qqAnswer !== undefined) data.qqAnswer = patch.qqAnswer;

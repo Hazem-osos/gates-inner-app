@@ -296,6 +296,28 @@ export function normalizedPrimaryPhoneFromReportRow(
   return parsePhones(raw).phone;
 }
 
+/** يحوّل خلية تاريخ من Excel (رقم تسلسل، نص، ISO) إلى ISO لـ `patchClientReportFields`. */
+function isoDateFromReportRow(
+  row: Record<string, unknown>,
+  keys: string[]
+): string | undefined {
+  for (const k of keys) {
+    if (!(k in row)) continue;
+    const raw = row[k];
+    if (raw === undefined || raw === null) continue;
+    if (typeof raw === "string" && raw.trim() === "") return undefined;
+    const d = parseExcelDateCell(raw);
+    if (d) return d.toISOString();
+    if (typeof raw === "string") {
+      const t = raw.trim();
+      if (t === "") return undefined;
+      return t;
+    }
+    return String(raw);
+  }
+  return undefined;
+}
+
 /**
  * يحوّل صف Excel (بعد sheet_to_json) إلى معرّف عميل (إن وُجد) + patch للحقول القابلة للتحديث من التقرير.
  * بدون `id` في الصف يُستنتج العميل من عمود **هاتف** عند الاستيراد (انظر `processReportImportRows`).
@@ -341,11 +363,6 @@ export function excelRowToReportClientPatch(
     "توصيات_الإدارة",
     REPORT_B_EXPORT_HEADER_AR_BASE.managementRecommendationText,
   ], { allowEmpty: true });
-  assignStr(patch, "managementRecommendationDate", row, [
-    "managementRecommendationDate",
-    "تاريخ_التوصية",
-    REPORT_B_EXPORT_HEADER_AR_BASE.managementRecommendationDate,
-  ], { allowEmpty: true });
   assignStr(patch, "callSummary", row, ["callSummary", "ملخص_مكالمة", "ملخص مكالمة", REPORT_B_EXPORT_HEADER_AR_BASE.callSummary], {
     allowEmpty: true,
   });
@@ -386,13 +403,6 @@ export function excelRowToReportClientPatch(
     if (b === true || b === false) patch.visitAppointmentScheduled = b;
   }
 
-  assignStr(patch, "visitAppointmentDate", row, [
-    "visitAppointmentDate",
-    "تاريخ_زيارة",
-    "تاريخ زيارة",
-    REPORT_B_EXPORT_HEADER_AR_BASE.visitAppointmentDate,
-  ], { allowEmpty: true });
-
   const qq = cellStrAllowEmpty(row, ["qqAnswer", "QQ", REPORT_B_EXPORT_HEADER_AR_BASE.qqAnswer]);
   if (qq !== undefined) {
     const b = parseBoolCell(qq);
@@ -413,16 +423,48 @@ export function excelRowToReportClientPatch(
     patch.followUpSlots = slotsPatch;
   }
 
-  const nfu = cellStrAllowEmpty(row, [
+  const mrd = isoDateFromReportRow(row, [
+    "managementRecommendationDate",
+    "تاريخ_التوصية",
+    REPORT_B_EXPORT_HEADER_AR_BASE.managementRecommendationDate,
+  ]);
+  if (mrd !== undefined) patch.managementRecommendationDate = mrd;
+
+  const vad = isoDateFromReportRow(row, [
+    "visitAppointmentDate",
+    "تاريخ_زيارة",
+    "تاريخ زيارة",
+    REPORT_B_EXPORT_HEADER_AR_BASE.visitAppointmentDate,
+  ]);
+  if (vad !== undefined) patch.visitAppointmentDate = vad;
+
+  const icd = isoDateFromReportRow(row, [
+    "initialCallDate",
+    REPORT_B_EXPORT_HEADER_AR_BASE.initialCallDate,
+  ]);
+  if (icd !== undefined) patch.initialCallDate = icd;
+
+  const closedAt = isoDateFromReportRow(row, [
+    "closedLostAt",
+    "تاريخ الإغلاق",
+    REPORT_B_EXPORT_HEADER_AR_BASE.closedLostAt,
+  ]);
+  if (closedAt !== undefined) patch.closedLostAt = closedAt;
+
+  assignStr(patch, "lossReason", row, [
+    "lossReason",
+    "سبب_الإغلاق",
+    "سبب الإغلاق",
+    REPORT_B_EXPORT_HEADER_AR_BASE.lossReason,
+  ], { allowEmpty: true });
+
+  const nfu = isoDateFromReportRow(row, [
     "nextFollowUpAt",
     "متابعة_تالية",
     "متابعة تالية",
     REPORT_B_EXPORT_HEADER_AR_BASE.nextFollowUpAt,
   ]);
-  if (nfu !== undefined) {
-    const t = nfu.trim();
-    if (t !== "") patch.nextFollowUpAt = t;
-  }
+  if (nfu !== undefined && nfu !== "") patch.nextFollowUpAt = nfu;
 
   return { clientId: clientId || null, patch };
 }

@@ -7,6 +7,7 @@ import {
   type ReportToolbarExportsConfig,
 } from "@/components/reports/report-page-exports-toolbar";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
@@ -23,7 +24,13 @@ export const dynamic = "force-dynamic";
 export default async function ReportClosedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sales?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{
+    sales?: string;
+    sort?: string;
+    dir?: string;
+    q?: string;
+    class?: string;
+  }>;
 }) {
   const user = await requireSessionUser();
   const stylesUserId = (await resolveSessionDbUserId(user)) ?? user.id;
@@ -37,6 +44,7 @@ export default async function ReportClosedPage({
       userId: user.id,
       salesUserId: salesKey,
       status: ClientStatus.LOST,
+      q: sp.q,
       sort,
       sortDir: dir,
       take: 500,
@@ -44,21 +52,41 @@ export default async function ReportClosedPage({
     listClientClassifications(),
   ]);
 
+  const classKey = sp.class?.trim();
+  const filtered =
+    classKey && classKey !== "all"
+      ? clients.filter(
+          (c) =>
+            c.classificationId === classKey ||
+            c.notBClassification === classKey
+        )
+      : clients;
+
   const rowStyles = await listReportRowStylesForClients({
     userId: stylesUserId,
-    reportKey: "report-b",
-    clientIds: clients.map((c) => c.id),
+    reportKey: "report-closed",
+    clientIds: filtered.map((c) => c.id),
   });
 
-  const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
+  const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
 
-  const filterActive = salesKey !== "all";
+  const classFilter =
+    classKey && classKey !== "all"
+      ? classifications.find((x) => x.id === classKey)?.label ?? classKey
+      : null;
+
+  const filterActive =
+    salesKey !== "all" ||
+    Boolean(sp.q?.trim()) ||
+    Boolean(classKey && classKey !== "all");
 
   const exportsConfig: ReportToolbarExportsConfig = {
     excelHref: reportExportExcelHref({
       kind: "report-closed",
       sales: salesKey,
+      q: sp.q,
       ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+      class: classKey && classKey !== "all" ? classKey : undefined,
     }),
     reportMappedImportKind: "report-closed",
   };
@@ -68,7 +96,7 @@ export default async function ReportClosedPage({
       <PageHeader
         fullWidthBar
         title="العملاء المغلقة"
-        subtitle="بيانات العملاء كما في تقرير B مع أعمدة الإغلاق — بدون أدوات الفلترة العلوية الإضافية."
+        subtitle="بيانات العملاء كما في تقرير B مع أعمدة الإغلاق — نفس فلاتر التصنيف والبحث وترتيب الأعمدة وتجاوزات التقرير."
       />
 
       <div
@@ -83,16 +111,58 @@ export default async function ReportClosedPage({
           bare
           role={user.role}
           pathname="/reports/closed"
-          searchParams={{}}
+          searchParams={{
+            ...(sp.q ? { q: sp.q } : {}),
+            ...(classKey && classKey !== "all"
+              ? { class: classKey }
+              : {}),
+          }}
           currentSales={salesKey}
         />
       </div>
 
-      <ReportRecordsCount count={rows.length} />
+      <form
+        className="flex flex-wrap items-center gap-2"
+        action="/reports/closed"
+        method="get"
+      >
+        {salesKey !== "all" ? (
+          <input type="hidden" name="sales" value={salesKey} />
+        ) : null}
+        <label className="flex items-center gap-2 text-sm">
+          عرض حسب التصنيف
+          <select
+            name="class"
+            defaultValue={classKey && classKey !== "" ? classKey : "all"}
+            className="h-9 min-w-[160px] rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="all">الكل</option>
+            {classifications.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                {cl.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <input
+          name="q"
+          defaultValue={sp.q ?? ""}
+          placeholder="بحث"
+          className="h-9 min-w-[180px] rounded-md border border-input bg-background px-2 text-sm"
+          dir="rtl"
+        />
+        <Button type="submit" size="sm" variant="secondary">
+          تطبيق
+        </Button>
+      </form>
 
       <p className={reportPageDescriptionClass}>
-        التقرير يعرض العملاء بحالة تم الإغلاق فقط — الشبكة الكاملة قابلة للتعديل كتقرير B.
+        التقرير يعرض العملاء بحالة تم الإغلاق فقط
+        {classFilter ? ` — تصنيف: «${classFilter}»` : ""}
+        {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
+
+      <ReportRecordsCount count={rows.length} />
 
       {filterActive ? (
         <p className="text-sm font-medium text-destructive">
@@ -105,6 +175,7 @@ export default async function ReportClosedPage({
         classifications={classifications}
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
+        rowStyleReportType="closed"
         toolbar="closed"
       />
     </div>

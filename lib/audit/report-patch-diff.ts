@@ -180,6 +180,26 @@ export function buildArabicAuditLinesFromPatch(
     if (prev !== next) lines.push("تعديل تصنيف العميل");
   }
 
+  if (patch.initialCallDate !== undefined) {
+    const prev = iso(client.initialCallDate);
+    const raw = patch.initialCallDate?.trim();
+    const next = raw && raw !== "" ? new Date(raw).toISOString() : "";
+    if (prev !== next) {
+      lines.push("تعديل تاريخ الاتصال الأول");
+    }
+  }
+  if (patch.lossReason !== undefined && !trimEq(patch.lossReason, client.lossReason)) {
+    lines.push("تعديل سبب الإغلاق");
+  }
+  if (patch.closedLostAt !== undefined) {
+    const prev = iso(client.closedLostAt);
+    const raw = patch.closedLostAt?.trim();
+    const next = raw && raw !== "" ? new Date(raw).toISOString() : "";
+    if (prev !== next) {
+      lines.push("تعديل تاريخ الإغلاق");
+    }
+  }
+
   if (patch.followUpSlots !== undefined) {
     const before = normalizeFollowSlots(client.followUpSlots);
     const after = normalizeFollowSlots(patch.followUpSlots);
