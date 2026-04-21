@@ -38,8 +38,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
-import { ExportToolbar } from "@/components/export/export-toolbar";
-import { ExcelClientsImportDialog } from "@/components/reports/excel-clients-import-dialog";
 import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   Table,
@@ -129,13 +127,6 @@ type Props = {
   toolbar?: "full" | "closed";
   /** مفتاح تقرير سجل العمل (تصفية AuditLog) — مثل report-dashboard-followups */
   auditReportKey?: string;
-  /** داخل بطاقة الفلاتر: تصدير Excel / PDF واستيراد التقرير وعملاء Excel */
-  toolbarExports?: {
-    excelHref: string;
-    /** استيراد سريع (ملف) — يُخفى تلقائياً إذا وُجد `clientsMappedImport` لتفادي زرّي استيراد */
-    importKind?: string;
-    clientsMappedImport?: "b" | "not-b";
-  };
 };
 
 type FollowSlot = { order: number; note: string; date: string };
@@ -244,13 +235,7 @@ export function ReportBTable({
   rowStyleReportType = "b",
   toolbar = "full",
   auditReportKey,
-  toolbarExports,
 }: Props) {
-  const toolbarImportKind =
-    toolbarExports?.clientsMappedImport != null
-      ? undefined
-      : toolbarExports?.importKind;
-
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
@@ -693,44 +678,7 @@ export function ReportBTable({
             dir="rtl"
           />
         ) : null}
-        {toolbar === "closed" && toolbarExports ? (
-          <>
-            <div className="h-px w-full shrink-0 basis-full bg-border/50" aria-hidden />
-            <div className="flex w-full justify-end">
-              <div
-                data-gate-exempt
-                className="flex max-w-full flex-wrap items-center justify-end gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5 shadow-sm dark:bg-muted/15"
-              >
-                <ExportToolbar
-                  excelHref={toolbarExports.excelHref}
-                  importKind={toolbarImportKind}
-                  className="justify-end"
-                />
-              </div>
-            </div>
-          </>
-        ) : null}
       </div>
-
-      {toolbar !== "closed" && toolbarExports ? (
-        <div className="flex w-full justify-end" dir="rtl">
-          <div
-            data-gate-exempt
-            className="flex max-w-full flex-wrap items-center justify-end gap-2 rounded-2xl border border-border/60 bg-card/90 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
-          >
-            {toolbarExports.clientsMappedImport ? (
-              <ExcelClientsImportDialog
-                importType={toolbarExports.clientsMappedImport}
-              />
-            ) : null}
-            <ExportToolbar
-              excelHref={toolbarExports.excelHref}
-              importKind={toolbarImportKind}
-              className="justify-end"
-            />
-          </div>
-        </div>
-      ) : null}
 
       {toolbar !== "closed" ? (
         <div

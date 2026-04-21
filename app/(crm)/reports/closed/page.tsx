@@ -1,6 +1,11 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  REPORT_FILTER_EXPORTS_BAR_CLASS,
+  ReportPageExportsToolbar,
+  type ReportToolbarExportsConfig,
+} from "@/components/reports/report-page-exports-toolbar";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
@@ -8,6 +13,7 @@ import { listClientsForReport } from "@/lib/data/report-queries";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
+import { cn } from "@/lib/utils";
 import { parseReportSortParams } from "@/lib/report-sort-params";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { ClientStatus } from "@prisma/client";
@@ -48,6 +54,15 @@ export default async function ReportClosedPage({
 
   const filterActive = salesKey !== "all";
 
+  const exportsConfig: ReportToolbarExportsConfig = {
+    excelHref: reportExportExcelHref({
+      kind: "report-closed",
+      sales: salesKey,
+      ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+    }),
+    importKind: "report-closed",
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
       <PageHeader
@@ -56,12 +71,22 @@ export default async function ReportClosedPage({
         subtitle="بيانات العملاء كما في تقرير B مع أعمدة الإغلاق — بدون أدوات الفلترة العلوية الإضافية."
       />
 
-      <SalesFilterLinks
-        role={user.role}
-        pathname="/reports/closed"
-        searchParams={{}}
-        currentSales={salesKey}
-      />
+      <div
+        className={cn(
+          REPORT_FILTER_EXPORTS_BAR_CLASS,
+          user.role === "SALES" ? "justify-start" : "justify-between"
+        )}
+        dir="rtl"
+      >
+        <ReportPageExportsToolbar config={exportsConfig} />
+        <SalesFilterLinks
+          bare
+          role={user.role}
+          pathname="/reports/closed"
+          searchParams={{}}
+          currentSales={salesKey}
+        />
+      </div>
 
       <ReportRecordsCount count={rows.length} />
 
@@ -81,14 +106,6 @@ export default async function ReportClosedPage({
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
         toolbar="closed"
-        toolbarExports={{
-          excelHref: reportExportExcelHref({
-            kind: "report-closed",
-            sales: salesKey,
-            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-          }),
-          importKind: "report-closed",
-        }}
       />
     </div>
   );

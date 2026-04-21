@@ -25,6 +25,8 @@ export async function SalesFilterLinks(props: {
   /** معاملات URL الحالية (مرّرها من الصفحة) */
   searchParams: Record<string, string | undefined>;
   currentSales?: string;
+  /** بدون إطار البطاقة الملتصّق — لدمجها مع أزرار التصدير في صف واحد */
+  bare?: boolean;
 }) {
   if (props.role === "SALES") return null;
 
@@ -41,8 +43,8 @@ export async function SalesFilterLinks(props: {
   const sp = { ...props.searchParams };
   delete sp.sales;
 
-  return (
-    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90">
+  const inner = (
+    <>
       <span className="font-medium text-muted-foreground">فلتر السيلز:</span>
       <Link
         href={buildHref(props.pathname, sp, "all")}
@@ -69,6 +71,18 @@ export async function SalesFilterLinks(props: {
           {s.name}
         </Link>
       ))}
+    </>
+  );
+
+  if (props.bare) {
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">{inner}</div>
+    );
+  }
+
+  return (
+    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90">
+      {inner}
     </div>
   );
 }

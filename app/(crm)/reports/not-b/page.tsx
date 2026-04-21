@@ -1,5 +1,10 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  REPORT_FILTER_EXPORTS_BAR_CLASS,
+  ReportPageExportsToolbar,
+  type ReportToolbarExportsConfig,
+} from "@/components/reports/report-page-exports-toolbar";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { Button } from "@/components/ui/button";
@@ -11,6 +16,7 @@ import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
+import { cn } from "@/lib/utils";
 import { ClientStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +74,18 @@ export default async function ReportNotBPage({
       ? classifications.find((x) => x.id === classKey)?.label ?? classKey
       : null;
 
+  const exportsConfig: ReportToolbarExportsConfig = {
+    excelHref: reportExportExcelHref({
+      kind: "report-not-b",
+      sales: salesKey,
+      q: sp.q,
+      ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
+      class: classKey && classKey !== "all" ? classKey : undefined,
+    }),
+    importKind: "report-not-b",
+    clientsMappedImport: "not-b",
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
       <PageHeader
@@ -76,17 +94,27 @@ export default async function ReportNotBPage({
         subtitle="جميع العملاء غير المصنفين B — نفس أعمدة تقرير B."
       />
 
-      <SalesFilterLinks
-        role={user.role}
-        pathname="/reports/not-b"
-        searchParams={{
-          ...(sp.q ? { q: sp.q } : {}),
-          ...(classKey && classKey !== "all"
-            ? { class: classKey }
-            : {}),
-        }}
-        currentSales={salesKey}
-      />
+      <div
+        className={cn(
+          REPORT_FILTER_EXPORTS_BAR_CLASS,
+          user.role === "SALES" ? "justify-start" : "justify-between"
+        )}
+        dir="rtl"
+      >
+        <ReportPageExportsToolbar config={exportsConfig} />
+        <SalesFilterLinks
+          bare
+          role={user.role}
+          pathname="/reports/not-b"
+          searchParams={{
+            ...(sp.q ? { q: sp.q } : {}),
+            ...(classKey && classKey !== "all"
+              ? { class: classKey }
+              : {}),
+          }}
+          currentSales={salesKey}
+        />
+      </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/reports/not-b" method="get">
         {salesKey !== "all" ? (
@@ -134,17 +162,6 @@ export default async function ReportNotBPage({
         rowStyles={rowStyles}
         currentUserId={stylesUserId}
         rowStyleReportType="not-b"
-        toolbarExports={{
-          excelHref: reportExportExcelHref({
-            kind: "report-not-b",
-            sales: salesKey,
-            q: sp.q,
-            ...(sort ? { sort, ...(dir !== "desc" ? { dir } : {}) } : {}),
-            class: classKey && classKey !== "all" ? classKey : undefined,
-          }),
-          importKind: "report-not-b",
-          clientsMappedImport: "not-b",
-        }}
       />
     </div>
   );
