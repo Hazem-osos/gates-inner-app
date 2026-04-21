@@ -6,7 +6,7 @@ import {
   normalizedPrimaryPhoneFromReportRow,
 } from "@/lib/export/report-b-flat";
 import { parseExcelDateCell, parsePhones } from "@/lib/import/excel-client-import";
-import { canAccessClient, clientScopeWhere } from "@/lib/report-scope";
+import { canAccessClient } from "@/lib/report-scope";
 import { prisma } from "@/lib/prisma";
 
 function cellStr(row: Record<string, unknown>, keys: string[]): string {
@@ -90,14 +90,150 @@ function matchesNormalizedPhone(
   return take >= 8 && a.slice(-take) === b.slice(-take);
 }
 
+/** لـ SQL: قيم فريدة أرقام فقط (بدون + ومسافات) */
+function digitOnlyVariants(variants: string[]): string[] {
+  return [
+    ...new Set(
+      variants
+        .map((v) => v.replace(/\D/g, ""))
+        .filter((v) => v.length >= 8)
+    ),
+  ];
+}
+
+function mysqlReportKindStatusFilter(kind: string): Prisma.Sql {
+  switch (kind) {
+    case "report-b":
+      return Prisma.sql`AND c.status = ${ClientStatus.B}`;
+    case "report-not-b":
+      return Prisma.sql`AND c.status = ${ClientStatus.NOT_B}`;
+    case "report-closed":
+      return Prisma.sql`AND c.status = ${ClientStatus.LOST}`;
+    case "report-won":
+      return Prisma.sql`AND c.status = ${ClientStatus.WON}`;
+    case "dashboard-followups":
+      return Prisma.sql`AND c.status IN (${Prisma.join([ClientStatus.B, ClientStatus.NOT_B])})`;
+    default:
+      return Prisma.empty;
+  }
+}
+
 /**
- * مطابقة هاتف ثم صف واحد: مطابقة نصية ثم بحث مرن (آخر 10 أرقام + مقارنة بعد التطبيع).
+ * مطابقة أرقام بعد إزالة أي رموز من الحقل (مسافات، +، …) — MySQL 8+.
+ */
+async function findClientsByMysqlDigitVariants(
+  digitVariants: string[],
+  kind: string
+): Promise<
+  Array<{
+    id: string;
+    status: ClientStatus;
+    assignedUserId: string | null;
+    phone: string | null;
+    phone2: string | null;
+  }>
+> {
+  if (digitVariants.length === 0) return [];
+  try {
+    const statusSql = mysqlReportKindStatusFilter(kind);
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        status: ClientStatus;
+        assignedUserId: string | null;
+        phone: string | null;
+        phone2: string | null;
+      }>
+    >`
+      SELECT c.id, c.status, c.assignedUserId, c.phone, c.phone2
+      FROM Client c
+      WHERE 1 = 1
+      ${statusSql}
+      AND (
+        REGEXP_REPLACE(COALESCE(c.phone, ''), '[^0-9]', '') IN (${Prisma.join(digitVariants)})
+        OR REGEXP_REPLACE(COALESCE(c.phone2, ''), '[^0-9]', '') IN (${Prisma.join(digitVariants)})
+      )
+      LIMIT 60
+    `;
+    return rows;
+  } catch (e) {
+    console.error("mysql digit match import", e);
+    return [];
+  }
+}
+
+type PhoneRowMatch = {
+  id: string;
+  status: ClientStatus;
+  assignedUserId: string | null;
+  phone: string | null;
+  phone2: string | null;
+};
+
+/** يختار صفاً واحداً أو يُبلغ عن تعدد المطابقات */
+function finalizePhoneRows(
+  rows: PhoneRowMatch[],
+  needle: string,
+  d: string,
+  rowNum: number,
+  errors: string[]
+): {
+  client: {
+    id: string;
+    status: ClientStatus;
+    assignedUserId: string | null;
+  } | null;
+  skipGenericNotFoundMessage?: boolean;
+} {
+  const matches = rows.filter(
+    (c) =>
+      matchesNormalizedPhone(needle, c.phone) ||
+      (c.phone2 ? matchesNormalizedPhone(needle, c.phone2) : false)
+  );
+  if (matches.length === 1) {
+    const m = matches[0]!;
+    return {
+      client: {
+        id: m.id,
+        status: m.status,
+        assignedUserId: m.assignedUserId,
+      },
+    };
+  }
+  if (matches.length === 0) {
+    return { client: null };
+  }
+  const exactDigit = matches.filter(
+    (c) =>
+      parsePhones(c.phone ?? "").phone.replace(/\D/g, "") === d ||
+      (c.phone2 &&
+        parsePhones(c.phone2).phone.replace(/\D/g, "") === d)
+  );
+  if (exactDigit.length === 1) {
+    const m = exactDigit[0]!;
+    return {
+      client: {
+        id: m.id,
+        status: m.status,
+        assignedUserId: m.assignedUserId,
+      },
+    };
+  }
+  errors.push(
+    `صف ${rowNum}: أكثر من عميل (${matches.length}) يطابق نفس الرقم — نقِّ بيانات التقرير أو راجع الأرقام`
+  );
+  return { client: null, skipGenericNotFoundMessage: true };
+}
+
+/**
+ * مطابقة هاتف: نص دقيق → أرقام فقط (SQL) → contains.
+ * لا يُطبَّق نطاق السيلز على البحث — يُفحَص لاحقاً بـ canAccessClient (تجنّباً لرسالة «لا يوجد عميل» خطأ).
  */
 async function findClientRowByImportPhone(
   needle: string,
   kind: string,
-  sessionRole: UserRole,
-  dbUserId: string,
+  _sessionRole: UserRole,
+  _dbUserId: string,
   rowNum: number,
   errors: string[]
 ): Promise<{
@@ -106,21 +242,13 @@ async function findClientRowByImportPhone(
     status: ClientStatus;
     assignedUserId: string | null;
   } | null;
-  /** تم إرسال رسالة خطأ بالفعل (مثل تعدد المطابقات) */
   skipGenericNotFoundMessage?: boolean;
 }> {
   const variants = phoneVariantsForDbLookup(needle);
   if (variants.length === 0) return { client: null };
 
-  const scope = clientScopeWhere({
-    role: sessionRole,
-    userId: dbUserId,
-    salesUserId: undefined,
-  });
   const statusPart = importKindStatusWhere(kind);
-
   const baseWhere: Prisma.ClientWhereInput = {
-    ...scope,
     ...(statusPart ?? {}),
   };
 
@@ -135,6 +263,13 @@ async function findClientRowByImportPhone(
 
   const d = needle.replace(/\D/g, "");
   if (d.length < 8) return { client: null };
+
+  const digitVars = digitOnlyVariants(variants);
+  const rawRows = await findClientsByMysqlDigitVariants(digitVars, kind);
+  const fromRaw = finalizePhoneRows(rawRows, needle, d, rowNum, errors);
+  if (fromRaw.client || fromRaw.skipGenericNotFoundMessage) {
+    return fromRaw;
+  }
 
   const tail10 = d.slice(-10);
   const tail9 = d.slice(-9);
@@ -160,48 +295,10 @@ async function findClientRowByImportPhone(
       phone: true,
       phone2: true,
     },
-    take: 150,
+    take: 200,
   });
 
-  const matches = candidates.filter(
-    (c) =>
-      matchesNormalizedPhone(needle, c.phone) ||
-      (c.phone2 ? matchesNormalizedPhone(needle, c.phone2) : false)
-  );
-
-  if (matches.length === 1) {
-    const m = matches[0]!;
-    return {
-      client: {
-        id: m.id,
-        status: m.status,
-        assignedUserId: m.assignedUserId,
-      },
-    };
-  }
-  if (matches.length > 1) {
-    const exactDigit = matches.filter(
-      (c) =>
-        parsePhones(c.phone).phone.replace(/\D/g, "") === d ||
-        (c.phone2 &&
-          parsePhones(c.phone2).phone.replace(/\D/g, "") === d)
-    );
-    if (exactDigit.length === 1) {
-      const m = exactDigit[0]!;
-      return {
-        client: {
-          id: m.id,
-          status: m.status,
-          assignedUserId: m.assignedUserId,
-        },
-      };
-    }
-    errors.push(
-      `صف ${rowNum}: أكثر من عميل (${matches.length}) يطابق نفس الرقم — نقِّ بيانات التقرير أو راجع الأرقام`
-    );
-    return { client: null, skipGenericNotFoundMessage: true };
-  }
-  return { client: null };
+  return finalizePhoneRows(candidates, needle, d, rowNum, errors);
 }
 
 export type ProcessReportImportContext = {
