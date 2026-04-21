@@ -1,11 +1,14 @@
 "use client";
 
+import { FileDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
+import { buttonVariants } from "@/components/ui/button";
 import { clientsImportTemplateHref } from "@/lib/export-excel-href";
+import { cn } from "@/lib/utils";
 import { CLIENTS_FLAT_IMPORT_FIELDS } from "@/lib/import/clients-flat-import-fields";
 
 export function ExcelImportForm() {
@@ -27,8 +30,15 @@ export function ExcelImportForm() {
       <p>
         <Link
           href={clientsImportTemplateHref()}
-          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "inline-flex gap-1.5 border-teal-200/90 bg-teal-50/90 text-teal-900 shadow-sm hover:border-teal-300 hover:bg-teal-100 hover:text-teal-950 dark:border-teal-800 dark:bg-teal-950/45 dark:text-teal-100 dark:hover:border-teal-600 dark:hover:bg-teal-900/55 dark:hover:text-teal-50"
+          )}
         >
+          <FileDown
+            className="size-3.5 shrink-0 text-teal-600 dark:text-teal-400"
+            aria-hidden
+          />
           تنزيل قالب Excel
         </Link>
       </p>

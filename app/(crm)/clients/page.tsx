@@ -1,3 +1,4 @@
+import { FileDown, Upload } from "lucide-react";
 import Link from "next/link";
 
 import { TransferClientDialog } from "@/components/clients/transfer-client-dialog";
@@ -25,6 +26,8 @@ import {
   clientsListExportHref,
 } from "@/lib/export-excel-href";
 import { statusLabelAr } from "@/lib/clients-form-values";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ClientStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -150,17 +153,31 @@ export default async function ClientsListPage({
         <ExportToolbar
           excelHref={clientsListExportHref({ sales: salesKey, q: qRaw })}
         />
-        <div className="flex flex-wrap gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={clientsImportTemplateHref()}
-            className="font-medium text-primary underline-offset-4 hover:underline"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1.5 border-teal-200/90 bg-teal-50/90 text-teal-900 shadow-sm hover:border-teal-300 hover:bg-teal-100 hover:text-teal-950 dark:border-teal-800 dark:bg-teal-950/45 dark:text-teal-100 dark:hover:border-teal-600 dark:hover:bg-teal-900/55 dark:hover:text-teal-50"
+            )}
           >
+            <FileDown
+              className="size-3.5 shrink-0 text-teal-600 dark:text-teal-400"
+              aria-hidden
+            />
             تنزيل قالب Excel
           </Link>
           <Link
             href="/clients/import"
-            className="font-medium text-primary underline-offset-4 hover:underline"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1.5 border-violet-200/90 bg-violet-50/90 text-violet-900 shadow-sm hover:border-violet-300 hover:bg-violet-100 hover:text-violet-950 dark:border-violet-800 dark:bg-violet-950/45 dark:text-violet-100 dark:hover:border-violet-600 dark:hover:bg-violet-900/55 dark:hover:text-violet-50"
+            )}
           >
+            <Upload
+              className="size-3.5 shrink-0 text-violet-600 dark:text-violet-400"
+              aria-hidden
+            />
             استيراد من Excel
           </Link>
         </div>
