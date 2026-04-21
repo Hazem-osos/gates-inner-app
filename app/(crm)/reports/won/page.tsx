@@ -1,12 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { connection } from "next/server";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
-import { ReportSortControls } from "@/components/reports/report-sort-controls";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -15,10 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
@@ -28,7 +28,38 @@ import { endOfDay, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportWonPage({
+function WonLoadingFallback() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-16">
+      <p className="text-center text-sm text-muted-foreground">
+        جاري تحميل تقرير تم البيع…
+      </p>
+    </div>
+  );
+}
+
+function safeStartOfDayFromYmd(ymd: string | undefined): Date | null {
+  if (!ymd?.trim()) return null;
+  const d = new Date(ymd.trim());
+  if (Number.isNaN(d.getTime())) return null;
+  return startOfDay(d);
+}
+
+function safeEndOfDayFromYmd(ymd: string | undefined): Date | null {
+  if (!ymd?.trim()) return null;
+  const d = new Date(ymd.trim());
+  if (Number.isNaN(d.getTime())) return null;
+  return endOfDay(d);
+}
+
+function formatSaleCell(iso: Date | null | undefined): string {
+  if (!iso) return "—";
+  const t = iso instanceof Date ? iso : new Date(iso);
+  if (Number.isNaN(t.getTime())) return "—";
+  return formatDateArabicLong(t);
+}
+
+export default function ReportWonPage({
   searchParams,
 }: {
   searchParams: Promise<{
@@ -39,6 +70,25 @@ export default async function ReportWonPage({
     dir?: string;
   }>;
 }) {
+  return (
+    <Suspense fallback={<WonLoadingFallback />}>
+      <ReportWonContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ReportWonContent({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    from?: string;
+    to?: string;
+    sales?: string;
+    sort?: string;
+    dir?: string;
+  }>;
+}) {
+  await connection();
   const user = await requireSessionUser();
   const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
@@ -55,8 +105,8 @@ export default async function ReportWonPage({
     take: 500,
   });
 
-  const from = sp.from ? startOfDay(new Date(sp.from)) : null;
-  const to = sp.to ? endOfDay(new Date(sp.to)) : null;
+  const from = safeStartOfDayFromYmd(sp.from);
+  const to = safeEndOfDayFromYmd(sp.to);
   const filtered = clients.filter((c) => {
     if (!c.saleDate) return false;
     if (from && c.saleDate < from) return false;
@@ -65,7 +115,7 @@ export default async function ReportWonPage({
   });
 
   const filterActive =
-    salesKey !== "all" || Boolean(sp.from || sp.to) || Boolean(sort);
+    salesKey !== "all" || Boolean(sp.from || sp.to);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
@@ -81,8 +131,6 @@ export default async function ReportWonPage({
         searchParams={{
           ...(sp.from ? { from: sp.from } : {}),
           ...(sp.to ? { to: sp.to } : {}),
-          ...(sort ? { sort } : {}),
-          ...(dir !== "desc" ? { dir } : {}),
         }}
         currentSales={salesKey}
       />
@@ -96,25 +144,24 @@ export default async function ReportWonPage({
         ) : null}
         <div>
           <label className="text-xs text-muted-foreground">من</label>
-          <Input
+          <input
             type="date"
             name="from"
             defaultValue={sp.from ?? ""}
-            className="mt-0.5 block h-9 rounded-md border border-input px-2 py-1 text-sm"
+            className="mt-0.5 block h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm"
             dir="ltr"
           />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">إلى</label>
-          <Input
+          <input
             type="date"
             name="to"
             defaultValue={sp.to ?? ""}
-            className="mt-0.5 block h-9 rounded-md border border-input px-2 py-1 text-sm"
+            className="mt-0.5 block h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm"
             dir="ltr"
           />
         </div>
-        <ReportSortControls defaultSort={sort} defaultDir={dir} />
         <button type="submit" className={cn(buttonVariants(), "h-9")}>
           فلترة
         </button>
@@ -161,13 +208,16 @@ export default async function ReportWonPage({
             {filtered.map((c) => (
               <TableRow key={c.id}>
                 <TableCell dir="ltr" className="text-xs">
-                  {c.saleDate
-                    ? formatDateArabicLong(new Date(c.saleDate))
-                    : "—"}
+                  {formatSaleCell(c.saleDate)}
                 </TableCell>
-                <TableCell dir="ltr">{c.contractValue?.toString() ?? "—"}</TableCell>
+                <TableCell dir="ltr">
+                  {c.contractValue != null ? String(c.contractValue) : "—"}
+                </TableCell>
                 <TableCell>
-                  <Link href={`/clients/${c.id}`} className="text-primary underline">
+                  <Link
+                    href={`/clients/${c.id}`}
+                    className="text-primary underline"
+                  >
                     {c.name}
                   </Link>
                 </TableCell>
