@@ -48,6 +48,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
@@ -1025,6 +1027,7 @@ export function ReportBTable({
         ) : null}
       </div>
 
+      <TooltipProvider delayDuration={180}>
       <div
         ref={reportBScrollRef}
         data-report-b-scroll
@@ -1310,81 +1313,95 @@ export function ReportBTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="date"
-                        className={cn(
-                          reportBInput,
-                          "min-w-[11rem] text-left tabular-nums"
-                        )}
-                        dir="ltr"
-                        title={fullCellTooltip(
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(
                           isoToDateInput(r.nextFollowUpAt)
                         )}
-                        disabled={savingRowId === r.id}
-                        value={isoToDateInput(r.nextFollowUpAt)}
-                        onChange={(e) => {
-                          const nextFollowUpAt = dateInputToIso(
-                            e.target.value
-                          );
-                          const nextFollowUpAtStr =
-                            nextFollowUpAt ?? "";
-                          onField(r.id, r, {
-                            nextFollowUpAt: nextFollowUpAtStr,
-                          });
-                          if (
-                            gateClientId === r.id &&
-                            nextFollowUpMeetsGate(nextFollowUpAtStr)
-                          ) {
-                            setGateClientId(null);
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.managementRecommendationText)}
-                        disabled={savingRowId === r.id}
-                        value={r.managementRecommendationText ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            managementRecommendationText: e.target.value,
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="date"
-                        dir="ltr"
-                        className={cn(reportBInput, "text-left")}
-                        title={fullCellTooltip(mgmtDateStr)}
-                        disabled={savingRowId === r.id}
-                        value={mgmtDateStr}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            managementRecommendationDate: dateInputToIso(
+                      >
+                        <Input
+                          type="date"
+                          className={cn(
+                            reportBInput,
+                            "min-w-[11rem] text-left tabular-nums"
+                          )}
+                          dir="ltr"
+                          disabled={savingRowId === r.id}
+                          value={isoToDateInput(r.nextFollowUpAt)}
+                          onChange={(e) => {
+                            const nextFollowUpAt = dateInputToIso(
                               e.target.value
-                            ),
-                          })
-                        }
-                      />
+                            );
+                            const nextFollowUpAtStr =
+                              nextFollowUpAt ?? "";
+                            onField(r.id, r, {
+                              nextFollowUpAt: nextFollowUpAtStr,
+                            });
+                            if (
+                              gateClientId === r.id &&
+                              nextFollowUpMeetsGate(nextFollowUpAtStr)
+                            ) {
+                              setGateClientId(null);
+                            }
+                          }}
+                        />
+                      </ReportFieldTooltip>
+                    </TableCell>
+                    <TableCell>
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(
+                          r.managementRecommendationText
+                        )}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.managementRecommendationText ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, {
+                              managementRecommendationText: e.target.value,
+                            })
+                          }
+                        />
+                      </ReportFieldTooltip>
+                    </TableCell>
+                    <TableCell>
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(mgmtDateStr)}
+                      >
+                        <Input
+                          type="date"
+                          dir="ltr"
+                          className={cn(reportBInput, "text-left")}
+                          disabled={savingRowId === r.id}
+                          value={mgmtDateStr}
+                          onChange={(e) =>
+                            onField(r.id, r, {
+                              managementRecommendationDate: dateInputToIso(
+                                e.target.value
+                              ),
+                            })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {r.assignedUserName ?? "—"}
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.company)}
-                        disabled={savingRowId === r.id}
-                        value={r.company ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { company: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.company)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.company ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { company: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell dir="ltr" className="text-muted-foreground">
                       {days === null ? "—" : `${days} D`}
@@ -1395,126 +1412,158 @@ export function ReportBTable({
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.name)}
-                        disabled={savingRowId === r.id}
-                        value={r.name}
-                        onChange={(e) =>
-                          onField(r.id, r, { name: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip tooltip={fullCellTooltip(r.name)}>
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.name}
+                          onChange={(e) =>
+                            onField(r.id, r, { name: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.activity)}
-                        disabled={savingRowId === r.id}
-                        value={r.activity ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { activity: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.activity)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.activity ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { activity: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        disabled={savingRowId === r.id}
-                        value={r.position ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { position: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.position)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.position ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { position: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={cn(reportBTextarea, "min-w-[12rem]")}
-                        title={fullCellTooltip(r.address)}
-                        value={r.address ?? ""}
-                        disabled={savingRowId === r.id}
-                        onChange={(e) =>
-                          onField(r.id, r, { address: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.address)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={cn(reportBTextarea, "min-w-[12rem]")}
+                          value={r.address ?? ""}
+                          disabled={savingRowId === r.id}
+                          onChange={(e) =>
+                            onField(r.id, r, { address: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell dir="ltr">
-                      <Textarea
-                        rows={2}
-                        className={cn(reportBTextarea, "min-w-[11rem] text-left")}
-                        title={fullCellTooltip(
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(
                           [r.phone, r.phone2].filter(Boolean).join(" / ")
                         )}
-                        value={[r.phone, r.phone2].filter(Boolean).join(" / ")}
-                        disabled={savingRowId === r.id}
-                        onChange={(e) => {
-                          const parts = e.target.value.split(/\s*\/\s*/);
-                          onField(r.id, r, {
-                            phone: parts[0]?.trim() ?? "",
-                            phone2: parts[1]?.trim() || null,
-                          });
-                        }}
-                      />
+                      >
+                        <Textarea
+                          rows={2}
+                          className={cn(
+                            reportBTextarea,
+                            "min-w-[11rem] text-left"
+                          )}
+                          value={[r.phone, r.phone2]
+                            .filter(Boolean)
+                            .join(" / ")}
+                          disabled={savingRowId === r.id}
+                          onChange={(e) => {
+                            const parts = e.target.value.split(/\s*\/\s*/);
+                            onField(r.id, r, {
+                              phone: parts[0]?.trim() ?? "",
+                              phone2: parts[1]?.trim() || null,
+                            });
+                          }}
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell dir="ltr">
-                      <Textarea
-                        rows={2}
-                        className={cn(
-                          reportBTextarea,
-                          "min-w-[6rem] text-left tabular-nums"
-                        )}
-                        title={fullCellTooltip(r.quotePrice)}
-                        value={r.quotePrice ?? ""}
-                        disabled={savingRowId === r.id}
-                        onChange={(e) =>
-                          onField(r.id, r, { quotePrice: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.quotePrice)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={cn(
+                            reportBTextarea,
+                            "min-w-[6rem] text-left tabular-nums"
+                          )}
+                          value={r.quotePrice ?? ""}
+                          disabled={savingRowId === r.id}
+                          onChange={(e) =>
+                            onField(r.id, r, { quotePrice: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        title={fullCellTooltip(r.quoteDetail)}
-                        className={reportBTextarea}
-                        disabled={savingRowId === r.id}
-                        value={r.quoteDetail ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { quoteDetail: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.quoteDetail)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.quoteDetail ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { quoteDetail: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        title={fullCellTooltip(combinedNote)}
-                        className={reportBTextarea}
-                        disabled={savingRowId === r.id}
-                        value={combinedNote}
-                        onChange={(e) => {
-                          const sp = splitCallAndSituation(e.target.value);
-                          onField(r.id, r, {
-                            callSummary: sp.callSummary,
-                            currentSituation: sp.currentSituation,
-                          });
-                        }}
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(combinedNote)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={combinedNote}
+                          onChange={(e) => {
+                            const sp = splitCallAndSituation(e.target.value);
+                            onField(r.id, r, {
+                              callSummary: sp.callSummary,
+                              currentSituation: sp.currentSituation,
+                            });
+                          }}
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        title={fullCellTooltip(r.salesNotes)}
-                        className={reportBTextarea}
-                        disabled={savingRowId === r.id}
-                        value={r.salesNotes ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { salesNotes: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.salesNotes)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.salesNotes ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { salesNotes: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
+                      <ReportFieldTooltip tooltip={classificationTooltip}>
                       <Select
                         value={r.classificationId ?? "__none__"}
                         onValueChange={(v) => {
@@ -1533,7 +1582,6 @@ export function ReportBTable({
                             "max-w-full min-w-0 justify-between"
                           )}
                           dir="rtl"
-                          title={classificationTooltip}
                         >
                           <SelectValue placeholder="—">
                             {(v) => {
@@ -1628,208 +1676,236 @@ export function ReportBTable({
                           })()}
                         </SelectContent>
                       </Select>
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.adPlatform)}
-                        disabled={savingRowId === r.id}
-                        value={r.adPlatform ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { adPlatform: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.adPlatform)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.adPlatform ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { adPlatform: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.sourceAdName)}
-                        disabled={savingRowId === r.id}
-                        value={r.sourceAdName ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, { sourceAdName: e.target.value })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.sourceAdName)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.sourceAdName ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, { sourceAdName: e.target.value })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-primary"
-                        title={
+                      <ReportFieldTooltip
+                        tooltip={
                           r.visitAppointmentScheduled
                             ? "زيارة مجدولة: نعم"
                             : "زيارة مجدولة: لا"
                         }
-                        checked={r.visitAppointmentScheduled}
-                        disabled={savingRowId === r.id}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            visitAppointmentScheduled: e.target.checked,
-                          })
-                        }
-                      />
+                      >
+                        <span className="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-primary"
+                            checked={r.visitAppointmentScheduled}
+                            disabled={savingRowId === r.id}
+                            onChange={(e) =>
+                              onField(r.id, r, {
+                                visitAppointmentScheduled: e.target.checked,
+                              })
+                            }
+                          />
+                        </span>
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="date"
-                        dir="ltr"
-                        className={cn(reportBInput, "text-left")}
-                        title={fullCellTooltip(
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(
                           isoToDateInput(r.visitAppointmentDate)
                         )}
-                        disabled={savingRowId === r.id}
-                        value={isoToDateInput(r.visitAppointmentDate)}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            visitAppointmentDate: dateInputToIso(
-                              e.target.value
-                            ),
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Textarea
-                        rows={2}
-                        className={reportBTextarea}
-                        title={fullCellTooltip(r.presentingEmployeeName)}
-                        disabled={savingRowId === r.id}
-                        value={r.presentingEmployeeName ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            presentingEmployeeName: e.target.value,
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={
-                          r.qqAnswer === null
-                            ? "__none__"
-                            : r.qqAnswer
-                              ? "yes"
-                              : "no"
-                        }
-                        onValueChange={(v) =>
-                          onField(r.id, r, {
-                            qqAnswer:
-                              v === "__none__"
-                                ? null
-                                : v === "yes"
-                                  ? true
-                                  : false,
-                          })
-                        }
                       >
-                        <SelectTrigger
-                          className={reportBSelectTrigger}
-                          title={fullCellTooltip(
-                            r.qqAnswer === null
-                              ? ""
-                              : r.qqAnswer
-                                ? "نعم"
-                                : "لا"
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__" label="—">
-                            —
-                          </SelectItem>
-                          <SelectItem value="yes" label="نعم">
-                            نعم
-                          </SelectItem>
-                          <SelectItem value="no" label="لا">
-                            لا
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Input
+                          type="date"
+                          dir="ltr"
+                          className={cn(reportBInput, "text-left")}
+                          disabled={savingRowId === r.id}
+                          value={isoToDateInput(r.visitAppointmentDate)}
+                          onChange={(e) =>
+                            onField(r.id, r, {
+                              visitAppointmentDate: dateInputToIso(
+                                e.target.value
+                              ),
+                            })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     <TableCell>
-                      <Textarea
-                        rows={2}
-                        title={fullCellTooltip(r.finalStatusNote)}
-                        className={reportBTextarea}
-                        disabled={savingRowId === r.id}
-                        value={r.finalStatusNote ?? ""}
-                        onChange={(e) =>
-                          onField(r.id, r, {
-                            finalStatusNote: e.target.value,
-                          })
-                        }
-                      />
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.presentingEmployeeName)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.presentingEmployeeName ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, {
+                              presentingEmployeeName: e.target.value,
+                            })
+                          }
+                        />
+                      </ReportFieldTooltip>
+                    </TableCell>
+                    <TableCell>
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(
+                          r.qqAnswer === null
+                            ? ""
+                            : r.qqAnswer
+                              ? "نعم"
+                              : "لا"
+                        )}
+                      >
+                        <Select
+                          value={
+                            r.qqAnswer === null
+                              ? "__none__"
+                              : r.qqAnswer
+                                ? "yes"
+                                : "no"
+                          }
+                          onValueChange={(v) =>
+                            onField(r.id, r, {
+                              qqAnswer:
+                                v === "__none__"
+                                  ? null
+                                  : v === "yes"
+                                    ? true
+                                    : false,
+                            })
+                          }
+                        >
+                          <SelectTrigger className={reportBSelectTrigger}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__" label="—">
+                              —
+                            </SelectItem>
+                            <SelectItem value="yes" label="نعم">
+                              نعم
+                            </SelectItem>
+                            <SelectItem value="no" label="لا">
+                              لا
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </ReportFieldTooltip>
+                    </TableCell>
+                    <TableCell>
+                      <ReportFieldTooltip
+                        tooltip={fullCellTooltip(r.finalStatusNote)}
+                      >
+                        <Textarea
+                          rows={2}
+                          className={reportBTextarea}
+                          disabled={savingRowId === r.id}
+                          value={r.finalStatusNote ?? ""}
+                          onChange={(e) =>
+                            onField(r.id, r, {
+                              finalStatusNote: e.target.value,
+                            })
+                          }
+                        />
+                      </ReportFieldTooltip>
                     </TableCell>
                     {Array.from({ length: maxFollowCols }, (_, i) => {
                       const slot = slots[i];
                       return (
                         <Fragment key={`${r.id}-slot-${i}`}>
                           <TableCell>
-                            <Textarea
-                              rows={2}
-                              title={fullCellTooltip(slot?.note)}
-                              className={reportBTextarea}
-                              disabled={savingRowId === r.id}
-                              value={slot?.note ?? ""}
-                              onChange={(e) => {
-                                const next = [...slots];
-                                while (next.length <= i) {
-                                  next.push({
-                                    order: next.length + 1,
-                                    note: "",
-                                    date: "",
+                            <ReportFieldTooltip
+                              tooltip={fullCellTooltip(slot?.note)}
+                            >
+                              <Textarea
+                                rows={2}
+                                className={reportBTextarea}
+                                disabled={savingRowId === r.id}
+                                value={slot?.note ?? ""}
+                                onChange={(e) => {
+                                  const next = [...slots];
+                                  while (next.length <= i) {
+                                    next.push({
+                                      order: next.length + 1,
+                                      note: "",
+                                      date: "",
+                                    });
+                                  }
+                                  next[i] = {
+                                    ...next[i],
+                                    order: i + 1,
+                                    note: e.target.value,
+                                  };
+                                  onField(r.id, r, {
+                                    followUpSlots: slotsToJson(next),
                                   });
-                                }
-                                next[i] = {
-                                  ...next[i],
-                                  order: i + 1,
-                                  note: e.target.value,
-                                };
-                                onField(r.id, r, {
-                                  followUpSlots: slotsToJson(next),
-                                });
-                              }}
-                            />
+                                }}
+                              />
+                            </ReportFieldTooltip>
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="date"
-                              dir="ltr"
-                              className={cn(reportBInput, "text-left")}
-                              title={fullCellTooltip(
+                            <ReportFieldTooltip
+                              tooltip={fullCellTooltip(
                                 slot?.date
                                   ? isoToDateInput(slot.date)
                                   : ""
                               )}
-                              disabled={savingRowId === r.id}
-                              value={
-                                slot?.date
-                                  ? isoToDateInput(slot.date)
-                                  : ""
-                              }
-                              onChange={(e) => {
-                                const next = [...slots];
-                                while (next.length <= i) {
-                                  next.push({
-                                    order: next.length + 1,
-                                    note: "",
-                                    date: "",
-                                  });
+                            >
+                              <Input
+                                type="date"
+                                dir="ltr"
+                                className={cn(reportBInput, "text-left")}
+                                disabled={savingRowId === r.id}
+                                value={
+                                  slot?.date
+                                    ? isoToDateInput(slot.date)
+                                    : ""
                                 }
-                                next[i] = {
-                                  ...next[i],
-                                  order: i + 1,
-                                  date:
-                                    dateInputToIso(e.target.value) ?? "",
-                                };
-                                onField(r.id, r, {
-                                  followUpSlots: slotsToJson(next),
-                                });
-                              }}
-                            />
+                                onChange={(e) => {
+                                  const next = [...slots];
+                                  while (next.length <= i) {
+                                    next.push({
+                                      order: next.length + 1,
+                                      note: "",
+                                      date: "",
+                                    });
+                                  }
+                                  next[i] = {
+                                    ...next[i],
+                                    order: i + 1,
+                                    date:
+                                      dateInputToIso(e.target.value) ?? "",
+                                  };
+                                  onField(r.id, r, {
+                                    followUpSlots: slotsToJson(next),
+                                  });
+                                }}
+                              />
+                            </ReportFieldTooltip>
                           </TableCell>
                         </Fragment>
                       );
@@ -1846,6 +1922,7 @@ export function ReportBTable({
             </p>
           ) : null}
       </div>
+      </TooltipProvider>
     </div>
   );
 }

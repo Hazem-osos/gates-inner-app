@@ -29,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import type { ExpectedField } from "@/lib/import/expected-field";
 import { parseFollowUpSlotColumnHeader } from "@/lib/import/follow-up-slot-columns";
 import {
@@ -398,6 +400,7 @@ export function DynamicExcelImporter({
   };
 
   return (
+    <TooltipProvider delayDuration={180}>
     <div
       dir="rtl"
       className={cn(
@@ -623,10 +626,15 @@ export function DynamicExcelImporter({
                       {expectedFields.map((f) => (
                         <TableCell
                           key={f.key}
-                          className="max-w-[12rem] truncate text-xs"
-                          title={String(row[f.key] ?? "")}
+                          className="max-w-[12rem] text-xs"
                         >
-                          {String(row[f.key] ?? "")}
+                          <ReportFieldTooltip
+                            tooltip={String(row[f.key] ?? "")}
+                          >
+                            <span className="block truncate">
+                              {String(row[f.key] ?? "")}
+                            </span>
+                          </ReportFieldTooltip>
                         </TableCell>
                       ))}
                     </TableRow>
@@ -662,5 +670,6 @@ export function DynamicExcelImporter({
         </div>
       ) : null}
     </div>
+    </TooltipProvider>
   );
 }
