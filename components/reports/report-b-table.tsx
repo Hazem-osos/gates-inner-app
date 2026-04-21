@@ -762,11 +762,11 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
-            <div className="flex w-full min-w-0 shrink-0 flex-col lg:max-w-[min(100%,40rem)] lg:items-end">
-              <p className="mb-2 w-full text-xs font-semibold tracking-wide text-muted-foreground lg:text-end">
+            <div className="flex w-full min-w-0 shrink-0 flex-col items-center lg:max-w-[min(100%,40rem)]">
+              <p className="mb-2 w-full text-center text-xs font-semibold tracking-wide text-muted-foreground">
                 فلتر الزيارة
               </p>
-              <div className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-0.5 lg:justify-end [scrollbar-width:thin]">
+              <div className="flex w-full min-w-0 flex-nowrap items-center justify-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
                 <Button
                   type="button"
                   size="lg"
