@@ -1,7 +1,11 @@
 import { ClientStatus, Prisma, type UserRole } from "@prisma/client";
 
 import { patchClientReportFields } from "@/app/actions/report-client-patch";
-import { excelRowToReportClientPatch } from "@/lib/export/report-b-flat";
+import {
+  excelRowToReportClientPatch,
+  normalizedPrimaryPhoneFromReportRow,
+} from "@/lib/export/report-b-flat";
+import { parseExcelDateCell } from "@/lib/import/excel-client-import";
 import { canAccessClient } from "@/lib/report-scope";
 import { prisma } from "@/lib/prisma";
 
@@ -170,12 +174,12 @@ export async function processReportImportRows(
           data.actionTaken = actionTaken || null;
         }
         if (workDateStr) {
-          const wd = new Date(workDateStr);
-          if (!Number.isNaN(wd.getTime())) data.workDate = wd;
+          const wd = parseExcelDateCell(workDateStr);
+          if (wd) data.workDate = wd;
         }
         if (recDateStr) {
-          const rd = new Date(recDateStr);
-          if (!Number.isNaN(rd.getTime())) data.recommendationDate = rd;
+          const rd = parseExcelDateCell(recDateStr);
+          if (rd) data.recommendationDate = rd;
         }
 
         if (Object.keys(data).length === 0) {
@@ -204,7 +208,7 @@ export async function processReportImportRows(
 
       const parsed = excelRowToReportClientPatch(row);
       if (!parsed) continue;
-      const { clientId, patch } = parsed;
+      const { patch } = parsed;
       const cv = cellStr(row, [
         "contractValue",
         "قيمة_التعاقد",
@@ -213,14 +217,35 @@ export async function processReportImportRows(
       ]);
       const sd = cellStr(row, ["saleDate", "تاريخ_البيع", "تاريخ البيع"]);
 
-      const client = await prisma.client.findUnique({
-        where: { id: clientId },
-        select: { status: true, assignedUserId: true },
-      });
+      let client: {
+        id: string;
+        status: ClientStatus;
+        assignedUserId: string | null;
+      } | null = null;
+
+      if (parsed.clientId) {
+        client = await prisma.client.findUnique({
+          where: { id: parsed.clientId },
+          select: { id: true, status: true, assignedUserId: true },
+        });
+      } else {
+        const phone = normalizedPrimaryPhoneFromReportRow(row);
+        client = await prisma.client.findFirst({
+          where: { OR: [{ phone }, { phone2: phone }] },
+          select: { id: true, status: true, assignedUserId: true },
+        });
+      }
+
       if (!client) {
-        errors.push(`صف ${rowNum}: عميل غير موجود`);
+        errors.push(
+          parsed.clientId
+            ? `صف ${rowNum}: عميل غير موجود`
+            : `صف ${rowNum}: لا يوجد عميل بهذا الهاتف`
+        );
         continue;
       }
+
+      const clientId = client.id;
       if (!importStatusOk(kind, client.status)) {
         errors.push(`صف ${rowNum}: حالة العميل لا تطابق نوع التقرير`);
         continue;
@@ -253,6 +278,7 @@ export async function processReportImportRows(
       }
 
       if (kind === "report-won" && (cv || sd)) {
+        const saleDateParsed = sd ? parseExcelDateCell(sd) : null;
         try {
           await prisma.client.update({
             where: { id: clientId },
@@ -260,7 +286,7 @@ export async function processReportImportRows(
               ...(cv
                 ? { contractValue: new Prisma.Decimal(cv.replace(/,/g, "")) }
                 : {}),
-              ...(sd ? { saleDate: new Date(sd) } : {}),
+              ...(saleDateParsed ? { saleDate: saleDateParsed } : {}),
             },
           });
         } catch {

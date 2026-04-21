@@ -1,6 +1,9 @@
 import type { ReportClientPatchInput } from "@/app/actions/report-client-patch";
 import type { ReportBRow } from "@/components/reports/report-b-table";
-import { parseExcelDateCell } from "@/lib/import/excel-client-import";
+import {
+  parseExcelDateCell,
+  parsePhones,
+} from "@/lib/import/excel-client-import";
 import {
   MAX_FOLLOW_UP_SLOTS_EXCEL,
   followUpSlotDateHeaderAliases,
@@ -280,19 +283,37 @@ function parseFollowUpSlotsForReportPatch(
 }
 
 /**
- * يحوّل صف Excel (بعد sheet_to_json) إلى معرّف عميل + patch للحقول القابلة للتحديث من التقرير.
+ * أرقام الهاتف الرئيسي بعد تنظيفها (مطابقة حقل `Client.phone` في الاستعلام).
+ */
+export function normalizedPrimaryPhoneFromReportRow(
+  row: Record<string, unknown>
+): string {
+  const raw = cellStr(row, [
+    "phone",
+    "الهاتف",
+    REPORT_B_EXPORT_HEADER_AR_BASE.phone,
+  ]);
+  return parsePhones(raw).phone;
+}
+
+/**
+ * يحوّل صف Excel (بعد sheet_to_json) إلى معرّف عميل (إن وُجد) + patch للحقول القابلة للتحديث من التقرير.
+ * بدون `id` في الصف يُستنتج العميل من عمود **هاتف** عند الاستيراد (انظر `processReportImportRows`).
  * يُحدَّث الحقل فقط إذا وُجد عمود مطابق في الملف (استيراد جزئي عند حذف أعمدة من القالب).
  */
 export function excelRowToReportClientPatch(
   row: Record<string, unknown>
-): { clientId: string; patch: ReportClientPatchInput } | null {
+): { clientId: string | null; patch: ReportClientPatchInput } | null {
   const clientId = cellStr(row, [
     "id",
     "معرف",
     "client_id",
     "معرف_العميل",
   ]);
-  if (!clientId) return null;
+  const phoneDigits = normalizedPrimaryPhoneFromReportRow(row);
+  if (!clientId && (!phoneDigits || phoneDigits.length < 8)) {
+    return null;
+  }
 
   const patch: ReportClientPatchInput = {};
 
@@ -403,5 +424,5 @@ export function excelRowToReportClientPatch(
     if (t !== "") patch.nextFollowUpAt = t;
   }
 
-  return { clientId, patch };
+  return { clientId: clientId || null, patch };
 }

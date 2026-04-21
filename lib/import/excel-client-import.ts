@@ -55,6 +55,59 @@ function parseNumericPrefixFromSlash(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * تحليل صريح ليوم/شهر/سنة (إنجليزي، سلوك شائع في مصر والمنطقة).
+ * يتجنّب Date.parse الذي يفسّر "١/٢/٢٠٢٥" و"1/2/2025" كـ شهر/يوم (أمريكي).
+ * يُفضّل ISO 8601 (سنة-شهر-يوم) لـ Date.parse كما هي.
+ */
+function parseDayMonthYearString(raw: string): Date | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const t = Date.parse(trimmed);
+    return Number.isNaN(t) ? null : new Date(t);
+  }
+
+  const m =
+    /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/.exec(
+      trimmed
+    );
+  if (!m) return null;
+
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  let year = Number(m[3]);
+  if (year < 100) year += year > 69 ? 1900 : 2000;
+
+  const h = m[4] !== undefined ? Number(m[4]) : 0;
+  const min = m[5] !== undefined ? Number(m[5]) : 0;
+  const sec = m[6] !== undefined ? Number(m[6]) : 0;
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    h > 23 ||
+    min > 59 ||
+    sec > 59
+  ) {
+    return null;
+  }
+
+  const ms = Date.UTC(year, month - 1, day, h, min, sec);
+  const d = new Date(ms);
+  if (
+    d.getUTCDate() !== day ||
+    d.getUTCMonth() !== month - 1 ||
+    d.getUTCFullYear() !== year
+  ) {
+    return null;
+  }
+  return d;
+}
+
 export function parseExcelDateCell(v: unknown): Date | null {
   if (v === null || v === undefined || v === "") return null;
   if (v instanceof Date) {
@@ -73,6 +126,8 @@ export function parseExcelDateCell(v: unknown): Date | null {
   if (prefixNum !== null && isLikelyExcelDateSerial(prefixNum)) {
     return toSafeDbDate(excelDateToJS(prefixNum));
   }
+  const dmy = parseDayMonthYearString(s);
+  if (dmy) return toSafeDbDate(dmy);
   const t = Date.parse(s);
   if (Number.isNaN(t)) return null;
   return toSafeDbDate(new Date(t));

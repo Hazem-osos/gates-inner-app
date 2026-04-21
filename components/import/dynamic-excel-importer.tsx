@@ -480,8 +480,8 @@ export function DynamicExcelImporter({
                     الحقول المطلوبة (*):
                   </span>{" "}
                   اربط أعمدة ملف التصدير من نفس التقرير لكل حقل يظهر بجانبه نجمة؛
-                  غالباً «معرّف العميل» أو id، أو معرّف التوصية في تقرير
-                  التوصيات.
+                  لتحديث صفوف التقرير مطلوب عمود «هاتف» لتحديد العميل (يمكن اختياري
+                  ربط id إن وُجد في الملف). في تقرير التوصيات يُطلب معرّف التوصية.
                 </div>
                 <div
                   className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"

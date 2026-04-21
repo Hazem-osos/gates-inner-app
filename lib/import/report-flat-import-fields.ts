@@ -13,20 +13,6 @@ import {
   followUpSlotNoteKey,
 } from "@/lib/import/follow-up-slot-columns";
 
-const ID_FIELD: ExpectedField = {
-  key: "id",
-  label: "معرّف العميل",
-  required: true,
-  aliases: [
-    "رقم العميل",
-    "كود العميل",
-    "معرف العميل",
-    "id",
-    "client id",
-    "رقم التسلسل",
-  ],
-};
-
 /** أعمدة المتابعة المسطّحة في التصدير — نفس ترتيب تقرير B / الجدول */
 const FOLLOW_SLOT_KEY_RE = /^followUpSlot\d+(Note|Date)$/;
 
@@ -73,14 +59,16 @@ export function buildReportFlatImportFields(
     MAX_FOLLOW_UP_SLOTS_EXCEL
   );
   const baseKeys = reportBaseKeysWithoutFollowSlots();
-  const base: ExpectedField[] = [
-    ID_FIELD,
-    ...baseKeys.map((k) => ({
-      key: k,
-      label: REPORT_B_EXPORT_HEADER_AR[k] ?? k,
-      required: false,
-    })),
-  ];
+  const base: ExpectedField[] = baseKeys.map((k) => ({
+    key: k,
+    label: REPORT_B_EXPORT_HEADER_AR[k] ?? k,
+    required: k === "phone",
+    ...(k === "phone"
+      ? {
+          aliases: ["phone", "الهاتف", "mobile", "جوال", "هاتف 1"],
+        }
+      : {}),
+  }));
   const slots: ExpectedField[] = [];
   for (let i = 1; i <= n; i++) {
     slots.push(...followUpPairFieldsForReport(i));
