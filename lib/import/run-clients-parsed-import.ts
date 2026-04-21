@@ -149,13 +149,30 @@ export async function runClientsParsedImport(args: {
           where: {
             OR: [{ phone: { in: phoneList } }, { phone2: { in: phoneList } }],
           },
-          select: { id: true, name: true, phone: true, phone2: true },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            phone2: true,
+            status: true,
+            assignedUserId: true,
+          },
         });
 
   const existingPhoneHit = new Set<string>();
   for (const e of existingClients) {
     existingPhoneHit.add(e.phone);
     if (e.phone2) existingPhoneHit.add(e.phone2);
+  }
+
+  function findExistingByPhones(p: ParsedImportRow) {
+    return existingClients.find(
+      (c) =>
+        c.phone === p.phone ||
+        c.phone === p.phone2 ||
+        c.phone2 === p.phone ||
+        (p.phone2 && (c.phone === p.phone2 || c.phone2 === p.phone2))
+    );
   }
 
   function isDuplicate(p: ParsedImportRow): boolean {
@@ -170,23 +187,6 @@ export async function runClientsParsedImport(args: {
   }
 
   for (const row of rows) {
-    if (isDuplicate(row)) {
-      skipped++;
-      const dup = existingClients.find(
-        (c) =>
-          c.phone === row.phone ||
-          c.phone === row.phone2 ||
-          c.phone2 === row.phone ||
-          (row.phone2 &&
-            (c.phone === row.phone2 || c.phone2 === row.phone2))
-      );
-      duplicates.push({
-        name: dup?.name ?? row.name,
-        phone: dup?.phone ?? row.phone,
-      });
-      continue;
-    }
-
     const { classificationId, status } = resolveClassificationId({
       importType,
       clientTypeRaw: row.clientTypeRaw,
@@ -195,6 +195,78 @@ export async function runClientsParsedImport(args: {
     });
 
     const customExtra = mergeCustomFields(row.daysRaw);
+
+    const dup = findExistingByPhones(row);
+    const phonesTaken = isDuplicate(row);
+
+    const canUpsertFromBExcel =
+      importType === "b" &&
+      status === ClientStatus.B &&
+      dup != null &&
+      (dup.status === ClientStatus.NOT_B || dup.status === ClientStatus.B);
+
+    if (phonesTaken && canUpsertFromBExcel) {
+      try {
+        await prisma.client.update({
+          where: { id: dup.id },
+          data: {
+            name: row.name,
+            phone: row.phone,
+            phone2: row.phone2,
+            company: row.company,
+            position: row.position,
+            address: row.address,
+            activity: row.activity,
+            quotePrice: parseOptionalDecimal(row.quotePrice ?? undefined),
+            allowedDiscount: parseOptionalDecimal(
+              row.allowedDiscount ?? undefined
+            ),
+            status,
+            classificationId,
+            notBClassification: null,
+            sourceAdName: row.sourceAdName,
+            adPlatform: row.adPlatform,
+            managementRecommendationText: row.managementRecommendationText,
+            managementRecommendationDate: row.managementRecommendationDate,
+            currentSituation: row.currentSituation,
+            callSummary: row.callSummary,
+            salesNotes: row.salesNotes,
+            clientWarmingText: row.clientWarmingText,
+            visitAppointmentScheduled: row.visitAppointmentScheduled,
+            visitAppointmentDate: row.visitAppointmentDate,
+            presentingEmployeeName: row.presentingEmployeeName,
+            qqAnswer: row.qqAnswer,
+            lossReason: row.lossReason,
+            closedLostAt: null,
+            initialCallDate: row.initialCallDate,
+            nextFollowUpAt: row.nextFollowUpAt,
+            followUpSlots: row.followUpSlots as unknown as Prisma.InputJsonValue,
+            ...(customExtra !== undefined
+              ? { customFields: customExtra as Prisma.InputJsonValue }
+              : {}),
+            assignedUserId: dup.assignedUserId ?? dbUserId,
+            quoteDetail: null,
+          },
+        });
+        registerPhones(row);
+        imported++;
+      } catch (e) {
+        errors.push({
+          row: row.excelRow,
+          reason: e instanceof Error ? e.message : "فشل التحديث",
+        });
+      }
+      continue;
+    }
+
+    if (phonesTaken) {
+      skipped++;
+      duplicates.push({
+        name: dup?.name ?? row.name,
+        phone: dup?.phone ?? row.phone,
+      });
+      continue;
+    }
 
     try {
       await prisma.client.create({
@@ -212,6 +284,7 @@ export async function runClientsParsedImport(args: {
           ),
           status,
           classificationId,
+          notBClassification: null,
           sourceAdName: row.sourceAdName,
           adPlatform: row.adPlatform,
           managementRecommendationText: row.managementRecommendationText,
@@ -225,6 +298,7 @@ export async function runClientsParsedImport(args: {
           presentingEmployeeName: row.presentingEmployeeName,
           qqAnswer: row.qqAnswer,
           lossReason: row.lossReason,
+          closedLostAt: null,
           initialCallDate: row.initialCallDate,
           nextFollowUpAt: row.nextFollowUpAt,
           followUpSlots: row.followUpSlots as unknown as Prisma.InputJsonValue,

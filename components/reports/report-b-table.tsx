@@ -673,16 +673,41 @@ export function ReportBTable({
         {toolbar === "closed" && toolbarExports ? (
           <>
             <div className="h-px w-full shrink-0 basis-full bg-border/50" aria-hidden />
-            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2">
-              <ExportToolbar
-                excelHref={toolbarExports.excelHref}
-                importKind={toolbarExports.importKind}
-                className="w-full justify-start"
-              />
+            <div className="flex w-full justify-end">
+              <div
+                data-gate-exempt
+                className="flex max-w-full flex-wrap items-center justify-end gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5 shadow-sm dark:bg-muted/15"
+              >
+                <ExportToolbar
+                  excelHref={toolbarExports.excelHref}
+                  importKind={toolbarExports.importKind}
+                  className="justify-end"
+                />
+              </div>
             </div>
           </>
         ) : null}
       </div>
+
+      {toolbar !== "closed" && toolbarExports ? (
+        <div className="flex w-full justify-end" dir="rtl">
+          <div
+            data-gate-exempt
+            className="flex max-w-full flex-wrap items-center justify-end gap-2 rounded-2xl border border-border/60 bg-card/90 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
+          >
+            {toolbarExports.clientsMappedImport ? (
+              <ExcelClientsImportDialog
+                importType={toolbarExports.clientsMappedImport}
+              />
+            ) : null}
+            <ExportToolbar
+              excelHref={toolbarExports.excelHref}
+              importKind={toolbarExports.importKind}
+              className="justify-end"
+            />
+          </div>
+        </div>
+      ) : null}
 
       {toolbar !== "closed" ? (
         <div
@@ -792,26 +817,6 @@ export function ReportBTable({
               العملاء التي تمت زيارتهم فعلياً
             </Button>
           </div>
-          {toolbarExports ? (
-            <>
-              <div className="my-3 h-px bg-border/60" aria-hidden />
-              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
-                تصدير واستيراد
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {toolbarExports.clientsMappedImport ? (
-                  <ExcelClientsImportDialog
-                    importType={toolbarExports.clientsMappedImport}
-                  />
-                ) : null}
-                <ExportToolbar
-                  excelHref={toolbarExports.excelHref}
-                  importKind={toolbarExports.importKind}
-                  className="justify-start"
-                />
-              </div>
-            </>
-          ) : null}
         </div>
       ) : null}
 

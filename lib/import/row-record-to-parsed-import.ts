@@ -57,6 +57,26 @@ export function rowRecordToParsedImportRow(
       followUpSlots = [];
     }
   }
+  const columnSlots: ParsedImportRow["followUpSlots"] = [];
+  for (let i = 1; i <= 5; i++) {
+    const note = cellStr(row[`followUpSlot${i}Note`]);
+    const dateRaw = row[`followUpSlot${i}Date`];
+    const date = parseExcelDateCell(dateRaw);
+    if (!note.trim() && !date) continue;
+    columnSlots.push({
+      order: columnSlots.length + 1,
+      note: note.trim(),
+      date: date ? date.toISOString() : "",
+    });
+  }
+  if (followUpSlots.length === 0) {
+    followUpSlots = columnSlots;
+  } else if (columnSlots.length > 0) {
+    followUpSlots = [...followUpSlots, ...columnSlots].map((s, idx) => ({
+      ...s,
+      order: idx + 1,
+    }));
+  }
 
   return {
     excelRow,

@@ -427,6 +427,15 @@ export function DynamicExcelImporter({
               </span>{" "}
               ثم اختره من القائمة بجانب «رقم الهاتف».
             </div>
+            <div
+              className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
+              role="note"
+            >
+              <span className="font-semibold">المتابعات:</span> اربط عمود «متابعات
+              (JSON)» أو أزواج «متابعة ١–٥ — نص/تاريخ» من Excel لتُستورد في شبكة
+              المتابعات. عند استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B
+              يُحدَّث إلى B وتُمسَح حقول التصنيف الفرعي Not B.
+            </div>
             <ul className="flex flex-col gap-4">
               {expectedFields.map((field) => {
                 const mappedHeader = mapping[field.key]?.trim() ?? "";

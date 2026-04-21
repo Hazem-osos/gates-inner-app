@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ReportExcelImportDialog } from "@/components/import/report-excel-import-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { pdfFromExcelHref, reportImportExcelUrl } from "@/lib/export-excel-href";
 import {
@@ -96,7 +95,6 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
       </Link>
       {importKind ? (
         <>
-          <ReportExcelImportDialog importKind={importKind} />
           <label
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
@@ -111,7 +109,7 @@ export function ExportToolbar({ excelHref, className, importKind }: Props) {
               disabled={busy}
               onChange={onQuickImport}
             />
-            {busy ? "جاري الاستيراد…" : "استيراد سريع"}
+            {busy ? "جاري الاستيراد…" : "استيراد Excel"}
           </label>
         </>
       ) : null}
