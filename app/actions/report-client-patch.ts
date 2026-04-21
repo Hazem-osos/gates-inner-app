@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, type UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
@@ -77,24 +77,41 @@ function normalizeFollowSlots(raw: unknown): Prisma.InputJsonValue {
 export async function patchClientReportFields(
   clientId: string,
   patch: ReportClientPatchInput,
-  opts?: { reportKey?: string | null }
+  opts?: {
+    reportKey?: string | null;
+    /**
+     * من `/api/import/*` حيث أُجري التحقق من الجلسة في المسار — استدعاء `getSessionUser`
+     * داخل الـ action قد لا يرى الكوكيز فيحصل تحديث 0 صف دون خطأ واضح.
+     */
+    importActor?: { dbUserId: string; role: UserRole };
+  }
 ): Promise<PatchResult> {
-  const session = await getSessionUser();
-  if (!session) return { ok: false, message: "غير مصرح." };
+  let dbUserId: string;
+  let role: UserRole;
 
-  const dbUserId = await resolveSessionDbUserId(session);
-  if (!dbUserId) {
-    return {
-      ok: false,
-      message:
-        "تعذر ربط حسابك بقاعدة البيانات. أعد تسجيل الدخول ثم أعد المحاولة.",
-    };
+  if (opts?.importActor) {
+    dbUserId = opts.importActor.dbUserId;
+    role = opts.importActor.role;
+  } else {
+    const session = await getSessionUser();
+    if (!session) return { ok: false, message: "غير مصرح." };
+
+    const resolved = await resolveSessionDbUserId(session);
+    if (!resolved) {
+      return {
+        ok: false,
+        message:
+          "تعذر ربط حسابك بقاعدة البيانات. أعد تسجيل الدخول ثم أعد المحاولة.",
+      };
+    }
+    dbUserId = resolved;
+    role = session.role;
   }
 
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) return { ok: false, message: "العميل غير موجود." };
   if (
-    session.role === "SALES" &&
+    role === "SALES" &&
     client.assignedUserId &&
     client.assignedUserId !== dbUserId
   ) {

@@ -222,7 +222,12 @@ export async function processReportImportRows(
       }
 
       const parsed = excelRowToReportClientPatch(row);
-      if (!parsed) continue;
+      if (!parsed) {
+        errors.push(
+          `صف ${rowNum}: لا يوجد هاتف صالح (أو معرّف عميل) لتحديد الصف`
+        );
+        continue;
+      }
       const { patch } = parsed;
       const cv = cellStr(row, [
         "contractValue",
@@ -286,12 +291,16 @@ export async function processReportImportRows(
         keys.length === 0 &&
         !(kind === "report-won" && (cv !== "" || sd !== ""))
       ) {
+        errors.push(
+          `صف ${rowNum}: لا حقول للتحديث — راجع ربط أعمدة Excel (لا تُرسل قيماً فارغة لكل الحقول أو احذف الصف الفارغ)`
+        );
         continue;
       }
 
       if (keys.length > 0) {
         const res = await patchClientReportFields(clientId, patch, {
           reportKey: reportKeyForExcelImportKind(kind),
+          importActor: { dbUserId, role: sessionRole },
         });
         if (!res.ok) {
           errors.push(`صف ${rowNum}: ${res.message}`);
