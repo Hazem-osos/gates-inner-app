@@ -42,7 +42,8 @@ export async function GET(req: Request) {
               `<tr>${keys.map((k) => `<td>${escapeHtml(row[k] ?? "")}</td>`).join("")}</tr>`
           )
           .join("");
-        return `<section class="sheet-block"><h2>${escapeHtml(sheet.sheetName)}</h2><table dir="rtl" class="export-grid">${thead}<tbody>${tbody}</tbody></table></section>`;
+        /** جدول بـ LTR ليطابق ترتيب أعمدة Excel؛ المحتوى العربي بمحاذاة يمين. */
+        return `<section class="sheet-block"><h2>${escapeHtml(sheet.sheetName)}</h2><table class="export-grid" lang="ar">${thead}<tbody>${tbody}</tbody></table></section>`;
       })
       .join("");
 
@@ -63,8 +64,18 @@ export async function GET(req: Request) {
       border: 1px solid #d4d4d8; background: #fff; color: #18181b; box-shadow: 0 1px 2px rgba(0,0,0,.05);
     }
     button:hover { background: #f4f4f5; }
-    table.export-grid { border-collapse: collapse; width: 100%; font-size: 11px; background: #fff; border: 1px solid #e4e4e7; border-radius: 0.5rem; overflow: hidden; direction: rtl; }
-    th, td { border: 1px solid #e4e4e7; padding: 6px 8px; text-align: right; vertical-align: top; word-break: break-word; }
+    table.export-grid {
+      border-collapse: collapse; width: 100%; font-size: 11px; background: #fff;
+      border: 1px solid #e4e4e7; border-radius: 0.5rem; overflow: hidden;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+    th, td {
+      border: 1px solid #e4e4e7; padding: 6px 8px;
+      text-align: right;
+      vertical-align: top;
+      word-break: break-word;
+    }
     th { background: #f4f4f5; font-weight: 600; color: #27272a; }
     .sheet-block { margin-bottom: 1.5rem; }
     .hint { font-size: 12px; color: #71717a; margin-top: 0.25rem; }

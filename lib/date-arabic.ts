@@ -32,6 +32,22 @@ export function todayInputDate(): string {
   return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
 }
 
+/**
+ * تاريخ فقط (yyyy-MM-dd) للتصدير Excel / PDF — بدون وقت.
+ * يستخدم التقويم المحلي ليتوافق مع العرض اليومي.
+ */
+export function formatExportDateOnly(
+  value: Date | string | null | undefined
+): string {
+  if (value === null || value === undefined || value === "") return "";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** تاريخ + وقت بصيغة عربية */
 export function formatDateTimeArabic(d: Date): string {
   const datePart = formatDateArabicLong(d);

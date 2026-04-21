@@ -1,5 +1,6 @@
 import type { ReportClientPatchInput } from "@/app/actions/report-client-patch";
 import type { ReportBRow } from "@/components/reports/report-b-table";
+import { formatExportDateOnly } from "@/lib/date-arabic";
 import {
   parseExcelDateCell,
   parsePhones,
@@ -129,12 +130,14 @@ export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> 
     address: r.address ?? "",
     activity: r.activity ?? "",
     status: r.status,
-    initialCallDate: r.initialCallDate ?? "",
-    nextFollowUpAt: r.nextFollowUpAt ?? "",
+    initialCallDate: formatExportDateOnly(r.initialCallDate),
+    nextFollowUpAt: formatExportDateOnly(r.nextFollowUpAt),
     quotePrice: r.quotePrice ?? "",
     quoteDetail: r.quoteDetail ?? "",
     managementRecommendationText: r.managementRecommendationText ?? "",
-    managementRecommendationDate: r.managementRecommendationDate ?? "",
+    managementRecommendationDate: formatExportDateOnly(
+      r.managementRecommendationDate
+    ),
     callSummary: r.callSummary ?? "",
     currentSituation: r.currentSituation ?? "",
     salesNotes: r.salesNotes ?? "",
@@ -143,20 +146,20 @@ export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> 
     adPlatform: r.adPlatform ?? "",
     sourceAdName: r.sourceAdName ?? "",
     visitAppointmentScheduled: boolToCell(r.visitAppointmentScheduled),
-    visitAppointmentDate: r.visitAppointmentDate ?? "",
+    visitAppointmentDate: formatExportDateOnly(r.visitAppointmentDate),
     presentingEmployeeName: r.presentingEmployeeName ?? "",
     qqAnswer: boolToCell(r.qqAnswer),
     classificationId: r.classificationId ?? "",
     classificationLabel: r.classificationLabel ?? "",
     assignedUserName: r.assignedUserName ?? "",
-    closedLostAt: r.closedLostAt ?? "",
+    closedLostAt: formatExportDateOnly(r.closedLostAt),
     lossReason: r.lossReason ?? "",
   };
 
   for (let i = 1; i <= MAX_FOLLOW_UP_SLOTS_EXCEL; i++) {
     const s = slots[i - 1];
     byKey[followUpSlotNoteKey(i)] = s?.note ?? "";
-    byKey[followUpSlotDateKey(i)] = s?.date ?? "";
+    byKey[followUpSlotDateKey(i)] = formatExportDateOnly(s?.date ?? "");
   }
 
   const out: Record<string, string> = {};

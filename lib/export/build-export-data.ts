@@ -1,7 +1,7 @@
 import { ClientStatus, type UserRole } from "@prisma/client";
 import { addDays, endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
-import { todayInputDate } from "@/lib/date-arabic";
+import { formatExportDateOnly, todayInputDate } from "@/lib/date-arabic";
 import { listClientsForUser } from "@/lib/data/clients-list";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
 import type { ReportSortDir, ReportSortKey } from "@/lib/data/report-queries";
@@ -39,8 +39,8 @@ function rowBShort(c: {
     الهاتف: c.phone,
     الشركة: c.company ?? "",
     الحالة: c.status,
-    متابعة_تالية: c.nextFollowUpAt?.toISOString() ?? "",
-    اتصال_أول: c.initialCallDate?.toISOString() ?? "",
+    متابعة_تالية: formatExportDateOnly(c.nextFollowUpAt),
+    اتصال_أول: formatExportDateOnly(c.initialCallDate),
     سيلز: c.assignedUser?.name ?? "",
   };
 }
@@ -110,7 +110,7 @@ export async function buildExportPayload(
       الهاتف: t.client.phone,
       الشركة: t.client.company ?? "",
       من_السيلز: t.fromUser?.name ?? "",
-      تاريخ_النقل: t.createdAt.toISOString(),
+      تاريخ_النقل: formatExportDateOnly(t.createdAt),
     }));
     return {
       filename: "عملاء_منقولون.xlsx",
@@ -174,7 +174,7 @@ export async function buildExportPayload(
 
     const rows = list.map((c) => {
       const w = c.warmingTools[0];
-      const contact = c.initialCallDate?.toISOString() ?? "";
+      const contact = formatExportDateOnly(c.initialCallDate);
       return {
         العميل: c.name,
         النشاط: c.activity ?? "",
@@ -232,9 +232,9 @@ export async function buildExportPayload(
       سيلز: r.client?.assignedUser?.name ?? "",
       التوصية: r.body,
       تاريخ_التوصية:
-        r.recommendationDate?.toISOString() ?? r.createdAt.toISOString(),
+        formatExportDateOnly(r.recommendationDate ?? r.createdAt),
       من_كتب: r.author.name,
-      تاريخ_العمل: r.workDate?.toISOString() ?? "",
+      تاريخ_العمل: formatExportDateOnly(r.workDate),
       الإجراء_المتخذ: r.actionTaken ?? "",
     }));
 
@@ -334,11 +334,11 @@ export async function buildExportPayload(
       العميل: c.name,
       مرجع_التاريخ:
         dateMode === "initial"
-          ? c.initialCallDate?.toISOString() ?? ""
-          : c.createdAt.toISOString(),
+          ? formatExportDateOnly(c.initialCallDate)
+          : formatExportDateOnly(c.createdAt),
       النشاط: c.activity ?? "",
       العنوان: c.address ?? "",
-      تاريخ_الزيارة: c.visitAppointmentDate?.toISOString() ?? "",
+      تاريخ_الزيارة: formatExportDateOnly(c.visitAppointmentDate),
       محدد_ميعاد:
         c.visitAppointmentScheduled || c.visitAppointmentDate ? "نعم" : "لا",
     }));
@@ -418,7 +418,7 @@ export async function buildExportPayload(
   if (kind === "report-won") {
     rows = clients.map((c) => ({
       ...reportBRowToExportRecord(clientEntityToReportBRow(c)),
-      تاريخ_البيع: c.saleDate?.toISOString() ?? "",
+      تاريخ_البيع: formatExportDateOnly(c.saleDate),
       قيمة_العقد: c.contractValue?.toString() ?? "",
     }));
   } else {
