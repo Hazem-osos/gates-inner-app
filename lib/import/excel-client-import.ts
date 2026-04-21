@@ -189,18 +189,61 @@ export function parsePhones(raw: unknown): { phone: string; phone2: string | nul
 
 /**
  * Normalizes a phone from Excel / JSON before Prisma `findFirst` / updates.
- * - Coerces values to text, strips non-digits (spaces, dashes, +, etc.), handles Arabic-Indic digits.
- * - Excel numeric cells & `"1012345678.0"`-style strings are handled inside `parsePhones`.
- * - Egyptian mobiles: if digits match common mobile shape after Excel dropped the leading `0`
- *   (e.g. 10 digits starting with `10`/`11`/`12`/`15`), a leading `0` is restored via `parsePhones`/`normalizeEgypt`.
+ * Bulletproof path for Egyptian mobiles: strips non-digits, normalizes +20 / 0020 / 00201 / Excel-dropped leading 0.
  *
- * @returns Canonical mobile digit string, or `null` if fewer than 8 digits.
+ * @returns Strict **11-digit** local mobile (`01xxxxxxxxx`), or `null` if not a valid Egyptian mobile shape.
  */
 export function normalizeExcelPhone(rawPhone: unknown): string | null {
-  const { phone } = parsePhones(rawPhone);
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 8) return null;
-  return phone;
+  if (rawPhone === null || rawPhone === undefined) return null;
+
+  let digits: string;
+
+  if (typeof rawPhone === "number" && Number.isFinite(rawPhone)) {
+    const n = rawPhone;
+    const rounded =
+      n % 1 !== 0 && Math.abs(n) >= 1e6 && Math.abs(n) < 1e13
+        ? Math.round(n)
+        : Math.trunc(n);
+    digits = String(rounded).replace(/\D/g, "");
+  } else {
+    const trimmed = toAsciiDigitsFromArabicIndic(String(rawPhone).trim());
+    const t = trimmed.trim();
+    if (/^\d+\.\d+$/.test(t)) {
+      const n = Number(t.replace(/,/g, ""));
+      if (Number.isFinite(n) && n >= 1e6 && n < 1e13) {
+        digits = String(Math.round(n)).replace(/\D/g, "");
+      } else {
+        digits = t.replace(/\D/g, "");
+      }
+    } else {
+      digits = trimmed.replace(/\D/g, "");
+    }
+  }
+
+  if (!digits) return null;
+
+  if (digits.startsWith("00201")) {
+    digits = "01" + digits.slice(5);
+  }
+
+  if (digits.startsWith("201") && digits.length >= 12) {
+    digits = "01" + digits.slice(3);
+  }
+
+  if (digits.length === 10 && /^1[0125]\d{8}$/.test(digits)) {
+    digits = `0${digits}`;
+  }
+
+  if (digits.length > 11) {
+    const tail = digits.slice(-11);
+    if (/^01\d{9}$/.test(tail)) digits = tail;
+  }
+
+  if (digits.length === 11 && /^01\d{9}$/.test(digits)) {
+    return digits;
+  }
+
+  return null;
 }
 
 export function parseDiscount(raw: unknown): {
@@ -445,14 +488,24 @@ export function parseRowToImport(
   excelRow: number
 ): ParseRowResult {
   const { byField, contactCol, nextFollowCol } = map;
-  const phones = parsePhones(getCell(dataRow, byField.phone));
-  if (!phones.phone || phones.phone.length < 8) {
+  const rawPhoneCell = getCell(dataRow, byField.phone);
+  const phoneParts = cellStr(rawPhoneCell)
+    .split(/[/／]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const phoneMain = normalizeExcelPhone(
+    phoneParts.length > 0 ? phoneParts[0] : rawPhoneCell
+  );
+  if (!phoneMain) {
     return { skip: true, reason: "لا رقم هاتف صالح", excelRow };
   }
+  const phone2Norm = phoneParts[1]
+    ? normalizeExcelPhone(phoneParts[1])
+    : null;
 
   const name = cellStr(getCell(dataRow, byField.name));
   const contactName = cellStr(getCell(dataRow, byField.company));
-  const finalName = name || contactName || `عميل ${phones.phone.slice(-4)}`;
+  const finalName = name || contactName || `عميل ${phoneMain.slice(-4)}`;
 
   const disc = parseDiscount(getCell(dataRow, byField.allowedDiscount));
   const qNoteParts: string[] = [];
@@ -474,8 +527,8 @@ export function parseRowToImport(
     excelRow,
     name: finalName,
     company: contactName || null,
-    phone: phones.phone,
-    phone2: phones.phone2,
+    phone: phoneMain,
+    phone2: phone2Norm,
     activity: nullIfEmpty(cellStr(getCell(dataRow, byField.activity))),
     position: nullIfEmpty(cellStr(getCell(dataRow, byField.position))),
     address: nullIfEmpty(cellStr(getCell(dataRow, byField.address))),

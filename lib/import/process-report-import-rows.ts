@@ -4,6 +4,7 @@ import { patchClientReportFields } from "@/app/actions/report-client-patch";
 import {
   excelRowToReportClientPatch,
   normalizedPrimaryPhoneFromReportRow,
+  rawPrimaryPhoneFromReportRow,
 } from "@/lib/export/report-b-flat";
 import { parseExcelDateCell, parsePhones } from "@/lib/import/excel-client-import";
 import { canAccessClient } from "@/lib/report-scope";
@@ -59,22 +60,16 @@ function importStatusOk(kind: string, status: ClientStatus): boolean {
   return true;
 }
 
-/** نفس نطاق التقارير + حالة التقرير — يقلّل تطابق الهاتف مع عملاء خارج القائمة */
-function importKindStatusWhere(kind: string): Prisma.ClientWhereInput | null {
-  switch (kind) {
-    case "report-b":
-      return { status: ClientStatus.B };
-    case "report-not-b":
-      return { status: ClientStatus.NOT_B };
-    case "report-closed":
-      return { status: ClientStatus.LOST };
-    case "report-won":
-      return { status: ClientStatus.WON };
-    case "dashboard-followups":
-      return { status: { in: [ClientStatus.B, ClientStatus.NOT_B] } };
-    default:
-      return null;
+/**
+ * تقييد بحالة العميل عند البحث بالهاتف **فقط** في استيراد تقرير العملاء المغلقة
+ * (`report-closed`). باقي التقارير تُطابق العميل بالرقم دون تصفية الحالة — ثم يُتحقق من
+ * `importStatusOk` بعد الإيجاد.
+ */
+function phoneLookupStatusWhere(kind: string): Prisma.ClientWhereInput | null {
+  if (kind === "report-closed") {
+    return { status: ClientStatus.LOST };
   }
+  return null;
 }
 
 function matchesNormalizedPhone(
@@ -101,21 +96,11 @@ function digitOnlyVariants(variants: string[]): string[] {
   ];
 }
 
-function mysqlReportKindStatusFilter(kind: string): Prisma.Sql {
-  switch (kind) {
-    case "report-b":
-      return Prisma.sql`AND c.status = ${ClientStatus.B}`;
-    case "report-not-b":
-      return Prisma.sql`AND c.status = ${ClientStatus.NOT_B}`;
-    case "report-closed":
-      return Prisma.sql`AND c.status = ${ClientStatus.LOST}`;
-    case "report-won":
-      return Prisma.sql`AND c.status = ${ClientStatus.WON}`;
-    case "dashboard-followups":
-      return Prisma.sql`AND c.status IN (${Prisma.join([ClientStatus.B, ClientStatus.NOT_B])})`;
-    default:
-      return Prisma.empty;
+function mysqlPhoneLookupStatusFilter(kind: string): Prisma.Sql {
+  if (kind === "report-closed") {
+    return Prisma.sql`AND c.status = ${ClientStatus.LOST}`;
   }
+  return Prisma.empty;
 }
 
 /**
@@ -135,7 +120,7 @@ async function findClientsByMysqlDigitVariants(
 > {
   if (digitVariants.length === 0) return [];
   try {
-    const statusSql = mysqlReportKindStatusFilter(kind);
+    const statusSql = mysqlPhoneLookupStatusFilter(kind);
     const rows = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -235,7 +220,8 @@ async function findClientRowByImportPhone(
   _sessionRole: UserRole,
   _dbUserId: string,
   rowNum: number,
-  errors: string[]
+  errors: string[],
+  rawPhoneForLog?: unknown
 ): Promise<{
   client: {
     id: string;
@@ -247,7 +233,14 @@ async function findClientRowByImportPhone(
   const variants = phoneVariantsForDbLookup(needle);
   if (variants.length === 0) return { client: null };
 
-  const statusPart = importKindStatusWhere(kind);
+  console.log(
+    "DB Query -> Raw Excel Phone:",
+    rawPhoneForLog !== undefined ? rawPhoneForLog : "(n/a)",
+    " | Normalized to:",
+    needle
+  );
+
+  const statusPart = phoneLookupStatusWhere(kind);
   const baseWhere: Prisma.ClientWhereInput = {
     ...(statusPart ?? {}),
   };
@@ -492,7 +485,7 @@ export async function processReportImportRows(
         });
       } else {
         const phone = normalizedPrimaryPhoneFromReportRow(row);
-        if (!phone.replace(/\D/g, "") || phone.replace(/\D/g, "").length < 8) {
+        if (!phone || phone.length !== 11) {
           errors.push(`صف ${rowNum}: رقم هاتف غير صالح بعد التطبيع`);
           continue;
         }
@@ -502,7 +495,8 @@ export async function processReportImportRows(
           sessionRole,
           dbUserId,
           rowNum,
-          errors
+          errors,
+          rawPrimaryPhoneFromReportRow(row)
         );
         client = phoneLookup.client;
         if (!client && phoneLookup.skipGenericNotFoundMessage) {

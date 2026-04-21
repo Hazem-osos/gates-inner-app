@@ -194,6 +194,19 @@ function rawPhoneFromRow(
   return undefined;
 }
 
+const PRIMARY_PHONE_ROW_KEYS = [
+  "phone",
+  "الهاتف",
+  REPORT_B_EXPORT_HEADER_AR_BASE.phone,
+] as const;
+
+/** قيمة خلية الهاتف الخام (قد تكون `number` من Excel) — للتسجيل والتطبيع. */
+export function rawPrimaryPhoneFromReportRow(
+  row: Record<string, unknown>
+): unknown {
+  return rawPhoneFromRow(row, [...PRIMARY_PHONE_ROW_KEYS]);
+}
+
 function cellStrAllowEmpty(row: Record<string, unknown>, keys: string[]): string | undefined {
   for (const k of keys) {
     if (!(k in row)) continue;
@@ -304,11 +317,7 @@ function parseFollowUpSlotsForReportPatch(
 export function normalizedPrimaryPhoneFromReportRow(
   row: Record<string, unknown>
 ): string {
-  const raw = rawPhoneFromRow(row, [
-    "phone",
-    "الهاتف",
-    REPORT_B_EXPORT_HEADER_AR_BASE.phone,
-  ]);
+  const raw = rawPrimaryPhoneFromReportRow(row);
   if (raw === undefined || raw === null) return "";
   return normalizeExcelPhone(raw) ?? "";
 }
@@ -352,7 +361,7 @@ export function excelRowToReportClientPatch(
     "معرف عميل",
   ]);
   const phoneDigits = normalizedPrimaryPhoneFromReportRow(row);
-  if (!clientId && (!phoneDigits || phoneDigits.length < 8)) {
+  if (!clientId && (!phoneDigits || phoneDigits.length !== 11)) {
     return null;
   }
 
@@ -364,11 +373,7 @@ export function excelRowToReportClientPatch(
     REPORT_B_EXPORT_HEADER_AR_BASE.name,
   ]);
 
-  const phoneRaw = rawPhoneFromRow(row, [
-    "phone",
-    "الهاتف",
-    REPORT_B_EXPORT_HEADER_AR_BASE.phone,
-  ]);
+  const phoneRaw = rawPrimaryPhoneFromReportRow(row);
   if (phoneRaw !== undefined && phoneRaw !== null) {
     if (typeof phoneRaw === "string" && phoneRaw.trim() === "") {
       /* عمود موجود لكنه فارغ — لا نمسح الهاتف من استيراد جزئي */
