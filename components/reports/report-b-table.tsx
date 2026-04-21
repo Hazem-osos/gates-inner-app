@@ -762,16 +762,16 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
-            <div className="flex w-full shrink-0 flex-col lg:max-w-[min(100%,26rem)] lg:items-end">
+            <div className="flex w-full min-w-0 shrink-0 flex-col lg:max-w-[min(100%,40rem)] lg:items-end">
               <p className="mb-2 w-full text-xs font-semibold tracking-wide text-muted-foreground lg:text-end">
                 فلتر الزيارة
               </p>
-              <div className="flex w-full flex-wrap items-center gap-2 lg:justify-end">
+              <div className="flex w-full min-w-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-0.5 lg:justify-end [scrollbar-width:thin]">
                 <Button
                   type="button"
                   size="lg"
                   variant={visitExtra === "scheduled" ? "default" : "outline"}
-                  className="h-9 rounded-xl px-3 text-sm"
+                  className="h-9 shrink-0 rounded-xl px-3 text-sm"
                   onClick={() =>
                     setVisitExtra((v) =>
                       v === "scheduled" ? "none" : "scheduled"
@@ -784,7 +784,7 @@ export function ReportBTable({
                   type="button"
                   size="lg"
                   variant={visitExtra === "visited" ? "default" : "outline"}
-                  className="h-9 rounded-xl px-3 text-sm"
+                  className="h-9 shrink-0 rounded-xl px-3 text-sm"
                   onClick={() =>
                     setVisitExtra((v) => (v === "visited" ? "none" : "visited"))
                   }
