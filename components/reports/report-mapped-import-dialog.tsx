@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
+import { ReportDynamicExcelImport } from "@/components/import/report-dynamic-excel-import";
 import { Button } from "@/components/ui/button";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { getReportImportExpectedFields } from "@/lib/import/report-import-expected-fields";
@@ -44,9 +45,42 @@ export function ReportMappedImportDialog({
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
 
-  const expectedFields = useMemo(
-    () => getReportImportExpectedFields(kind),
-    [kind]
+  const useStaticFields =
+    kind === "warming" || kind === "report-recommendations";
+
+  const staticExpectedFields = useMemo(
+    () => (useStaticFields ? getReportImportExpectedFields(kind) : []),
+    [kind, useStaticFields]
+  );
+
+  const onMappedRowsImport = useCallback(
+    async (mappedData: Record<string, unknown>[]) => {
+      const r = await fetch("/api/import/mapped-rows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, rows: mappedData }),
+      });
+      const j = (await r.json()) as {
+        message?: string;
+        updated?: number;
+        processed?: number;
+        errors?: string[];
+      };
+      if (!r.ok) {
+        toast.error(j.message ?? "فشل الاستيراد");
+        return;
+      }
+      const errTxt =
+        j.errors?.length && j.errors.length > 0
+          ? ` — ${j.errors.slice(0, 3).join("؛ ")}`
+          : "";
+      toast.success(
+        `تم تحديث ${j.updated ?? 0} من ${j.processed ?? 0} صفاً.${errTxt}`
+      );
+      setOpen(false);
+      router.refresh();
+    },
+    [kind, router]
   );
 
   return (
@@ -72,38 +106,21 @@ export function ReportMappedImportDialog({
         footer={null}
       >
         <div className="max-h-[min(85vh,900px)] overflow-y-auto pe-1">
-          <DynamicExcelImporter
-            key={session}
-            title="تعيين الأعمدة ثم تأكيد الاستيراد"
-            mappingHelpMode="report"
-            expectedFields={expectedFields}
-            onImport={async (mappedData) => {
-              const r = await fetch("/api/import/mapped-rows", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ kind, rows: mappedData }),
-              });
-              const j = (await r.json()) as {
-                message?: string;
-                updated?: number;
-                processed?: number;
-                errors?: string[];
-              };
-              if (!r.ok) {
-                toast.error(j.message ?? "فشل الاستيراد");
-                return;
-              }
-              const errTxt =
-                j.errors?.length && j.errors.length > 0
-                  ? ` — ${j.errors.slice(0, 3).join("؛ ")}`
-                  : "";
-              toast.success(
-                `تم تحديث ${j.updated ?? 0} من ${j.processed ?? 0} صفاً.${errTxt}`
-              );
-              setOpen(false);
-              router.refresh();
-            }}
-          />
+          {useStaticFields ? (
+            <DynamicExcelImporter
+              key={session}
+              title="تعيين الأعمدة ثم تأكيد الاستيراد"
+              mappingHelpMode="report"
+              expectedFields={staticExpectedFields}
+              onImport={onMappedRowsImport}
+            />
+          ) : (
+            <ReportDynamicExcelImport
+              key={session}
+              reportKind={kind}
+              onImport={onMappedRowsImport}
+            />
+          )}
         </div>
       </SimpleDialog>
     </>

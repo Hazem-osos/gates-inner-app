@@ -1,8 +1,4 @@
 import type { ExpectedField } from "@/lib/import/expected-field";
-import {
-  REPORT_B_EXPORT_HEADER_AR,
-  REPORT_B_EXPORT_KEYS,
-} from "@/lib/export/report-b-flat";
 
 const ID_FIELD: ExpectedField = {
   key: "id",
@@ -17,15 +13,6 @@ const ID_FIELD: ExpectedField = {
     "رقم التسلسل",
   ],
 };
-
-const REPORT_BASE_FIELDS: ExpectedField[] = [
-  ID_FIELD,
-  ...REPORT_B_EXPORT_KEYS.map((k) => ({
-    key: k,
-    label: REPORT_B_EXPORT_HEADER_AR[k],
-    required: false,
-  })),
-];
 
 const WARMING_FIELDS: ExpectedField[] = [
   ID_FIELD,
@@ -74,18 +61,14 @@ const RECOMMENDATION_FIELDS: ExpectedField[] = [
   },
 ];
 
-/** حقول واجهة التعيين لكل نوع استيراد تقرير */
+/**
+ * حقول ثابتة لأنواع خاصة فقط — باقي التقارير تستخدم
+ * `buildReportFlatImportFields` مع «إضافة متابعة» ديناميكياً.
+ */
 export function getReportImportExpectedFields(kind: string): ExpectedField[] {
   if (kind === "warming") return WARMING_FIELDS;
   if (kind === "report-recommendations") return RECOMMENDATION_FIELDS;
-
-  if (kind === "report-won") {
-    return [
-      ...REPORT_BASE_FIELDS,
-      { key: "contractValue", label: "قيمة التعاقد", required: false },
-      { key: "saleDate", label: "تاريخ البيع", required: false },
-    ];
-  }
-
-  return REPORT_BASE_FIELDS;
+  throw new Error(
+    `getReportImportExpectedFields: use ReportDynamicExcelImport for kind "${kind}"`
+  );
 }

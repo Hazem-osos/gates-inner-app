@@ -84,6 +84,22 @@ export function parseFollowUpSlotColumnHeader(header: string): {
     return { slotIndex: n, part: arAlt[2] === "نص" ? "note" : "date" };
   }
 
+  /** عناوين كجدول التقرير: «متابعة 1» / «تاريخ 1» */
+  const tableStyleNote = /^متابعة\s*(\d+)\s*$/.exec(h);
+  if (tableStyleNote) {
+    const n = Number(tableStyleNote[1]);
+    if (n >= 1 && n <= MAX_FOLLOW_UP_SLOTS_EXCEL) {
+      return { slotIndex: n, part: "note" };
+    }
+  }
+  const tableStyleDate = /^تاريخ\s*(\d+)\s*$/.exec(h);
+  if (tableStyleDate) {
+    const n = Number(tableStyleDate[1]);
+    if (n >= 1 && n <= MAX_FOLLOW_UP_SLOTS_EXCEL) {
+      return { slotIndex: n, part: "date" };
+    }
+  }
+
   return null;
 }
 
