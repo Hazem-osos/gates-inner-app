@@ -72,11 +72,17 @@ export function ReportMappedImportDialog({
       }
       const errTxt =
         j.errors?.length && j.errors.length > 0
-          ? ` — ${j.errors.slice(0, 3).join("؛ ")}`
+          ? ` — ${j.errors.slice(0, 5).join("؛ ")}`
           : "";
-      toast.success(
-        `تم تحديث ${j.updated ?? 0} من ${j.processed ?? 0} صفاً.${errTxt}`
-      );
+      const upd = j.updated ?? 0;
+      const proc = j.processed ?? 0;
+      if (upd === 0 && proc > 0) {
+        toast.error(
+          `لم يُحدَّث أي صف من ${proc}. تحقق من ربط عمود «هاتف» والحقول.${errTxt}`
+        );
+      } else {
+        toast.success(`تم تحديث ${upd} من ${proc} صفاً.${errTxt}`);
+      }
       setOpen(false);
       router.refresh();
     },
