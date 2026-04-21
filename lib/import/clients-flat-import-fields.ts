@@ -1,34 +1,12 @@
 import type { ExpectedField } from "@/lib/import/expected-field";
 import {
-  MAX_FOLLOW_UP_SLOTS_EXCEL,
   followUpSlotDateHeaderAliases,
   followUpSlotDateHeaderAr,
-  followUpSlotDateKey,
   followUpSlotNoteHeaderAliases,
   followUpSlotNoteHeaderAr,
-  followUpSlotNoteKey,
 } from "@/lib/import/follow-up-slot-columns";
 
-function buildFollowUpSlotImportFields(): ExpectedField[] {
-  const out: ExpectedField[] = [];
-  for (let i = 1; i <= MAX_FOLLOW_UP_SLOTS_EXCEL; i++) {
-    out.push({
-      key: followUpSlotNoteKey(i),
-      label: followUpSlotNoteHeaderAr(i),
-      required: false,
-      aliases: followUpSlotNoteHeaderAliases(i),
-    });
-    out.push({
-      key: followUpSlotDateKey(i),
-      label: followUpSlotDateHeaderAr(i),
-      required: false,
-      aliases: followUpSlotDateHeaderAliases(i),
-    });
-  }
-  return out;
-}
-
-/** استيراد عملاء جدد — صف مسطّح؛ المتابعات كأعمدة «متابعة N — نص/تاريخ» أو JSON اختياري. */
+/** استيراد عملاء جدد — صف مسطّح؛ خانة ١ للربط اليدوي، وباقي الأعمدة تُكتشف تلقائياً من العناوين. */
 export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] = [
   {
     key: "phone",
@@ -225,7 +203,18 @@ export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] = [
     required: false,
     aliases: ["متابعات", "follow ups json", "followups"],
   },
-  ...buildFollowUpSlotImportFields(),
+  {
+    key: "followUpSlot1Note",
+    label: followUpSlotNoteHeaderAr(1),
+    required: false,
+    aliases: followUpSlotNoteHeaderAliases(1),
+  },
+  {
+    key: "followUpSlot1Date",
+    label: followUpSlotDateHeaderAr(1),
+    required: false,
+    aliases: followUpSlotDateHeaderAliases(1),
+  },
   {
     key: "clientType",
     label: "نوع العميل (TB/TU/TC…)",

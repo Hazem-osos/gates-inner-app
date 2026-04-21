@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ExpectedField } from "@/lib/import/expected-field";
+import { parseFollowUpSlotColumnHeader } from "@/lib/import/follow-up-slot-columns";
 import {
   compactNormalized,
   normalizeArabicText,
@@ -317,9 +318,26 @@ export function DynamicExcelImporter({
         const idx = headerIndex.get(excelHeader);
         out[f.key] = idx !== undefined ? cellAt(row, idx) : "";
       }
+      /** أعمدة «متابعة N — نص/تاريخ» من تصدير التقرير تُربط تلقائياً دون إدراج ٣٠ خانة في القائمة */
+      for (const h of headers) {
+        const parsed = parseFollowUpSlotColumnHeader(h);
+        if (!parsed) continue;
+        const key = `followUpSlot${parsed.slotIndex}${
+          parsed.part === "note" ? "Note" : "Date"
+        }`;
+        const cur = out[key];
+        const curEmpty =
+          cur === undefined ||
+          cur === null ||
+          String(cur).trim() === "";
+        if (!curEmpty) continue;
+        const idx = headerIndex.get(h);
+        if (idx === undefined) continue;
+        out[key] = cellAt(row, idx);
+      }
       return out;
     },
-    [expectedFields, mapping, headerIndex]
+    [expectedFields, mapping, headerIndex, headers]
   );
 
   const previewRows = useMemo(() => {
@@ -431,11 +449,11 @@ export function DynamicExcelImporter({
               className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-foreground"
               role="note"
             >
-              <span className="font-semibold">المتابعات:</span> اربط أعمدة «متابعة
-              ١ — نص» و«متابعة ١ — تاريخ» لكل خانة (حتى ٣٠)، أو عمود JSON قديم
-              «متابعات (JSON)». تصدير التقرير يولّد نفس الأعمدة تلقائياً. عند
-              استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B يُحدَّث إلى B
-              وتُمسَح حقول التصنيف الفرعي Not B.
+              <span className="font-semibold">المتابعات:</span> اربط «متابعة ١ —
+              نص/تاريخ» إن رغبت؛ أعمدة «متابعة ٢، ٣…» من ملف التصدير تُستورد
+              تلقائياً عند تطابق العنوان دون ربط يدوي. يمكن أيضاً عمود JSON قديم
+              «متابعات». عند استيراد عملاء B، إن وُجد عميل بنفس الهاتف بحالة Not B
+              يُحدَّث إلى B وتُمسَح حقول التصنيف الفرعي Not B.
             </div>
             <ul className="flex flex-col gap-4">
               {expectedFields.map((field) => {

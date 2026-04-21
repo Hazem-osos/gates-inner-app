@@ -158,6 +158,23 @@ function slotsToJson(slots: FollowSlot[]): unknown {
   return slots.map((s, i) => ({ ...s, order: i + 1 }));
 }
 
+/** يزيل المتابعات الفارغة من نهاية السجل قبل الحفظ في القاعدة */
+function trimTrailingEmptyFollowSlots(slots: FollowSlot[]): FollowSlot[] {
+  if (slots.length === 0) return [];
+  let end = slots.length;
+  while (
+    end > 0 &&
+    !(slots[end - 1]?.note ?? "").trim() &&
+    !(slots[end - 1]?.date ?? "").trim()
+  ) {
+    end--;
+  }
+  return slots.slice(0, end).map((s, i) => ({
+    ...s,
+    order: i + 1,
+  }));
+}
+
 function mergedCallAndSituation(call: string | null, sit: string | null): string {
   const a = (call ?? "").trim();
   const b = (sit ?? "").trim();
@@ -383,7 +400,7 @@ export function ReportBTable({
   }, [gateInvalid, gateClientId]);
 
   function patchFromRow(row: ReportBRow): ReportClientPatchInput {
-    const slots = normalizeSlots(row.followUpSlots);
+    const slots = trimTrailingEmptyFollowSlots(normalizeSlots(row.followUpSlots));
 
     const out: ReportClientPatchInput = {
       name: row.name,
@@ -1109,19 +1126,19 @@ export function ReportBTable({
                     <TableHead className="min-w-[9rem]">تاريخ {i + 1}</TableHead>
                   </Fragment>
                 ))}
-                <TableHead className="w-12 px-1 text-center align-middle">
+                <TableHead className="min-w-[8.5rem] px-1 text-center align-middle">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 min-w-7 px-0 font-semibold"
-                    title="إضافة عمود متابعة للجدول (لا يُنشئ متابعات فارغة في البيانات)"
+                    className="h-8 w-full min-w-0 px-1.5 text-[11px] font-semibold leading-tight"
+                    title="إضافة عمود متابعة للجدول (لا يُنشئ صفوفاً فارغة في البيانات حتى تُدخل نصاً أو تاريخاً)"
                     onClick={(e) => {
                       e.stopPropagation();
                       setFollowColExtra((c) => Math.min(c + 1, 998));
                     }}
                   >
-                    +
+                    + إضافة متابعة
                   </Button>
                 </TableHead>
               </TableRow>
