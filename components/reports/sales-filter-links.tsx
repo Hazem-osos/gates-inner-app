@@ -45,7 +45,9 @@ export async function SalesFilterLinks(props: {
 
   const inner = (
     <>
-      <span className="font-medium text-muted-foreground">فلتر السيلز:</span>
+      <span className="inline-flex shrink-0 items-center self-center font-medium leading-none text-muted-foreground">
+        فلتر السيلز:
+      </span>
       <Link
         href={buildHref(props.pathname, sp, "all")}
         className={cn(
@@ -76,7 +78,9 @@ export async function SalesFilterLinks(props: {
 
   if (props.bare) {
     return (
-      <div className="flex min-w-0 flex-wrap items-center gap-2">{inner}</div>
+      <div className="flex min-h-10 min-w-0 flex-wrap items-center gap-2 sm:min-h-0">
+        {inner}
+      </div>
     );
   }
 
