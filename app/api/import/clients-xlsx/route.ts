@@ -3,6 +3,7 @@ import { ClientStatus } from "@prisma/client";
 import * as XLSX from "xlsx";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { normalizedImportNameAndCompany } from "@/lib/import/client-name-company-normalize";
 import { prisma } from "@/lib/prisma";
 
 function cellStr(row: Record<string, unknown>, keys: string[]): string {
@@ -69,22 +70,48 @@ export async function POST(req: Request) {
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const name = cellStr(row, [
+    const phone = cellStr(row, ["الهاتف", "هاتف", "phone", "Phone"]);
+    const contactExplicit = cellStr(row, [
+      "اسم المسؤول",
+      "اسم المسئول",
+      "المسؤول",
+      "مسؤول",
+      "contact",
+      "Contact",
+    ]);
+    const companyRaw = cellStr(row, [
+      "الشركة",
+      "شركة",
+      "company",
+      "Company",
+      "اسم_الشركة",
+      "اسم الشركة",
+    ]);
+    const genericLabel = cellStr(row, [
       "اسم_العميل",
       "اسم العميل",
       "الاسم",
       "name",
       "Name",
     ]);
-    const phone = cellStr(row, ["الهاتف", "هاتف", "phone", "Phone"]);
-    if (!name || !phone) {
-      if (name || phone) {
-        errors.push(`صف ${i + 2}: اسم أو هاتف ناقص`);
+
+    const hasIdentity =
+      contactExplicit.trim() ||
+      genericLabel.trim() ||
+      companyRaw.trim();
+
+    if (!phone || !hasIdentity) {
+      if (phone || hasIdentity) {
+        errors.push(`صف ${i + 2}: هاتف ناقص أو لا يوجد اسم/شركة`);
       }
       continue;
     }
 
-    const company = cellStr(row, ["الشركة", "شركة", "company"]);
+    const { name, company } = normalizedImportNameAndCompany({
+      contactPerson: contactExplicit || genericLabel,
+      companyName: companyRaw,
+      phoneFallbackSuffix: phone.slice(-4),
+    });
     const position = cellStr(row, ["المسمى_الوظيفي", "المسمى الوظيفي", "position"]) || "—";
     const address = cellStr(row, ["العنوان", "address"]) || "—";
 
@@ -93,7 +120,7 @@ export async function POST(req: Request) {
         data: {
           name,
           phone,
-          company: company || null,
+          company,
           position,
           address,
           quoteDetail: "—",

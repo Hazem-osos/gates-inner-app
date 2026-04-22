@@ -1,3 +1,4 @@
+import { normalizedImportNameAndCompany } from "@/lib/import/client-name-company-normalize";
 import {
   cellStr,
   parseDiscount,
@@ -35,9 +36,14 @@ export function rowRecordToParsedImportRow(
     return { skip: true, reason: "لا رقم هاتف صالح", excelRow };
   }
 
-  const name = cellStr(row.name);
-  const contactName = cellStr(row.company);
-  const finalName = name || contactName || `عميل ${phones.phone.slice(-4)}`;
+  const contactPerson = cellStr(row.name);
+  const companyName = cellStr(row.company);
+  const { name: finalName, company: companyOut } =
+    normalizedImportNameAndCompany({
+      contactPerson,
+      companyName,
+      phoneFallbackSuffix: phones.phone.slice(-4),
+    });
 
   const disc = parseDiscount(row.allowedDiscount);
   const qNoteParts: string[] = [];
@@ -82,7 +88,7 @@ export function rowRecordToParsedImportRow(
   return {
     excelRow,
     name: finalName,
-    company: contactName || null,
+    company: companyOut,
     phone: phones.phone,
     phone2: phones.phone2,
     activity: nullIfEmpty(cellStr(row.activity)),

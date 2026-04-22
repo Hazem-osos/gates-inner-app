@@ -4,7 +4,10 @@ import { Prisma, type UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
-import { buildArabicAuditLinesFromPatch } from "@/lib/audit/report-patch-diff";
+import {
+  buildArabicAuditLinesFromPatch,
+  managementRecommendationFieldsChanged,
+} from "@/lib/audit/report-patch-diff";
 import { parseExcelDateCell } from "@/lib/import/excel-client-import";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +27,63 @@ function parseOptionalDecimal(v: string | undefined): Prisma.Decimal | null {
     return new Prisma.Decimal(v);
   } catch {
     return null;
+  }
+}
+
+/**
+ * يبقي صف «توصيات الإدارة» متزامناً مع عمود التقرير B: النص/التاريخ على `Client`
+ * يُعرض في `/reports/recommendations` من جدول `ManagementRecommendation`.
+ */
+async function syncManagementRecommendationFromReportBCell(opts: {
+  clientId: string;
+  clientBefore: {
+    managementRecommendationText: string | null;
+    managementRecommendationDate: Date | null;
+    assignedUserId: string | null;
+  };
+  dbUserId: string;
+}) {
+  const fresh = await prisma.client.findUnique({
+    where: { id: opts.clientId },
+    select: {
+      managementRecommendationText: true,
+      managementRecommendationDate: true,
+      assignedUserId: true,
+    },
+  });
+  if (!fresh) return;
+
+  const newText = (fresh.managementRecommendationText ?? "").trim();
+  const targetUserId = fresh.assignedUserId ?? opts.dbUserId;
+  if (newText.length === 0) return;
+
+  const oldText = (opts.clientBefore.managementRecommendationText ?? "").trim();
+  const existing =
+    oldText !== ""
+      ? await prisma.managementRecommendation.findFirst({
+          where: { clientId: opts.clientId, body: oldText },
+        })
+      : null;
+
+  if (existing) {
+    await prisma.managementRecommendation.update({
+      where: { id: existing.id },
+      data: {
+        body: fresh.managementRecommendationText ?? "",
+        recommendationDate: fresh.managementRecommendationDate,
+        targetUserId,
+      },
+    });
+  } else {
+    await prisma.managementRecommendation.create({
+      data: {
+        clientId: opts.clientId,
+        body: fresh.managementRecommendationText ?? "",
+        authorId: opts.dbUserId,
+        targetUserId,
+        recommendationDate: fresh.managementRecommendationDate,
+      },
+    });
   }
 }
 
@@ -226,6 +286,18 @@ export async function patchClientReportFields(
       data,
     });
 
+    if (managementRecommendationFieldsChanged(client, patch)) {
+      await syncManagementRecommendationFromReportBCell({
+        clientId,
+        clientBefore: {
+          managementRecommendationText: client.managementRecommendationText,
+          managementRecommendationDate: client.managementRecommendationDate,
+          assignedUserId: client.assignedUserId,
+        },
+        dbUserId,
+      });
+    }
+
     const auditLines = buildArabicAuditLinesFromPatch(client, patch);
     const auditSummary =
       auditLines.length > 0 ? auditLines.join(" — ") : "حفظ من التقرير";
@@ -262,6 +334,7 @@ export async function patchClientReportFields(
     revalidatePath("/reports/b");
     revalidatePath("/reports/not-b");
     revalidatePath("/reports/closed");
+    revalidatePath("/reports/recommendations");
     return { ok: true };
   } catch (e) {
     console.error(e);

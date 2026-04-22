@@ -160,7 +160,7 @@ export default async function ClientsListPage({
           excelHref={clientsListExportHref({ sales: salesKey, q: qRaw })}
         />
         <div className="flex flex-wrap items-center gap-2">
-          <Link
+          <a
             href={clientsImportTemplateHref()}
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
@@ -172,7 +172,7 @@ export default async function ClientsListPage({
               aria-hidden
             />
             تنزيل قالب Excel
-          </Link>
+          </a>
           <Link
             href="/clients/import"
             className={cn(

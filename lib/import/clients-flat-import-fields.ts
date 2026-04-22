@@ -1,4 +1,5 @@
 import type { ExpectedField } from "@/lib/import/expected-field";
+/** تطبيع الاسم/الشركة عند الحفظ: انظر `client-name-company-normalize.ts` */
 import {
   MAX_FOLLOW_UP_SLOTS_EXCEL,
   followUpSlotDateHeaderAliases,
@@ -37,30 +38,31 @@ export const CLIENTS_FLAT_IMPORT_FIELDS_BASE: ExpectedField[] = [
   },
   {
     key: "name",
-    label: "اسم الشركة / الاسم",
-    required: false,
-    aliases: [
-      "اسم العميل",
-      "اسم الشركة",
-      "الاسم",
-      "اسم العميل بالكامل",
-      "الشركة",
-      "اسم المنشأة",
-      "customer name",
-      "company name",
-    ],
-  },
-  {
-    key: "company",
-    label: "اسم المسؤول / الشركة المعروضة",
+    label: "اسم المسؤول / جهة الاتصال",
     required: false,
     aliases: [
       "اسم المسؤول",
       "المسؤول",
+      "اسم المسئول",
       "جهة الاتصال",
+      "اسم العميل",
+      "الاسم",
+      "اسم العميل بالكامل",
       "اسم صاحب الشركة",
-      "الشركة المعروضة",
       "contact person",
+      "customer name",
+    ],
+  },
+  {
+    key: "company",
+    label: "اسم الشركة / المنشأة",
+    required: false,
+    aliases: [
+      "اسم الشركة",
+      "الشركة",
+      "اسم المنشأة",
+      "company name",
+      "organization",
     ],
   },
   {
@@ -265,3 +267,12 @@ export function buildClientsFlatImportFields(
 /** افتراضياً خانة متابعة واحدة — للتوافق مع الاستيراد البسيط */
 export const CLIENTS_FLAT_IMPORT_FIELDS: ExpectedField[] =
   buildClientsFlatImportFields(1);
+
+/** صف فارغ بعناوين أعمدة مطابقة للاستيراد — لتصدير قالب Excel */
+export function buildClientsImportTemplateEmptyRow(): Record<string, string> {
+  const row: Record<string, string> = {};
+  for (const f of CLIENTS_FLAT_IMPORT_FIELDS) {
+    row[f.label] = "";
+  }
+  return row;
+}

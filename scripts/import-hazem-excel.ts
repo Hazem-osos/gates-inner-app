@@ -15,7 +15,18 @@ import * as path from "node:path";
 import { Prisma, PrismaClient, ClientStatus } from "@prisma/client";
 import * as XLSX from "xlsx";
 
+import { normalizedImportNameAndCompany } from "../lib/import/client-name-company-normalize";
+
 const prisma = new PrismaClient();
+
+function identityForDb(contactFromExcel: string, companyFromExcel: string, phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  return normalizedImportNameAndCompany({
+    contactPerson: contactFromExcel,
+    companyName: companyFromExcel,
+    phoneFallbackSuffix: digits.slice(-4) || "0000",
+  });
+}
 
 const ROOT = process.cwd();
 const XLSX_PATH = path.join(ROOT, "Hazemexcel.xlsx");
@@ -148,11 +159,16 @@ async function importClientsB(assigneeId: string | null) {
   const { headers, data } = pack;
   let n = 0;
   for (const row of data) {
-    const company = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
-    const name = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
+    const companyFromSheet = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
+    const contactFromSheet = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
     const phoneRaw = rowVal(row, headers, ["رقم التليفون"], ["تليفون", "هاتف"]);
     const phone = phoneForDb(phoneRaw, `nophone-${n}-${Date.now()}`);
-    if (!company && !name) continue;
+    if (!companyFromSheet && !contactFromSheet) continue;
+    const { name: clientName, company: clientCompany } = identityForDb(
+      contactFromSheet,
+      companyFromSheet,
+      phone
+    );
 
     const nextFollow = parseMaybeDate(rowVal(row, headers, ["تاريخ المتابعه التالي"], ["متابعه التالي"]));
     const visitDate = parseMaybeDate(rowVal(row, headers, ["تاريخ الزيارة"], ["زيارة"]));
@@ -187,9 +203,9 @@ async function importClientsB(assigneeId: string | null) {
 
     const client = await prisma.client.create({
       data: {
-        name: name || company || "عميل",
+        name: clientName,
         phone,
-        company: company || null,
+        company: clientCompany,
         position: str(rowVal(row, headers, ["البوزيشن"], [])) || null,
         address: str(rowVal(row, headers, ["العنوان"], [])) || null,
         quotePrice: quote,
@@ -225,10 +241,15 @@ async function importClientsNotB(assigneeId: string | null) {
   const { headers, data } = pack;
   let n = 0;
   for (const row of data) {
-    const company = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
-    const name = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
+    const companyFromSheet = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
+    const contactFromSheet = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
     const phone = phoneForDb(rowVal(row, headers, ["رقم التليفون"], ["تليفون"]), `nophone-nb-${n}-${Date.now()}`);
-    if (!company && !name) continue;
+    if (!companyFromSheet && !contactFromSheet) continue;
+    const { name: clientName, company: clientCompany } = identityForDb(
+      contactFromSheet,
+      companyFromSheet,
+      phone
+    );
 
     const type = str(rowVal(row, headers, ["نوعية العميل"], ["نوعية"]));
     const status =
@@ -262,9 +283,9 @@ async function importClientsNotB(assigneeId: string | null) {
 
     const client = await prisma.client.create({
       data: {
-        name: name || company || "عميل",
+        name: clientName,
         phone,
-        company: company || null,
+        company: clientCompany,
         position: str(rowVal(row, headers, ["البوزيشن"], [])) || null,
         address: str(rowVal(row, headers, ["العنوان"], [])) || null,
         quotePrice: parseDecimal(rowVal(row, headers, ["عرض السعر"], [])),
@@ -300,10 +321,15 @@ async function importClientsWon(assigneeId: string | null) {
   const { headers, data } = pack;
   let n = 0;
   for (const row of data) {
-    const company = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
-    const name = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
+    const companyFromSheet = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
+    const contactFromSheet = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
     const phone = phoneForDb(rowVal(row, headers, ["رقم التليفون"], ["تليفون"]), `won-${n}-${Date.now()}`);
-    if (!company && !name) continue;
+    if (!companyFromSheet && !contactFromSheet) continue;
+    const { name: clientName, company: clientCompany } = identityForDb(
+      contactFromSheet,
+      companyFromSheet,
+      phone
+    );
 
     const saleDate =
       parseMaybeDate(rowVal(row, headers, ["تاريخ البيع"], ["تاريخ اتمام", "تاريخ إتمام"])) ??
@@ -329,9 +355,9 @@ async function importClientsWon(assigneeId: string | null) {
 
     const client = await prisma.client.create({
       data: {
-        name: name || company || "عميل",
+        name: clientName,
         phone,
-        company: company || null,
+        company: clientCompany,
         position: str(rowVal(row, headers, ["البوزيشن"], [])) || null,
         address: str(rowVal(row, headers, ["العنوان"], [])) || null,
         quotePrice: parseDecimal(rowVal(row, headers, ["عرض السعر"], [])),
@@ -376,10 +402,15 @@ async function importClientsLost(assigneeId: string | null) {
   const { headers, data } = pack;
   let n = 0;
   for (const row of data) {
-    const company = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
-    const name = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
+    const companyFromSheet = str(rowVal(row, headers, ["أسم الشركة"], ["شركة"]));
+    const contactFromSheet = str(rowVal(row, headers, ["أسم المسئول"], ["مسئول"]));
     const phone = phoneForDb(rowVal(row, headers, ["رقم التليفون"], ["تليفون"]), `lost-${n}-${Date.now()}`);
-    if (!company && !name) continue;
+    if (!companyFromSheet && !contactFromSheet) continue;
+    const { name: clientName, company: clientCompany } = identityForDb(
+      contactFromSheet,
+      companyFromSheet,
+      phone
+    );
 
     const lossReason =
       str(rowVal(row, headers, ["سبب الاغلاق", "سبب الإغلاق"], ["سبب"])) ||
@@ -396,9 +427,9 @@ async function importClientsLost(assigneeId: string | null) {
 
     const client = await prisma.client.create({
       data: {
-        name: name || company || "عميل",
+        name: clientName,
         phone,
-        company: company || null,
+        company: clientCompany,
         position: str(rowVal(row, headers, ["البوزيشن"], [])) || null,
         address: str(rowVal(row, headers, ["العنوان"], [])) || null,
         status: ClientStatus.LOST,

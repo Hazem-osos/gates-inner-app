@@ -437,9 +437,10 @@ export function ReportBTable({
       classificationId: row.classificationId,
     };
 
-    if (row.managementRecommendationDate) {
-      out.managementRecommendationDate = row.managementRecommendationDate;
-    }
+    out.managementRecommendationDate =
+      row.managementRecommendationDate && row.managementRecommendationDate.trim() !== ""
+        ? row.managementRecommendationDate
+        : "";
 
     return out;
   }
@@ -1062,10 +1063,20 @@ export function ReportBTable({
                 <TableHead className="min-w-[140px]">توصيات الإدارة</TableHead>
                 <TableHead className="min-w-[120px]">تاريخ التوصية</TableHead>
                 <TableHead className="min-w-[90px]">سيلز</TableHead>
-                <TableHead className="min-w-[10rem]">شركة</TableHead>
+                <TableHead className="min-w-[10rem] whitespace-normal text-start leading-tight">
+                  <span className="block font-semibold">شركة</span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                    اسم المنشأة كما في السجل
+                  </span>
+                </TableHead>
                 <TableHead className="w-12">أيام</TableHead>
                 <TableHead className="min-w-[100px]">اتصال</TableHead>
-                <TableHead className="min-w-[9rem]">اسم المسئول</TableHead>
+                <TableHead className="min-w-[9rem] whitespace-normal text-start leading-tight">
+                  <span className="block font-semibold">اسم المسئول</span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                    مسؤول الاتصال (الشخص)
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[9rem]">نشاط</TableHead>
                 <TableHead className="min-w-[9rem]">وظيفة</TableHead>
                 <TableHead className="min-w-[120px]">عنوان</TableHead>

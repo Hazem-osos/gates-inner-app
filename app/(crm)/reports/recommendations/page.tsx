@@ -12,6 +12,7 @@ import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { recommendationsExportExcelHref } from "@/lib/export-excel-href";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function RecommendationsReportPage({
         ? { targetUserId: salesKey }
         : {};
 
-  let rows = await prisma.managementRecommendation.findMany({
+  const allRecRows = await prisma.managementRecommendation.findMany({
     where: recommendationWhere,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 500,
@@ -53,13 +54,41 @@ export default async function RecommendationsReportPage({
     },
   });
 
+  const recKeysForDedupe = new Set(
+    allRecRows.map((r) => `${r.clientId}\0${r.body.trim()}`)
+  );
+
+  let rows = allRecRows;
   if (filter === "pending") {
     rows = rows.filter((r) => !(r.actionTaken ?? "").trim());
   } else if (filter === "done") {
     rows = rows.filter((r) => !!(r.actionTaken ?? "").trim());
   }
 
-  const tableRows: RecommendationReportRow[] = rows.map((r) => ({
+  const clientWhere: Prisma.ClientWhereInput = {
+    managementRecommendationText: { not: null },
+    ...(user.role === "SALES"
+      ? { assignedUserId: dbUserId }
+      : salesKey !== "all"
+        ? { assignedUserId: salesKey }
+        : {}),
+  };
+
+  const clientsWithReportText = await prisma.client.findMany({
+    where: clientWhere,
+    take: 500,
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      updatedAt: true,
+      managementRecommendationText: true,
+      managementRecommendationDate: true,
+      assignedUser: { select: { name: true } },
+    },
+  });
+
+  const fromRecs: RecommendationReportRow[] = rows.map((r) => ({
     id: r.id,
     clientId: r.clientId,
     clientName: r.client?.name ?? "—",
@@ -72,6 +101,38 @@ export default async function RecommendationsReportPage({
     workDateIso: r.workDate?.toISOString() ?? null,
     actionTaken: r.actionTaken,
   }));
+
+  const fromClientOnly: RecommendationReportRow[] = [];
+  for (const c of clientsWithReportText) {
+    const t = (c.managementRecommendationText ?? "").trim();
+    if (!t) continue;
+    const key = `${c.id}\0${t}`;
+    if (recKeysForDedupe.has(key)) continue;
+    if (filter === "done") continue;
+    fromClientOnly.push({
+      id: `pending-sync:${c.id}`,
+      clientId: c.id,
+      clientName: c.name,
+      salesName: c.assignedUser?.name ?? null,
+      body: t,
+      recommendationDateIso:
+        c.managementRecommendationDate?.toISOString() ?? null,
+      createdAtIso: c.updatedAt.toISOString(),
+      authorName: "عمود تقرير B",
+      workDateIso: null,
+      actionTaken: null,
+    });
+  }
+
+  const tableRows = [...fromRecs, ...fromClientOnly].sort((a, b) => {
+    const da = new Date(
+      a.recommendationDateIso ?? a.createdAtIso
+    ).getTime();
+    const db = new Date(
+      b.recommendationDateIso ?? b.createdAtIso
+    ).getTime();
+    return db - da;
+  });
 
   const filterActive = filter !== "all" || salesKey !== "all";
 

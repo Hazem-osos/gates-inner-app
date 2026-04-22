@@ -33,9 +33,9 @@ export default async function NewClientPage() {
       />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          <Link href={clientsImportTemplateHref()} className="text-primary underline-offset-4 hover:underline">
+          <a href={clientsImportTemplateHref()} className="text-primary underline-offset-4 hover:underline">
             قالب استيراد Excel
-          </Link>
+          </a>
           {" · "}
           <Link href="/clients/import" className="text-primary underline-offset-4 hover:underline">
             استيراد دفعة

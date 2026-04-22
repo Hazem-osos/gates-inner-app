@@ -11,6 +11,7 @@ import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { passesNeglected } from "@/lib/report-b-utils";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
+import { buildClientsImportTemplateEmptyRow } from "@/lib/import/clients-flat-import-fields";
 
 export type ExportSheet = {
   sheetName: string;
@@ -58,15 +59,7 @@ export async function buildExportPayload(
       sheets: [
         {
           sheetName: "عملاء",
-          rows: [
-            {
-              اسم_العميل: "مثال",
-              الهاتف: "01234567890",
-              الشركة: "اختياري",
-              المسمى_الوظيفي: "اختياري",
-              العنوان: "اختياري",
-            },
-          ],
+          rows: [buildClientsImportTemplateEmptyRow()],
         },
       ],
     };

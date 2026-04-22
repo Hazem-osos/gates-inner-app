@@ -1,7 +1,6 @@
 "use client";
 
 import { FileSpreadsheet } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -24,7 +23,7 @@ export function ExcelImportForm() {
         كعميل B ويُسند إليك.
       </p>
       <p>
-        <Link
+        <a
           href={clientsImportTemplateHref()}
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
@@ -37,7 +36,7 @@ export function ExcelImportForm() {
             aria-hidden
           />
           تنزيل قالب Excel
-        </Link>
+        </a>
       </p>
 
       <ClientsDynamicExcelImport

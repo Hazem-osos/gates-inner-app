@@ -20,7 +20,7 @@ export function normalizeFollowSlots(raw: unknown): FollowSlot[] {
   return out.sort((a, b) => a.order - b.order);
 }
 
-function trimEq(a: string | null | undefined, b: string | null | undefined): boolean {
+export function trimEq(a: string | null | undefined, b: string | null | undefined): boolean {
   return (a ?? "").trim() === (b ?? "").trim();
 }
 
@@ -35,9 +35,47 @@ function dateOnlyFromIso(s: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** مقارنة تواريخ للعرض في السجل — نفس اليوم التقويمي حتى لو اختلفت صيغة ISO */
+function calendarDayKeyFromDb(d: Date | null | undefined): string {
+  if (!d) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function calendarDayKeyFromPatch(raw: string | undefined | null): string {
+  if (raw === undefined || raw === null) return "";
+  const t = String(raw).trim();
+  if (!t) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const d = new Date(t);
+  return Number.isNaN(d.getTime()) ? t : d.toISOString().slice(0, 10);
+}
+
+function slotDateKey(raw: string): string {
+  return calendarDayKeyFromPatch(raw);
+}
+
 function quoteStr(v: Prisma.Decimal | null | undefined): string {
   if (v == null) return "";
   return v.toString();
+}
+
+/** هل تغيّرت توصية الإدارة (نص أو تاريخ) في هذا الـ patch مقارنةً بالعميل قبل الحفظ؟ */
+export function managementRecommendationFieldsChanged(
+  client: Client,
+  patch: ReportClientPatchInput
+): boolean {
+  if (
+    patch.managementRecommendationText !== undefined &&
+    !trimEq(patch.managementRecommendationText, client.managementRecommendationText)
+  ) {
+    return true;
+  }
+  if (patch.managementRecommendationDate !== undefined) {
+    const prevDay = calendarDayKeyFromDb(client.managementRecommendationDate);
+    const nextDay = calendarDayKeyFromPatch(patch.managementRecommendationDate);
+    if (prevDay !== nextDay) return true;
+  }
+  return false;
 }
 
 /** سطور عربية قصيرة — بدون نص التوصية أو الحقول الطويلة */
@@ -120,26 +158,23 @@ export function buildArabicAuditLinesFromPatch(
       client.managementRecommendationText
     )
   ) {
-    lines.push("كتابة أو تعديل حقل توصية الإدارة (بدون عرض نص التوصية)");
+    lines.push("تحديث توصية الإدارة");
   }
   if (patch.managementRecommendationDate !== undefined) {
-    const prev = iso(client.managementRecommendationDate);
-    const raw = patch.managementRecommendationDate?.trim();
-    const next = raw && raw !== "" ? new Date(raw).toISOString() : "";
-    if (prev !== next) {
-      const d = raw && raw !== "" ? dateOnlyFromIso(raw) : "—";
-      lines.push(`تعديل تاريخ توصية الإدارة (${d})`);
+    const prevDay = calendarDayKeyFromDb(client.managementRecommendationDate);
+    const nextDay = calendarDayKeyFromPatch(patch.managementRecommendationDate);
+    if (prevDay !== nextDay) {
+      const label = nextDay ? dateOnlyFromIso(nextDay) : "إفراغ";
+      lines.push(`تحديث تاريخ توصية الإدارة (${label})`);
     }
   }
 
   if (patch.nextFollowUpAt !== undefined) {
-    const prev = iso(client.nextFollowUpAt);
-    const next = patch.nextFollowUpAt.trim()
-      ? new Date(patch.nextFollowUpAt).toISOString()
-      : "";
-    if (prev !== next) {
+    const prevDay = calendarDayKeyFromDb(client.nextFollowUpAt);
+    const nextDay = calendarDayKeyFromPatch(patch.nextFollowUpAt);
+    if (prevDay !== nextDay) {
       lines.push(
-        `تعديل تاريخ المتابعة التالي إلى ${dateOnlyFromIso(patch.nextFollowUpAt)}`
+        `تحديث تاريخ المتابعة التالي إلى ${nextDay ? dateOnlyFromIso(patch.nextFollowUpAt) : "—"}`
       );
     }
   }
@@ -208,15 +243,15 @@ export function buildArabicAuditLinesFromPatch(
 
     for (const [order, a] of afterBy) {
       const b = beforeBy.get(order);
-      const dateShort = (a.date || "").slice(0, 10) || "—";
+      const dateShort = slotDateKey(a.date) || (a.date || "").slice(0, 10) || "—";
       if (!b && (a.date.trim() || a.note.trim())) {
-        lines.push(`إضافة متابعة رقم ${order} بتاريخ ${dateShort}`);
+        lines.push(`متابعة جديدة (رقم ${order}) — تاريخ ${dateShort}`);
       } else if (b) {
-        if (b.date !== a.date) {
-          lines.push(`تعديل تاريخ متابعة رقم ${order} إلى ${dateShort}`);
+        if (slotDateKey(b.date) !== slotDateKey(a.date)) {
+          lines.push(`تحديث تاريخ متابعة رقم ${order} إلى ${dateShort}`);
         }
         if (b.note !== a.note) {
-          lines.push(`تعديل ملاحظة متابعة رقم ${order}`);
+          lines.push(`تحديث ملاحظة متابعة رقم ${order}`);
         }
       }
     }

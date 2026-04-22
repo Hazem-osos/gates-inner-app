@@ -34,7 +34,7 @@ export function DataPageToolbar({
     >
       <span className="text-xs font-medium text-muted-foreground">بيانات:</span>
       {excelHref ? (
-        <Link
+        <a
           href={excelHref}
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
@@ -47,11 +47,13 @@ export function DataPageToolbar({
             aria-hidden
           />
           تصدير Excel
-        </Link>
+        </a>
       ) : null}
       {pdfHref ? (
-        <Link
+        <a
           href={pdfHref}
+          target="_blank"
+          rel="noopener noreferrer"
           title="يوضّح أن التصدير الأساسي عبر Excel من التقرير"
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
@@ -61,7 +63,7 @@ export function DataPageToolbar({
         >
           <FileText className={REPORT_PDF_EXPORT_ICON_CLASS} aria-hidden />
           تصدير PDF
-        </Link>
+        </a>
       ) : null}
       {importHref ? (
         <Link

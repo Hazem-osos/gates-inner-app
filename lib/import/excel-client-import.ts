@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
 
+import { normalizedImportNameAndCompany } from "@/lib/import/client-name-company-normalize";
+
 export type ImportType = "b" | "not-b";
 
 /** حدود سنة مقبولة لـ MySQL / Prisma DateTime */
@@ -341,9 +343,16 @@ export function buildColumnMap(headerRow: unknown[]): ColumnMap | null {
     "تعليمات تنمية مهارات",
   ]);
   take("managementRecommendationText", ["توصيات الاجتماع"]);
-  take("name", ["اسم الشركه", "أسم الشركة", "اسم الشركة"]);
+  /** يطابق تقرير B: `name` = مسؤول الاتصال، `company` = اسم الشركة */
+  take("name", ["اسم المسئول", "أسم المسئول", "اسم المسؤول", "المسؤول"]);
   take("daysCount", ["عدد الايام", "عدد الأيام"]);
-  take("company", ["اسم المسئول", "أسم المسئول", "اسم المسؤول"]);
+  take("company", [
+    "اسم الشركه",
+    "أسم الشركة",
+    "اسم الشركة",
+    "الشركة",
+    "اسم المنشأة",
+  ]);
   take("phone", ["رقم التليفون", "رقم التلفون", "رقم الهاتف", "هاتف"]);
   take("activity", ["النشاط"]);
   take("position", ["البوزيشن", "الوظيفة"]);
@@ -372,9 +381,9 @@ export function bPositionalMap(colCount: number): ColumnMap {
     "nextFollowUpAt",
     "clientWarmingText",
     "managementRecommendationText",
-    "name",
-    "daysCount",
     "company",
+    "daysCount",
+    "name",
     "phone",
     "activity",
     "position",
@@ -503,9 +512,14 @@ export function parseRowToImport(
     ? normalizeExcelPhone(phoneParts[1])
     : null;
 
-  const name = cellStr(getCell(dataRow, byField.name));
-  const contactName = cellStr(getCell(dataRow, byField.company));
-  const finalName = name || contactName || `عميل ${phoneMain.slice(-4)}`;
+  const contactName = cellStr(getCell(dataRow, byField.name));
+  const companyName = cellStr(getCell(dataRow, byField.company));
+  const { name: finalName, company: companyOut } =
+    normalizedImportNameAndCompany({
+      contactPerson: contactName,
+      companyName,
+      phoneFallbackSuffix: phoneMain.slice(-4),
+    });
 
   const disc = parseDiscount(getCell(dataRow, byField.allowedDiscount));
   const qNoteParts: string[] = [];
@@ -526,7 +540,7 @@ export function parseRowToImport(
   return {
     excelRow,
     name: finalName,
-    company: contactName || null,
+    company: companyOut,
     phone: phoneMain,
     phone2: phone2Norm,
     activity: nullIfEmpty(cellStr(getCell(dataRow, byField.activity))),

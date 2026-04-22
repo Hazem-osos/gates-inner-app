@@ -140,7 +140,7 @@ export default async function DashboardPage() {
             <ReportBTable
               rows={todayRows}
               {...reportBTableSharedProps}
-              auditReportKey="report-dashboard-followups"
+              auditReportKey="report-b"
             />
           )}
         </div>
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
             <ReportBTable
               rows={overdueRows}
               {...reportBTableSharedProps}
-              auditReportKey="report-dashboard-followups"
+              auditReportKey="report-b"
             />
           )}
         </div>

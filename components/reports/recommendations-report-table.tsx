@@ -50,9 +50,16 @@ export function RecommendationsReportTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r) => (
-            <RecommendationEditableRow key={r.id} r={r} />
-          ))}
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                لا توجد توصيات. تظهر هنا التوصيات المسجّلة من بطاقة العميل أو من عمود «توصيات
+                الإدارة» في تقرير B بعد الحفظ.
+              </TableCell>
+            </TableRow>
+          ) : (
+            rows.map((r) => <RecommendationEditableRow key={r.id} r={r} />)
+          )}
         </TableBody>
       </Table>
     </div>
@@ -72,16 +79,27 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
 
   function save() {
     start(async () => {
-      const res = await fetch(`/api/recommendations/${r.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body,
-          recommendationDate: recDate || null,
-          workDate: workDate || null,
-          actionTaken: actionTaken || null,
-        }),
-      });
+      const payload = {
+        body,
+        recommendationDate: recDate || null,
+        workDate: workDate || null,
+        actionTaken: actionTaken || null,
+      };
+      const fromReportB = r.id.startsWith("pending-sync:");
+      const res = fromReportB
+        ? await fetch("/api/recommendations/from-client-report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clientId: r.clientId,
+              ...payload,
+            }),
+          })
+        : await fetch(`/api/recommendations/${r.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
       const data = (await res.json().catch(() => ({}))) as {
         message?: string;
       };
@@ -90,6 +108,9 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
         return;
       }
       toast.success("تم الحفظ.");
+      if (fromReportB) {
+        window.location.reload();
+      }
     });
   }
 

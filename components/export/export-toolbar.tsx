@@ -1,7 +1,6 @@
 "use client";
 
 import { FileSpreadsheet, FileText, Upload } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -88,7 +87,8 @@ export function ExportToolbar({
       {mappedReportKind ? (
         <ReportMappedImportDialog kind={mappedReportKind} />
       ) : null}
-      <Link
+      {/* <a> وليس Next Link — حتى يطلب المتصفح الملف كتنزيل كامل مع الكوكيز */}
+      <a
         href={excelHref}
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
@@ -97,8 +97,8 @@ export function ExportToolbar({
       >
         <FileSpreadsheet className={REPORT_EXCEL_EXPORT_ICON_CLASS} aria-hidden />
         تصدير Excel
-      </Link>
-      <Link
+      </a>
+      <a
         href={pdfHref}
         target="_blank"
         rel="noopener noreferrer"
@@ -109,7 +109,7 @@ export function ExportToolbar({
       >
         <FileText className={REPORT_PDF_EXPORT_ICON_CLASS} aria-hidden />
         طباعة / PDF
-      </Link>
+      </a>
       {quickImportKind ? (
         <>
           <label

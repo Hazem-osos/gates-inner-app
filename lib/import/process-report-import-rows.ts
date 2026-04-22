@@ -4,7 +4,6 @@ import { patchClientReportFields } from "@/app/actions/report-client-patch";
 import {
   excelRowToReportClientPatch,
   normalizedPrimaryPhoneFromReportRow,
-  rawPrimaryPhoneFromReportRow,
 } from "@/lib/export/report-b-flat";
 import { parseExcelDateCell, parsePhones } from "@/lib/import/excel-client-import";
 import { canAccessClient } from "@/lib/report-scope";
@@ -197,8 +196,7 @@ async function findClientRowByImportPhone(
   _sessionRole: UserRole,
   _dbUserId: string,
   rowNum: number,
-  errors: string[],
-  rawPhoneForLog?: unknown
+  errors: string[]
 ): Promise<{
   client: {
     id: string;
@@ -209,13 +207,6 @@ async function findClientRowByImportPhone(
 }> {
   const variants = phoneVariantsForDbLookup(needle);
   if (variants.length === 0) return { client: null };
-
-  console.log(
-    "DB Query -> Raw Excel Phone:",
-    rawPhoneForLog !== undefined ? rawPhoneForLog : "(n/a)",
-    " | Normalized to:",
-    needle
-  );
 
   const exact = await prisma.client.findFirst({
     where: {
@@ -455,7 +446,7 @@ export async function processReportImportRows(
         });
       } else {
         const phone = normalizedPrimaryPhoneFromReportRow(row);
-        if (!phone || phone.length !== 11) {
+        if (!phone || phone.replace(/\D/g, "").length < 8) {
           errors.push(`صف ${rowNum}: رقم هاتف غير صالح بعد التطبيع`);
           continue;
         }
@@ -464,8 +455,7 @@ export async function processReportImportRows(
           sessionRole,
           dbUserId,
           rowNum,
-          errors,
-          rawPrimaryPhoneFromReportRow(row)
+          errors
         );
         client = phoneLookup.client;
         if (!client && phoneLookup.skipGenericNotFoundMessage) {

@@ -18,6 +18,7 @@ import {
 import { normalizeSlotsSimple } from "@/lib/report-b-utils";
 
 const REPORT_B_EXPORT_BASE_KEYS = [
+  "id",
   "name",
   "phone",
   "phone2",
@@ -70,6 +71,7 @@ const REPORT_B_EXPORT_HEADER_AR_BASE: Record<
   (typeof REPORT_B_EXPORT_BASE_KEYS)[number],
   string
 > = {
+  id: "معرف_العميل",
   name: "اسم المسئول",
   phone: "هاتف",
   phone2: "هاتف ثاني",
@@ -123,6 +125,7 @@ function boolToCell(v: boolean | null | undefined): string {
 export function reportBRowToExportRecord(r: ReportBRow): Record<string, string> {
   const slots = normalizeSlotsSimple(r.followUpSlots);
   const byKey: Record<string, string> = {
+    id: r.id,
     name: r.name,
     phone: r.phone,
     phone2: r.phone2 ?? "",
@@ -198,6 +201,16 @@ const PRIMARY_PHONE_ROW_KEYS = [
   "phone",
   "الهاتف",
   REPORT_B_EXPORT_HEADER_AR_BASE.phone,
+  "رقم_الهاتف",
+  "رقم الهاتف",
+  "Mobile",
+  "mobile",
+  "MOBILE",
+  "جوال",
+  "موبايل",
+  "Tel",
+  "tel",
+  "هاتف 1",
 ] as const;
 
 /** قيمة خلية الهاتف الخام (قد تكون `number` من Excel) — للتسجيل والتطبيع. */
@@ -319,7 +332,15 @@ export function normalizedPrimaryPhoneFromReportRow(
 ): string {
   const raw = rawPrimaryPhoneFromReportRow(row);
   if (raw === undefined || raw === null) return "";
-  return normalizeExcelPhone(raw) ?? "";
+  const n = normalizeExcelPhone(raw);
+  if (n) return n;
+  const fromParse = parsePhones(raw).phone.replace(/\D/g, "");
+  if (fromParse.length < 8) return "";
+  return (
+    normalizeExcelPhone(fromParse) ??
+    normalizeExcelPhone(`0${fromParse}`) ??
+    ""
+  );
 }
 
 /** يحوّل خلية تاريخ من Excel (رقم تسلسل، نص، ISO) إلى ISO لـ `patchClientReportFields`. */
@@ -359,9 +380,11 @@ export function excelRowToReportClientPatch(
     "معرف_العميل",
     "معرّف عميل",
     "معرف عميل",
+    REPORT_B_EXPORT_HEADER_AR_BASE.id,
   ]);
   const phoneDigits = normalizedPrimaryPhoneFromReportRow(row);
-  if (!clientId && (!phoneDigits || phoneDigits.length !== 11)) {
+  const phoneLen = phoneDigits.replace(/\D/g, "").length;
+  if (!clientId && phoneLen < 8) {
     return null;
   }
 

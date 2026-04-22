@@ -33,11 +33,6 @@ export function RegisterForm() {
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle>تسجيل مستخدم جديد</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          يعمل فقط عند تفعيل{" "}
-          <code className="rounded bg-muted px-1">ALLOW_OPEN_REGISTRATION=true</code>{" "}
-          على الخادم.
-        </p>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">

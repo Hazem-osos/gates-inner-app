@@ -18,7 +18,7 @@ export async function registerUserAction(raw: {
   if (process.env.ALLOW_OPEN_REGISTRATION !== "true") {
     return {
       ok: false,
-      message: "التسجيل المفتوح معطّل. ضبط ALLOW_OPEN_REGISTRATION=true في الخادم.",
+      message: "التسجيل غير متاح.",
     };
   }
 

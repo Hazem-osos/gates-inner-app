@@ -63,6 +63,18 @@ export function buildReportFlatImportFields(
     key: k,
     label: REPORT_B_EXPORT_HEADER_AR[k] ?? k,
     required: k === "phone",
+    ...(k === "id"
+      ? {
+          aliases: [
+            "معرف العميل",
+            "معرّف العميل",
+            "رقم العميل",
+            "كود العميل",
+            "client id",
+            "معرف_العميل",
+          ],
+        }
+      : {}),
     ...(k === "phone"
       ? {
           aliases: ["phone", "الهاتف", "mobile", "جوال", "هاتف 1"],
