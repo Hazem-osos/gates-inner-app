@@ -14,6 +14,7 @@ import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
 import { transferredExportExcelHref } from "@/lib/export-excel-href";
 import { prisma } from "@/lib/prisma";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function TransferredClientsReportPage() {
     orderBy: { createdAt: "desc" },
     include: {
       client: { select: { id: true, name: true, phone: true, company: true } },
-      fromUser: { select: { name: true } },
+      fromUser: { select: { name: true, deletedAt: true } },
     },
   });
 
@@ -81,7 +82,9 @@ export default async function TransferredClientsReportPage() {
                   <TableCell>
                     {t.client.name} · <span dir="ltr">{t.client.phone}</span>
                   </TableCell>
-                  <TableCell>{t.fromUser?.name ?? "—"}</TableCell>
+                  <TableCell>
+                    {t.fromUser ? userDisplayName(t.fromUser) : "—"}
+                  </TableCell>
                   <TableCell dir="ltr" className="text-xs">
                     {formatDateTimeArabic(t.createdAt)}
                   </TableCell>

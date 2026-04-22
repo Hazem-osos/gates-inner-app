@@ -16,6 +16,7 @@ import { getCoreFieldLabels, labelMap } from "@/lib/data/core-field-labels";
 import { isManagerOrAdmin, requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function ClientDetailPage({
 
   const salesUsers = isManagerOrAdmin(user.role)
     ? await prisma.user.findMany({
-        where: { isActive: true, role: "SALES" },
+        where: { isActive: true, role: "SALES", deletedAt: null },
         select: { id: true, name: true, email: true },
         orderBy: { name: "asc" },
       })
@@ -106,7 +107,9 @@ export default async function ClientDetailPage({
             >
               <p className="text-muted-foreground" dir="ltr">
                 {formatDateTimeArabic(i.interactionAt)}
-                {i.createdBy ? ` · ${i.createdBy.name}` : ""}
+                {i.createdBy
+                  ? ` · ${userDisplayName(i.createdBy)}`
+                  : ""}
               </p>
               {i.followUpStatus ? (
                 <p className="text-xs text-muted-foreground">
@@ -163,7 +166,9 @@ export default async function ClientDetailPage({
               {h.fromStatus ? statusLabelAr(h.fromStatus) : "—"} ←{" "}
               {statusLabelAr(h.toStatus)} —{" "}
               {formatDateTimeArabic(h.createdAt)}
-              {h.changedBy ? ` (${h.changedBy.name})` : ""}
+              {h.changedBy
+                ? ` (${userDisplayName(h.changedBy)})`
+                : ""}
             </li>
           ))}
         </ul>

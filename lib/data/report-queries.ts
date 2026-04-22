@@ -42,7 +42,7 @@ export const clientReportExportSelect = {
   lossReason: true,
   saleDate: true,
   contractValue: true,
-  assignedUser: { select: { id: true, name: true } },
+  assignedUser: { select: { id: true, name: true, deletedAt: true } },
   classification: {
     select: { id: true, label: true, color: true, isBRow: true },
   },
@@ -130,7 +130,7 @@ export async function listClientsForReport(args: ReportListArgs) {
   return prisma.client.findMany({
     where,
     include: {
-      assignedUser: { select: { id: true, name: true } },
+      assignedUser: { select: { id: true, name: true, deletedAt: true } },
       classification: { select: { id: true, label: true, color: true, isBRow: true } },
     },
     orderBy,

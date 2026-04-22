@@ -38,8 +38,18 @@ export async function createRecommendationAction(
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) return { ok: false, message: "العميل غير موجود." };
 
-  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
-  if (!target) return { ok: false, message: "المستخدم المستهدف غير موجود." };
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+  });
+  if (!target) {
+    return { ok: false, message: "المستخدم المستهدف غير موجود." };
+  }
+  if (target.deletedAt || !target.isActive) {
+    return { ok: false, message: "لا يمكن توجيه التوصية إلى حساب موقوف أو محذوف." };
+  }
+  if (target.role !== "SALES") {
+    return { ok: false, message: "الهدف يجب أن يكون مندوب مبيعات." };
+  }
 
   try {
     await prisma.$transaction(async (tx) => {

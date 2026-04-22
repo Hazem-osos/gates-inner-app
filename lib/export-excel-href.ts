@@ -51,8 +51,11 @@ export function clientsListExportHref(args: { sales?: string; q?: string }): str
 }
 
 /** لوحة المتابعات — متابعات اليوم ومتأخر في ورقتين */
-export function dashboardFollowupsExportHref(): string {
-  return `/api/export/excel?kind=dashboard-followups`;
+export function dashboardFollowupsExportHref(args?: { sales?: string }): string {
+  const u = new URLSearchParams();
+  u.set("kind", "dashboard-followups");
+  if (args?.sales && args.sales !== "all") u.set("sales", args.sales);
+  return `/api/export/excel?${u.toString()}`;
 }
 
 /** تقرير Warming */

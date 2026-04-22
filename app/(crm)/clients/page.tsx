@@ -63,7 +63,7 @@ export default async function ClientsListPage({
   const salesUsers =
     user.role === "ADMIN" || user.role === "MANAGER"
       ? await prisma.user.findMany({
-          where: { isActive: true, role: "SALES" },
+          where: { isActive: true, role: "SALES", deletedAt: null },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })

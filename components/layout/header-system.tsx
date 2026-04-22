@@ -5,7 +5,7 @@ import { CrmShortcutsRibbon } from "@/components/layout/crm-shortcuts-ribbon";
 import type { UserRole } from "@prisma/client";
 
 /**
- * هيكل موحّد: شريط التنقل الكلاسيكي + شريط الأيقونات (تلميح عربي تحت كل أيقونة).
+ * هيكل موحّد: شريط التنقل + شريط اختصارات (أيقونات أكبر، عناوين، حركة خفيفة).
  * `sticky` حتى لا يحتاج المحتوى إلى `padding-top` ثابت.
  */
 export function HeaderSystem({

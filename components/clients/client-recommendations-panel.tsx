@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
+import { userDisplayName } from "@/lib/user-display-name";
 
 type SalesUser = { id: string; name: string; email: string };
 
@@ -29,8 +30,8 @@ type Rec = {
   body: string;
   createdAt: string;
   acknowledgedAt: string | null;
-  author: { name: string };
-  targetUser: { name: string };
+  author: { name: string; deletedAt: Date | string | null };
+  targetUser: { name: string; deletedAt: Date | string | null };
 };
 
 export function ClientRecommendationsPanel({
@@ -126,7 +127,8 @@ export function ClientRecommendationsPanel({
         {recommendations.map((r) => (
           <li key={r.id} className="rounded-lg border border-border/60 p-3">
             <p className="text-muted-foreground">
-              من {r.author.name} — إلى {r.targetUser.name} —{" "}
+              من {userDisplayName(r.author)} — إلى{" "}
+              {userDisplayName(r.targetUser)} —{" "}
               {formatDateTimeArabic(new Date(r.createdAt))}
             </p>
             <p className="mt-1 whitespace-pre-wrap" dir="rtl">

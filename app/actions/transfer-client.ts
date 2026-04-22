@@ -18,7 +18,12 @@ export async function transferClientToSalesAction(
   }
 
   const target = await prisma.user.findFirst({
-    where: { id: toUserId, isActive: true, role: "SALES" },
+    where: {
+      id: toUserId,
+      isActive: true,
+      role: "SALES",
+      deletedAt: null,
+    },
   });
   if (!target) return { ok: false, message: "المستخدم غير موجود أو ليس سيلز." };
 

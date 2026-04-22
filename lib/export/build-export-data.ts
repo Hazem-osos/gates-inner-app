@@ -19,6 +19,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { buildClientsImportTemplateEmptyRow } from "@/lib/import/clients-flat-import-fields";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type ExportSheet = {
   sheetName: string;
@@ -40,7 +41,7 @@ function rowBShort(c: {
   status: string;
   nextFollowUpAt: Date | null;
   initialCallDate: Date | null;
-  assignedUser?: { name: string } | null;
+  assignedUser?: { name: string; deletedAt: Date | null } | null;
 }): Record<string, string> {
   return {
     الاسم: c.name,
@@ -49,7 +50,7 @@ function rowBShort(c: {
     الحالة: c.status,
     متابعة_تالية: formatExportDateOnly(c.nextFollowUpAt),
     اتصال_أول: formatExportDateOnly(c.initialCallDate),
-    سيلز: c.assignedUser?.name ?? "",
+    سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
   };
 }
 
@@ -102,14 +103,14 @@ export async function buildExportPayload(
         client: {
           select: { name: true, phone: true, company: true },
         },
-        fromUser: { select: { name: true } },
+        fromUser: { select: { name: true, deletedAt: true } },
       },
     });
     const rows = transfers.map((t) => ({
       العميل: t.client.name,
       الهاتف: t.client.phone,
       الشركة: t.client.company ?? "",
-      من_السيلز: t.fromUser?.name ?? "",
+      من_السيلز: t.fromUser ? userDisplayName(t.fromUser) : "",
       تاريخ_النقل: formatExportDateOnly(t.createdAt),
     }));
     return {
@@ -236,11 +237,11 @@ export async function buildExportPayload(
           select: {
             id: true,
             name: true,
-            assignedUser: { select: { name: true } },
+            assignedUser: { select: { name: true, deletedAt: true } },
           },
         },
-        author: { select: { name: true } },
-        targetUser: { select: { name: true } },
+        author: { select: { name: true, deletedAt: true } },
+        targetUser: { select: { name: true, deletedAt: true } },
       },
     });
 
@@ -285,11 +286,19 @@ export async function buildExportPayload(
         updatedAt: true,
         managementRecommendationText: true,
         managementRecommendationDate: true,
-        assignedUser: { select: { name: true } },
+        assignedUser: { select: { name: true, deletedAt: true } },
       },
     });
 
     type RecExportRow = Record<string, string>;
+
+    const salesLine = (
+      t: { name: string; deletedAt: Date | null } | null | undefined,
+      fallback: { name: string; deletedAt: Date | null } | null | undefined
+    ) => {
+      const a = t ?? fallback;
+      return a ? userDisplayName(a) : "";
+    };
 
     const merged: { sortMs: number; row: RecExportRow }[] = rowsDb.map(
       (r) => ({
@@ -298,13 +307,12 @@ export async function buildExportPayload(
         ).getTime(),
         row: {
           العميل: r.client?.name ?? "",
-          سيلز:
-            r.targetUser?.name ?? r.client?.assignedUser?.name ?? "",
+          سيلز: salesLine(r.targetUser, r.client?.assignedUser),
           التوصية: r.body,
           تاريخ_التوصية: formatExportDateOnly(
             r.recommendationDate ?? r.createdAt
           ),
-          من_كتب: r.author.name,
+          من_كتب: userDisplayName(r.author),
           تاريخ_العمل: formatExportDateOnly(r.workDate),
           الإجراء_المتخذ: r.actionTaken ?? "",
         },
@@ -333,7 +341,7 @@ export async function buildExportPayload(
           ).getTime(),
           row: {
             العميل: c.name,
-            سيلز: c.assignedUser?.name ?? "",
+            سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
             التوصية: t,
             تاريخ_التوصية: formatExportDateOnly(
               c.managementRecommendationDate ?? c.updatedAt
@@ -357,10 +365,11 @@ export async function buildExportPayload(
   }
 
   if (kind === "dashboard-followups") {
+    const salesKey = sp.get("sales")?.trim() ?? "all";
     const followupClients = await listClientsForDashboardFollowups(
       user.role,
       user.id,
-      { forExport: true }
+      { forExport: true, salesUserId: salesKey }
     );
     const rowsAll = followupClients.map(clientEntityToReportBRow);
     const todayStart = startOfDay(new Date());
@@ -423,7 +432,7 @@ export async function buildExportPayload(
           ? { ...scope, initialCallDate: { gte: from, lte: to } }
           : { ...scope, createdAt: { gte: from, lte: to } },
       include: {
-        assignedUser: { select: { name: true } },
+        assignedUser: { select: { name: true, deletedAt: true } },
       },
       orderBy:
         dateMode === "initial"
@@ -442,7 +451,7 @@ export async function buildExportPayload(
     });
 
     const rows = filtered.map((c) => ({
-      سيلز: c.assignedUser?.name ?? "",
+      سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
       العميل: c.name,
       مرجع_التاريخ:
         dateMode === "initial"

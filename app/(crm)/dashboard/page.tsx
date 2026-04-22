@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { REPORT_FILTER_EXPORTS_BAR_CLASS } from "@/components/reports/report-page-exports-toolbar";
 import { ReportBTable } from "@/components/reports/report-b-table";
 import {
   Card,
@@ -27,16 +29,26 @@ import { endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sales?: string }>;
+}) {
   const user = await requireSessionUser();
+  const sp = await searchParams;
+  const salesKey = sp.sales?.trim() ?? "all";
+  const recCountUserId =
+    user.role === "SALES" || salesKey === "all" ? user.id : salesKey;
 
   const [
     { pendingActionRecommendationsCount },
     followupClients,
     classifications,
   ] = await Promise.all([
-    getDashboardData(user.id),
-    listClientsForDashboardFollowups(user.role, user.id),
+    getDashboardData(recCountUserId),
+    listClientsForDashboardFollowups(user.role, user.id, {
+      salesUserId: salesKey,
+    }),
     listClientClassifications(),
   ]);
 
@@ -45,7 +57,15 @@ export default async function DashboardPage() {
     filter: "pending",
     fromYmd: RECOMMENDATIONS_WIDE_RANGE_START_YMD,
     toYmd: todayYmd,
+    ...(user.role !== "SALES" && salesKey !== "all"
+      ? { sales: salesKey }
+      : {}),
   });
+
+  const isSalesRepScopedView = user.role === "SALES";
+  const isTeamWideAdminView = user.role !== "SALES" && salesKey === "all";
+  const isFilteredRepDashboard =
+    user.role !== "SALES" && salesKey !== "all";
 
   const rowsAll = followupClients.map(clientEntityToReportBRow);
   const todayStart = startOfDay(new Date());
@@ -63,31 +83,77 @@ export default async function DashboardPage() {
     classifications,
   } as const;
 
+  const headerSubtitle =
+    user.role === "SALES"
+      ? `مرحباً ${user.name} — متابعاتك اليومية.`
+      : salesKey === "all"
+        ? `مرحباً ${user.name} — متابعات الفريق (كل السيلز).`
+        : `مرحباً ${user.name} — متابعات المندوب المحدد في فلتر السيلز.`;
+
   return (
     <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-8">
       <PageHeader
         fullWidthBar
         title="لوحة إرشادية بالمتابعات اليومية"
-        subtitle={`مرحباً ${user.name} — متابعاتك اليومية.`}
+        subtitle={headerSubtitle}
       />
 
-      <ExportToolbar excelHref={dashboardFollowupsExportHref()} />
+      <div
+        className={cn(
+          REPORT_FILTER_EXPORTS_BAR_CLASS,
+          user.role === "SALES" ? "justify-start" : "justify-between"
+        )}
+        dir="rtl"
+      >
+        <ExportToolbar
+          excelHref={dashboardFollowupsExportHref({ sales: salesKey })}
+        />
+        {user.role !== "SALES" ? (
+          <div className="flex min-w-0 max-w-full flex-col items-end gap-1 self-center">
+            <SalesFilterLinks
+              bare
+              role={user.role}
+              pathname="/dashboard"
+              searchParams={{}}
+              currentSales={salesKey}
+            />
+            {salesKey !== "all" ? (
+              <p className="max-w-sm text-right text-xs font-medium text-destructive">
+                يوجد فلتر نشط على النتائج المعروضة.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <Card className="border-amber-200/80 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20">
         <CardHeader>
           <CardTitle>توصيات إدارة — لم يُتخذ إجراء</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-foreground">
-          <p className="text-muted-foreground" dir="rtl">
-            يُحصى فقط ما هو <span className="font-medium text-foreground">موجّه لك</span>{" "}
-            (كمسند تابع للتوصية) ولا يزال حقل «الإجراء المتخذ» فارغاً، من بداية تسجيل
-            التوصيات حتى <span className="font-medium text-foreground">{todayYmd}</span>.
-            مندوبو المبيعات يرون طلباتهم فقط؛ الإدارة ترى التقرير حسب فلتر السيلز
-            داخل صفحة التوصيات.
-          </p>
+          {isSalesRepScopedView || isTeamWideAdminView ? (
+            <p className="text-muted-foreground" dir="rtl">
+              يُحصى فقط ما هو <span className="font-medium text-foreground">موجّه لك</span>{" "}
+              (كمسند تابع للتوصية) ولا يزال حقل «الإجراء المتخذ» فارغاً، من بداية تسجيل
+              التوصيات حتى <span className="font-medium text-foreground">{todayYmd}</span>.
+              {isSalesRepScopedView
+                ? " مندوبو المبيعات يرون طلباتهم فقط؛ الإدارة ترى التقرير حسب فلتر السيلز داخل صفحة التوصيات."
+                : " عند اختيار مندوب من فلتر السيلز في هذه الصفحة يُعاد العد لذلك المندوب."}
+            </p>
+          ) : (
+            <p className="text-muted-foreground" dir="rtl">
+              يُحصى فقط ما هو <span className="font-medium text-foreground">موجّه للمندوب المحدد</span>{" "}
+              في فلتر السيلز أعلاه (كمسند تابع للتوصية) ولا يزال حقل «الإجراء المتخذ» فارغاً، من بداية
+              تسجيل التوصيات حتى{" "}
+              <span className="font-medium text-foreground">{todayYmd}</span>. يفتح رابط التقرير
+              بنفس فلتر السيلز.
+            </p>
+          )}
           <p className="text-lg font-semibold tabular-nums text-amber-900 dark:text-amber-100" dir="rtl">
             {pendingActionRecommendationsCount === 0
-              ? "لا توجد لديك توصيات بلا إجراء في هذا النطاق."
+              ? isFilteredRepDashboard
+                ? "لا توجد لهذا المندوب توصيات بلا إجراء في هذا النطاق."
+                : "لا توجد لديك توصيات بلا إجراء في هذا النطاق."
               : `يوجد ${pendingActionRecommendationsCount} توصية لم يُتخذ بشأنها إجراء حتى تاريخه.`}
           </p>
           <Link

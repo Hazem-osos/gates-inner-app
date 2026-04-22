@@ -6,6 +6,7 @@ import type {
 } from "@/lib/audit/work-log-types";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { userDisplayName } from "@/lib/user-display-name";
 
 export type { AuditWorkClientGroup, AuditWorkEvent } from "@/lib/audit/work-log-types";
 
@@ -114,7 +115,7 @@ export async function GET(req: Request) {
             id: true,
             name: true,
             company: true,
-            assignedUser: { select: { name: true } },
+            assignedUser: { select: { name: true, deletedAt: true } },
           },
         },
       },
@@ -131,7 +132,9 @@ export async function GET(req: Request) {
         byClient.set(cid, {
           clientId: cid,
           clientName: l.client?.name ?? "—",
-          assignedSalesName: l.client?.assignedUser?.name ?? null,
+          assignedSalesName: l.client?.assignedUser
+            ? userDisplayName(l.client.assignedUser)
+            : null,
           company: l.client?.company ?? null,
           events: [],
         });

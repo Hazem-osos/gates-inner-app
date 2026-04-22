@@ -19,13 +19,14 @@ export default async function SettingsUsersPage() {
   }
 
   const users = await prisma.user.findMany({
-    orderBy: [{ name: "asc" }, { email: "asc" }],
+    orderBy: [{ deletedAt: "asc" }, { name: "asc" }, { email: "asc" }],
     select: {
       id: true,
       name: true,
       email: true,
       role: true,
       isActive: true,
+      deletedAt: true,
     },
   });
 
@@ -34,9 +35,9 @@ export default async function SettingsUsersPage() {
       <PageHeader
         fullWidthBar
         title="المستخدمون وكلمة المرور"
-        subtitle="للمسؤول فقط — عرض كل الحسابات وتعيين كلمة مرور جديدة لأي مستخدم (مثلاً بعد انصراف موظف)."
+        subtitle="للمسؤول فقط — تفعيل/تعطيل الحسابات، حذف ناعم (السجلات تبقى ويظهر «مستخدم محذوف»)، واستعادة، وتعيين كلمة مرور."
       />
-      <UsersPasswordSettings users={users} />
+      <UsersPasswordSettings currentUserId={user.id} users={users} />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { callsReportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { clientScopeWhere } from "@/lib/report-scope";
+import { userDisplayName } from "@/lib/user-display-name";
 import { endOfDay, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +69,7 @@ export default async function CallsReportPage({
             createdAt: { gte: from, lte: to },
           },
     include: {
-      assignedUser: { select: { name: true } },
+      assignedUser: { select: { name: true, deletedAt: true } },
     },
     orderBy:
       dateMode === "initial"
@@ -223,7 +224,11 @@ export default async function CallsReportPage({
           <TableBody>
             {filtered.map((c) => (
               <TableRow key={c.id}>
-                <TableCell>{c.assignedUser?.name ?? "—"}</TableCell>
+                <TableCell>
+                  {c.assignedUser
+                    ? userDisplayName(c.assignedUser)
+                    : "—"}
+                </TableCell>
                 <TableCell>
                   <Link href={`/clients/${c.id}`} className="text-primary underline">
                     {c.name}

@@ -2,9 +2,10 @@ import type { Client, ClientClassification, User } from "@prisma/client";
 import type { ReportBRow } from "@/components/reports/report-b-table";
 import type { ClientReportExportRow } from "@/lib/data/report-queries";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
+import { userDisplayName } from "@/lib/user-display-name";
 
 type ClientWithReportInc = Client & {
-  assignedUser?: Pick<User, "id" | "name"> | null;
+  assignedUser?: Pick<User, "id" | "name" | "deletedAt"> | null;
   classification?:
     | (Pick<
         ClientClassification,
@@ -44,7 +45,9 @@ export function clientEntityToReportBRow(
     visitAppointmentDate: c.visitAppointmentDate?.toISOString() ?? null,
     presentingEmployeeName: c.presentingEmployeeName ?? null,
     qqAnswer: c.qqAnswer,
-    assignedUserName: c.assignedUser?.name ?? null,
+    assignedUserName: c.assignedUser
+      ? userDisplayName(c.assignedUser)
+      : null,
     classificationId: c.classificationId ?? null,
     classificationLabel:
       c.classification?.label != null

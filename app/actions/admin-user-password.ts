@@ -47,10 +47,13 @@ export async function adminSetUserPasswordAction(
 
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true },
+    select: { id: true, deletedAt: true },
   });
   if (!target) {
     return { ok: false, message: "المستخدم غير موجود." };
+  }
+  if (target.deletedAt) {
+    return { ok: false, message: "لا يمكن تغيير كلمة مرور مستخدم محذوف — استعِد الحساب أولاً." };
   }
 
   const hash = await bcrypt.hash(newPassword, 10);

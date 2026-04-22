@@ -21,6 +21,7 @@ import {
   resolveRecommendationsDateSearchParams,
   ymdRangeToBounds,
 } from "@/lib/recommendations-report-search";
+import { userDisplayName } from "@/lib/user-display-name";
 import { cn } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
@@ -83,11 +84,11 @@ export default async function RecommendationsReportPage({
         select: {
           id: true,
           name: true,
-          assignedUser: { select: { name: true } },
+          assignedUser: { select: { name: true, deletedAt: true } },
         },
       },
-      author: { select: { name: true } },
-      targetUser: { select: { name: true } },
+      author: { select: { name: true, deletedAt: true } },
+      targetUser: { select: { name: true, deletedAt: true } },
     },
   });
 
@@ -129,7 +130,7 @@ export default async function RecommendationsReportPage({
       updatedAt: true,
       managementRecommendationText: true,
       managementRecommendationDate: true,
-      assignedUser: { select: { name: true } },
+      assignedUser: { select: { name: true, deletedAt: true } },
     },
   });
 
@@ -137,12 +138,14 @@ export default async function RecommendationsReportPage({
     id: r.id,
     clientId: r.clientId,
     clientName: r.client?.name ?? "—",
-    salesName:
-      r.targetUser?.name ?? r.client?.assignedUser?.name ?? null,
+    salesName: (() => {
+      const u = r.targetUser ?? r.client?.assignedUser;
+      return u ? userDisplayName(u) : null;
+    })(),
     body: r.body,
     recommendationDateIso: r.recommendationDate?.toISOString() ?? null,
     createdAtIso: r.createdAt.toISOString(),
-    authorName: r.author.name,
+    authorName: userDisplayName(r.author),
     workDateIso: r.workDate?.toISOString() ?? null,
     actionTaken: r.actionTaken,
   }));
@@ -167,7 +170,9 @@ export default async function RecommendationsReportPage({
       id: `pending-sync:${c.id}`,
       clientId: c.id,
       clientName: c.name,
-      salesName: c.assignedUser?.name ?? null,
+      salesName: c.assignedUser
+        ? userDisplayName(c.assignedUser)
+        : null,
       body: t,
       recommendationDateIso:
         c.managementRecommendationDate?.toISOString() ?? null,

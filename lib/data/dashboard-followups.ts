@@ -8,9 +8,13 @@ import { clientScopeWhere } from "@/lib/report-scope";
 export async function listClientsForDashboardFollowups(
   role: UserRole,
   userId: string,
-  opts?: { forExport?: boolean }
+  opts?: { forExport?: boolean; salesUserId?: string }
 ) {
-  const scope = clientScopeWhere({ role, userId, salesUserId: undefined });
+  const scope = clientScopeWhere({
+    role,
+    userId,
+    salesUserId: opts?.salesUserId,
+  });
   const orderBy: Prisma.ClientOrderByWithRelationInput[] = [
     { nextFollowUpAt: "asc" },
     { id: "asc" },
@@ -36,7 +40,7 @@ export async function listClientsForDashboardFollowups(
   return prisma.client.findMany({
     ...base,
     include: {
-      assignedUser: { select: { id: true, name: true } },
+      assignedUser: { select: { id: true, name: true, deletedAt: true } },
       classification: {
         select: { id: true, label: true, color: true, isBRow: true },
       },

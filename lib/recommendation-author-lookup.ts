@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { userDisplayName } from "@/lib/user-display-name";
 
 /**
  * لصفوف «نص فقط على Client» (لا تظهر في نتائج الاستعلام المُفلترة كتوصية):
@@ -27,13 +28,13 @@ export async function authorNamesByClientAndBody(
     select: {
       clientId: true,
       body: true,
-      author: { select: { name: true } },
+      author: { select: { name: true, deletedAt: true } },
     },
   });
 
   for (const r of rows) {
     const k = `${r.clientId}\0${r.body.trim()}`;
-    if (!out.has(k)) out.set(k, r.author.name);
+    if (!out.has(k)) out.set(k, userDisplayName(r.author));
   }
   return out;
 }

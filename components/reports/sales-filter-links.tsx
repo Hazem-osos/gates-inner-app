@@ -31,7 +31,7 @@ export async function SalesFilterLinks(props: {
   if (props.role === "SALES") return null;
 
   const salesUsers = await prisma.user.findMany({
-    where: { isActive: true, role: "SALES" },
+    where: { isActive: true, role: "SALES", deletedAt: null },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });

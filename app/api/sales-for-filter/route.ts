@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   const users = await prisma.user.findMany({
-    where: { isActive: true, role: "SALES" },
+    where: { isActive: true, role: "SALES", deletedAt: null },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });

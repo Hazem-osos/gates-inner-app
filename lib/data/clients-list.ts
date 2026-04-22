@@ -44,7 +44,7 @@ export async function listClientsForUser(
       status: true,
       nextFollowUpAt: true,
       initialCallDate: true,
-      assignedUser: { select: { name: true } },
+      assignedUser: { select: { name: true, deletedAt: true } },
     },
     take: 500,
   });
