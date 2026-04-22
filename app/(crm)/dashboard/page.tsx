@@ -26,7 +26,7 @@ import {
   RECOMMENDATIONS_WIDE_RANGE_START_YMD,
 } from "@/lib/recommendations-report-search";
 import { buttonVariants } from "@/components/ui/button";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +37,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ sales?: string }>;
 }) {
   const user = await requireSessionUser();
+  const dbUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales?.trim() ?? "all";
-  const recCountUserId =
-    user.role === "SALES" || salesKey === "all" ? user.id : salesKey;
 
   const [
     { pendingActionRecommendationsCount },
@@ -48,7 +47,7 @@ export default async function DashboardPage({
     classifications,
     activeSalesName,
   ] = await Promise.all([
-    getDashboardData(recCountUserId),
+    getDashboardData({ userRole: user.role, dbUserId, salesKey }),
     listClientsForDashboardFollowups(user.role, user.id, {
       salesUserId: salesKey,
     }),
