@@ -103,7 +103,7 @@ export async function buildExportPayload(
         client: {
           select: { name: true, phone: true, company: true },
         },
-        fromUser: { select: { name: true, deletedAt: true } },
+        fromUser: true,
       },
     });
     const rows = transfers.map((t) => ({
@@ -234,15 +234,10 @@ export async function buildExportPayload(
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: {
         client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-            assignedUser: { select: { name: true, deletedAt: true } },
-          },
+          include: { assignedUser: true },
         },
-        author: { select: { name: true, deletedAt: true } },
-        targetUser: { select: { name: true, deletedAt: true } },
+        author: true,
+        targetUser: true,
       },
     });
 
@@ -288,15 +283,15 @@ export async function buildExportPayload(
         updatedAt: true,
         managementRecommendationText: true,
         managementRecommendationDate: true,
-        assignedUser: { select: { name: true, deletedAt: true } },
+        assignedUser: true,
       },
     });
 
     type RecExportRow = Record<string, string>;
 
     const salesLine = (
-      t: { name: string; deletedAt: Date | null } | null | undefined,
-      fallback: { name: string; deletedAt: Date | null } | null | undefined
+      t: Parameters<typeof userDisplayName>[0],
+      fallback: Parameters<typeof userDisplayName>[0]
     ) => {
       const a = t ?? fallback;
       return a ? userDisplayName(a) : "";
@@ -421,7 +416,6 @@ export async function buildExportPayload(
     const from = startOfDay(new Date(fromStr));
     const to = endOfDay(new Date(toStr));
     const salesKey = sp.get("sales")?.trim() ?? "all";
-    const dateMode = sp.get("dateMode") === "initial" ? "initial" : "created";
     const scheduledFilter = sp.get("scheduled")?.trim() ?? "all";
 
     const scope = clientScopeWhere({
@@ -431,17 +425,11 @@ export async function buildExportPayload(
     });
 
     const clients = await prisma.client.findMany({
-      where:
-        dateMode === "initial"
-          ? { ...scope, initialCallDate: { gte: from, lte: to } }
-          : { ...scope, createdAt: { gte: from, lte: to } },
+      where: { ...scope, createdAt: { gte: from, lte: to } },
       include: {
-        assignedUser: { select: { name: true, deletedAt: true } },
+        assignedUser: true,
       },
-      orderBy:
-        dateMode === "initial"
-          ? { initialCallDate: "desc" }
-          : { createdAt: "desc" },
+      orderBy: { createdAt: "desc" },
       take: 800,
     });
 
@@ -457,10 +445,8 @@ export async function buildExportPayload(
     const rows = filtered.map((c) => ({
       سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
       العميل: c.name,
-      مرجع_التاريخ:
-        dateMode === "initial"
-          ? formatExportDateOnly(c.initialCallDate)
-          : formatExportDateOnly(c.createdAt),
+      الشركة: c.company?.trim() ?? "",
+      تاريخ_الإدخال: formatExportDateOnly(c.createdAt),
       النشاط: c.activity ?? "",
       العنوان: c.address ?? "",
       تاريخ_الزيارة: formatExportDateOnly(c.visitAppointmentDate),

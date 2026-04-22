@@ -20,10 +20,16 @@ import { cn } from "@/lib/utils";
 /** مثل تقارير B / Not B: نص مضغوط، وعند التركيز يكبر لسهولة القراءة والكتابة */
 const recTextareaClass = cn(
   "min-h-[2.5rem] min-w-[7rem] max-h-[40rem] max-w-[min(100vw,48rem)] resize-y",
-  "border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit]",
+  "border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit] md:text-xs",
   "transition-[font-size,box-shadow,min-width] duration-150",
-  "focus:z-20 focus:min-w-[12rem] focus:text-base focus:font-normal focus:leading-relaxed",
+  "focus:z-20 focus:min-w-[12rem] focus:text-lg focus:font-normal focus:leading-relaxed md:focus:text-lg",
   "focus:shadow-md focus:ring-1 focus:ring-primary/20 dark:border-border/55"
+);
+
+const recDateInputClass = cn(
+  "w-[140px] text-left text-xs md:text-xs",
+  "transition-[font-size] duration-150",
+  "focus:z-20 focus:text-lg focus:md:text-lg focus:font-medium"
 );
 
 export type RecommendationReportRow = {
@@ -164,7 +170,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
         <Input
           type="date"
           dir="ltr"
-          className="w-[140px] text-left text-xs"
+          className={recDateInputClass}
           value={recDate}
           onChange={(e) => setRecDate(e.target.value)}
         />
@@ -174,7 +180,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
         <Input
           type="date"
           dir="ltr"
-          className="w-[140px] text-left text-xs"
+          className={recDateInputClass}
           value={workDate}
           onChange={(e) => setWorkDate(e.target.value)}
         />

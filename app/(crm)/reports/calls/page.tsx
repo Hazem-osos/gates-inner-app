@@ -33,7 +33,6 @@ export default async function CallsReportPage({
     to?: string;
     scheduled?: string;
     sales?: string;
-    dateMode?: string;
   }>;
 }) {
   const user = await requireSessionUser();
@@ -55,28 +54,16 @@ export default async function CallsReportPage({
 
   const scheduledFilter = sp.scheduled ?? "all";
 
-  /** created = عملاء أُضيفوا للنظام في الفترة؛ initial = من لهم أول اتصال في الفترة */
-  const dateMode = sp.dateMode === "initial" ? "initial" : "created";
-
   const [clients, activeSalesName] = await Promise.all([
     prisma.client.findMany({
-      where:
-        dateMode === "initial"
-          ? {
-              ...scope,
-              initialCallDate: { gte: from, lte: to },
-            }
-          : {
-              ...scope,
-              createdAt: { gte: from, lte: to },
-            },
+      where: {
+        ...scope,
+        createdAt: { gte: from, lte: to },
+      },
       include: {
         assignedUser: { select: { name: true } },
       },
-      orderBy:
-        dateMode === "initial"
-          ? { initialCallDate: "desc" }
-          : { createdAt: "desc" },
+      orderBy: { createdAt: "desc" },
       take: 800,
     }),
     resolveActiveSalesName(user.role, salesKey),
@@ -104,7 +91,6 @@ export default async function CallsReportPage({
   const filterActive =
     scheduledFilter !== "all" ||
     salesKey !== "all" ||
-    dateMode !== "created" ||
     Boolean(sp.from || sp.to);
 
   return (
@@ -121,23 +107,11 @@ export default async function CallsReportPage({
           ...(scheduledFilter !== "all" ? { scheduled: scheduledFilter } : {}),
           ...(sp.from ? { from: sp.from } : {}),
           ...(sp.to ? { to: sp.to } : {}),
-          ...(dateMode !== "created" ? { dateMode } : {}),
         }}
         currentSales={salesKey}
       />
 
       <form className="flex flex-wrap gap-3 rounded-xl border border-border/60 p-4 text-sm" method="get">
-        <label className="flex flex-col gap-1">
-          معنى الفترة
-          <select
-            name="dateMode"
-            defaultValue={dateMode}
-            className="min-w-56 rounded border px-2 py-1"
-          >
-            <option value="created">جدد في النظام (تاريخ الإنشاء)</option>
-            <option value="initial">أول اتصال في الفترة</option>
-          </select>
-        </label>
         <label className="flex flex-col gap-1">
           من تاريخ
           <Input
@@ -182,11 +156,8 @@ export default async function CallsReportPage({
       </form>
 
       <p className={reportPageDescriptionClass}>
-        {dateMode === "initial"
-          ? "أول اتصال في الفترة:"
-          : "العملاء المضافون جدد في الفترة:"}{" "}
-        {stats.total} | محدد لهم زيارة: {stats.scheduled} | غير محدد:{" "}
-        {stats.unscheduled}
+        العملاء المضافون جدد في الفترة (حسب تاريخ الإدخال): {stats.total} | محدد لهم
+        زيارة: {stats.scheduled} | غير محدد: {stats.unscheduled}
       </p>
 
       {activeSalesName ? (
@@ -201,7 +172,6 @@ export default async function CallsReportPage({
           excelHref={callsReportExportExcelHref({
             from: fromStr,
             to: toStr,
-            dateMode,
             scheduled: scheduledFilter,
             sales: salesKey,
           })}
@@ -211,14 +181,16 @@ export default async function CallsReportPage({
       <ReportRecordsCount count={filtered.length} />
 
       <div className="rounded-xl border border-border/80">
-        <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
+        <Table
+          containerClassName="max-h-[min(70vh,calc(100vh-11rem))]"
+          className="[&_th]:border-s-2 [&_td]:border-s-2 [&_th]:border-border [&_td]:border-border"
+        >
           <TableHeader>
             <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
               <TableHead>السيلز</TableHead>
               <TableHead>العميل</TableHead>
-              <TableHead>
-                {dateMode === "initial" ? "أول اتصال" : "تاريخ الإنشاء"}
-              </TableHead>
+              <TableHead>الشركة</TableHead>
+              <TableHead>تاريخ الإدخال</TableHead>
               <TableHead>النشاط</TableHead>
               <TableHead>العنوان</TableHead>
               <TableHead>تاريخ الزيارة</TableHead>
@@ -234,12 +206,11 @@ export default async function CallsReportPage({
                     {c.name}
                   </Link>
                 </TableCell>
+                <TableCell className="max-w-[160px] truncate text-xs">
+                  {c.company?.trim() ? c.company : "—"}
+                </TableCell>
                 <TableCell dir="ltr" className="text-xs whitespace-nowrap">
-                  {dateMode === "initial"
-                    ? c.initialCallDate
-                      ? formatDateArabicLong(new Date(c.initialCallDate))
-                      : "—"
-                    : formatDateArabicLong(new Date(c.createdAt))}
+                  {formatDateArabicLong(new Date(c.createdAt))}
                 </TableCell>
                 <TableCell className="max-w-[180px] truncate text-xs">
                   {c.activity ?? "—"}

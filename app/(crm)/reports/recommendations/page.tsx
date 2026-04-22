@@ -83,16 +83,9 @@ export default async function RecommendationsReportPage({
     where: recommendationWhere,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
-      client: {
-        select: {
-          id: true,
-          name: true,
-          company: true,
-          assignedUser: { select: { name: true, deletedAt: true } },
-        },
-      },
-      author: { select: { name: true, deletedAt: true } },
-      targetUser: { select: { name: true, deletedAt: true } },
+      client: { include: { assignedUser: true } },
+      author: true,
+      targetUser: true,
     },
   });
 
@@ -135,7 +128,7 @@ export default async function RecommendationsReportPage({
       updatedAt: true,
       managementRecommendationText: true,
       managementRecommendationDate: true,
-      assignedUser: { select: { name: true, deletedAt: true } },
+      assignedUser: true,
     },
   });
 
