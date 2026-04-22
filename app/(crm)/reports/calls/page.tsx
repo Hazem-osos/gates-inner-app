@@ -193,7 +193,7 @@ export default async function CallsReportPage({
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ExportToolbar
-          mappedReportKind="report-calls"
+          importKind="report-calls"
           excelHref={callsReportExportExcelHref({
             from: fromStr,
             to: toStr,
