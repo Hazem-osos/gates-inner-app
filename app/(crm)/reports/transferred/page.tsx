@@ -1,6 +1,7 @@
 import { AcknowledgeTransferButton } from "@/components/clients/acknowledge-transfer-button";
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   Table,
   TableBody,
@@ -9,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
 import { transferredExportExcelHref } from "@/lib/export-excel-href";
@@ -50,6 +50,7 @@ export default async function TransferredClientsReportPage() {
         <ReportWorkLogDialog
           reportKey="report-transferred"
           userId={workLogUserId}
+          userRole={user.role}
         />
         <ExportToolbar excelHref={transferredExportExcelHref()} />
       </div>

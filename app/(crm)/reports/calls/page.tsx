@@ -13,8 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
-import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
 import { callsReportExportExcelHref } from "@/lib/export-excel-href";
@@ -36,7 +35,6 @@ export default async function CallsReportPage({
   }>;
 }) {
   const user = await requireSessionUser();
-  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
 
   const todayStr = todayInputDate();
@@ -193,7 +191,6 @@ export default async function CallsReportPage({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ReportWorkLogDialog reportKey="report-calls" userId={workLogUserId} />
         <ExportToolbar
           mappedReportKind="report-calls"
           excelHref={callsReportExportExcelHref({

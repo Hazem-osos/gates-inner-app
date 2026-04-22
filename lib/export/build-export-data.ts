@@ -9,6 +9,13 @@ import { listClientsForReportExport } from "@/lib/data/report-queries";
 import { reportBRowToExportRecord } from "@/lib/export/report-b-flat";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { passesNeglected } from "@/lib/report-b-utils";
+import { authorNamesByClientAndBody } from "@/lib/recommendation-author-lookup";
+import {
+  clientPendingRecommendationDateWindowWhere,
+  managementRecommendationDateWindowWhere,
+  resolveRecommendationsDateSearchParams,
+  ymdRangeToBounds,
+} from "@/lib/recommendations-report-search";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { buildClientsImportTemplateEmptyRow } from "@/lib/import/clients-flat-import-fields";
@@ -192,19 +199,38 @@ export async function buildExportPayload(
   if (kind === "report-recommendations") {
     const filter = sp.get("filter") ?? "all";
     const salesKeyParam = sp.get("sales") ?? "all";
+    const dateResolved = resolveRecommendationsDateSearchParams({
+      from: sp.get("from") ?? undefined,
+      to: sp.get("to") ?? undefined,
+      full: sp.get("full") ?? undefined,
+    });
+    const { fromYmd, toYmd, fullDb: fullDbView } = dateResolved;
+    const { rangeStart, rangeEnd } = ymdRangeToBounds(fromYmd, toYmd);
 
     /** يطابق صفحة التقرير: user.id = معرّف DB من مسار التصدير */
-    const recommendationWhere =
+    const recommendationWhereBase: Prisma.ManagementRecommendationWhereInput =
       user.role === "SALES"
         ? { targetUserId: user.id }
         : salesKeyParam !== "all"
           ? { targetUserId: salesKeyParam }
           : {};
 
+    const recommendationWhere: Prisma.ManagementRecommendationWhereInput =
+      !fullDbView
+        ? {
+            AND: [
+              recommendationWhereBase,
+              managementRecommendationDateWindowWhere(
+                rangeStart,
+                rangeEnd
+              ),
+            ],
+          }
+        : recommendationWhereBase;
+
     const allRecRows = await prisma.managementRecommendation.findMany({
       where: recommendationWhere,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: 500,
       include: {
         client: {
           select: {
@@ -229,7 +255,7 @@ export async function buildExportPayload(
       rowsDb = rowsDb.filter((r) => !!(r.actionTaken ?? "").trim());
     }
 
-    const clientWhere: Prisma.ClientWhereInput = {
+    const clientWhereBase: Prisma.ClientWhereInput = {
       managementRecommendationText: { not: null },
       ...(user.role === "SALES"
         ? { assignedUserId: user.id }
@@ -238,9 +264,20 @@ export async function buildExportPayload(
           : {}),
     };
 
+    const clientWhere: Prisma.ClientWhereInput = !fullDbView
+      ? {
+          AND: [
+            clientWhereBase,
+            clientPendingRecommendationDateWindowWhere(
+              rangeStart,
+              rangeEnd
+            ),
+          ],
+        }
+      : clientWhereBase;
+
     const clientsWithReportText = await prisma.client.findMany({
       where: clientWhere,
-      take: 500,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -275,11 +312,21 @@ export async function buildExportPayload(
     );
 
     if (filter !== "done") {
+      const exportClientOnly: { c: (typeof clientsWithReportText)[0]; t: string; key: string }[] = [];
       for (const c of clientsWithReportText) {
         const t = (c.managementRecommendationText ?? "").trim();
         if (!t) continue;
         const key = `${c.id}\0${t}`;
         if (recKeysForDedupe.has(key)) continue;
+        exportClientOnly.push({ c, t, key });
+      }
+
+      const authorByKey = await authorNamesByClientAndBody(
+        exportClientOnly.map((x) => ({ clientId: x.c.id, body: x.t })),
+        recommendationWhereBase
+      );
+
+      for (const { c, t, key } of exportClientOnly) {
         merged.push({
           sortMs: new Date(
             c.managementRecommendationDate ?? c.updatedAt
@@ -291,7 +338,7 @@ export async function buildExportPayload(
             تاريخ_التوصية: formatExportDateOnly(
               c.managementRecommendationDate ?? c.updatedAt
             ),
-            من_كتب: "عمود تقرير B",
+            من_كتب: authorByKey.get(key) ?? "—",
             تاريخ_العمل: "",
             الإجراء_المتخذ: "",
           },

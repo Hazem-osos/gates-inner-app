@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   WarmingReportTable,
   type WarmingReportRow,
@@ -9,7 +10,6 @@ import {
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
@@ -145,7 +145,11 @@ export default async function ReportWarmingPage({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ReportWorkLogDialog reportKey="report-warming" userId={workLogUserId} />
+        <ReportWorkLogDialog
+          reportKey="report-warming"
+          userId={workLogUserId}
+          userRole={user.role}
+        />
         <ExportToolbar
           mappedReportKind="warming"
           excelHref={warmingExportExcelHref({

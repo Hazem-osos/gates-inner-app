@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -15,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
@@ -178,7 +178,11 @@ async function ReportWonContent({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ReportWorkLogDialog reportKey="report-won" userId={workLogUserId} />
+        <ReportWorkLogDialog
+          reportKey="report-won"
+          userId={workLogUserId}
+          userRole={user.role}
+        />
         <ExportToolbar
           mappedReportKind="report-won"
           excelHref={reportExportExcelHref({

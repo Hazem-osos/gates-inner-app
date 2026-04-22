@@ -1,6 +1,6 @@
 "use client";
 
-import { ClientStatus } from "@prisma/client";
+import { ClientStatus, type UserRole } from "@prisma/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -64,7 +64,6 @@ import {
   passesNoAnswerFilter,
   passesVisitOverdue,
   passesVisitScheduledOnly,
-  REPORT_B_PALETTE,
   sortRows,
   startOfToday,
   type SortTriState,
@@ -121,15 +120,14 @@ export type ReportBRow = {
 type Props = {
   rows: ReportBRow[];
   classifications: ClassificationRow[];
-  rowStyles?: Record<string, { color: string; legendNote?: string }>;
-  /** مطلوب لسجل العمل وسجل لوحة الألوان */
-  currentUserId?: string;
-  /** لـ PATCH تلوين الصف (مثلاً not-b) */
+  /** لمسار التصنيف/الانتقالات (مثلاً not-b) */
   rowStyleReportType?: "b" | "not-b" | "closed";
-  /** تقرير المغلقة: شبكة كاملة بدون أدوات الفلترة العلوية من تقرير B */
-  toolbar?: "full" | "closed";
+  /** full: أدوات التقرير كاملة | closed: تقرير المغلقة | dashboard: جدول فقط + بحث (لوحة) */
+  toolbar?: "full" | "closed" | "dashboard";
   /** مفتاح تقرير سجل العمل (تصفية AuditLog) — مثل report-dashboard-followups */
   auditReportKey?: string;
+  workLogUserId?: string;
+  workLogUserRole?: UserRole;
 };
 
 type FollowSlot = { order: number; note: string; date: string };
@@ -197,32 +195,6 @@ function splitCallAndSituation(combined: string): {
   return { callSummary, currentSituation: rest.join(sep) };
 }
 
-function serializeRowStyleMap(
-  m: Record<string, { color: string; legendNote?: string }>
-): string {
-  return JSON.stringify(
-    Object.entries(m)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([id, v]) => [id, v.color, v.legendNote ?? ""])
-  );
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  let h = hex.replace("#", "").trim();
-  if (h.length === 3) {
-    h = h
-      .split("")
-      .map((c) => c + c)
-      .join("");
-  }
-  const n = parseInt(h, 16);
-  if (Number.isNaN(n)) return `rgba(0,0,0,${alpha})`;
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
 function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
   if (!iso) return false;
   const d = new Date(iso);
@@ -233,11 +205,11 @@ function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
 export function ReportBTable({
   rows,
   classifications,
-  rowStyles: rowStylesProp = {},
-  currentUserId = "",
   rowStyleReportType = "b",
   toolbar = "full",
   auditReportKey,
+  workLogUserId,
+  workLogUserRole = "SALES",
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -259,12 +231,6 @@ export function ReportBTable({
   const [reopeningClientId, setReopeningClientId] = useState<string | null>(
     null
   );
-  const [styleMap, setStyleMap] =
-    useState<Record<string, { color: string; legendNote?: string }>>(rowStylesProp);
-
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [legends, setLegends] = useState<Record<string, string>>({});
-
   /** تقرير Not B: لا يُعرض صف مسار B في قائمة التصنيف لتفادي قوائم فارغة/قيم غير مطابقة */
   const tableClassificationOptions = useMemo(
     () =>
@@ -281,6 +247,8 @@ export function ReportBTable({
     if (rowStyleReportType === "not-b") return "report-not-b";
     return "report-b";
   }, [auditReportKey, toolbar, rowStyleReportType]);
+
+  const dashboardMode = toolbar === "dashboard";
 
   const [searchQ, setSearchQ] = useState("");
   const [violation, setViolation] = useState<ViolationKind>(null);
@@ -327,33 +295,6 @@ export function ReportBTable({
     document.addEventListener("pointerdown", onDocPointerDown);
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
-
-  const storageKey = `crm-b-palette-legends-${currentUserId || "anon"}`;
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setLegends(JSON.parse(raw) as Record<string, string>);
-    } catch {
-      /* ignore */
-    }
-  }, [storageKey]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(legends));
-    } catch {
-      /* ignore */
-    }
-  }, [legends, storageKey]);
-
-  useEffect(() => {
-    setStyleMap((prev) => {
-      if (serializeRowStyleMap(prev) === serializeRowStyleMap(rowStylesProp)) {
-        return prev;
-      }
-      return { ...rowStylesProp };
-    });
-  }, [rowStylesProp]);
 
   const merged = useMemo(() => {
     return rows.map((r) => ({ ...r, ...(local[r.id] ?? {}) }));
@@ -567,59 +508,6 @@ export function ReportBTable({
     else setMe(null);
   }
 
-  async function applyPaletteToRow(clientId: string) {
-    if (!selectedColor) {
-      toast.error("اختر لوناً من لوحة الألوان أولاً.");
-      return;
-    }
-    const label = legends[selectedColor] ?? "";
-    try {
-      const res = await fetch(`/api/clients/${clientId}/row-style`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          color: selectedColor,
-          reportType: rowStyleReportType,
-          label,
-        }),
-      });
-      const data = (await res.json()) as { message?: string };
-      if (!res.ok) {
-        toast.error(data.message ?? "فشل الحفظ");
-        return;
-      }
-      setStyleMap((prev) => ({
-        ...prev,
-        [clientId]: { color: selectedColor, legendNote: label },
-      }));
-      toast.success("تم حفظ التلوين");
-    } catch {
-      toast.error("فشل الاتصال بالخادم.");
-    }
-  }
-
-  async function clearRowStyle(clientId: string) {
-    try {
-      const res = await fetch(
-        `/api/clients/${clientId}/row-style?reportType=${rowStyleReportType}`,
-        { method: "DELETE" }
-      );
-      const data = (await res.json()) as { message?: string };
-      if (!res.ok) {
-        toast.error(data.message ?? "فشل الإزالة");
-        return;
-      }
-      setStyleMap((prev) => {
-        const n = { ...prev };
-        delete n[clientId];
-        return n;
-      });
-      toast.success("تمت إزالة اللون");
-    } catch {
-      toast.error("فشل الاتصال بالخادم.");
-    }
-  }
-
   function visitOverdueFilterMessage(): string | null {
     if (!visitOverdueOnly) return null;
     return "يعرض العملاء التي تجاوز ميعاد زيارتهم ولم يُسجَّل موظف عارض";
@@ -671,16 +559,22 @@ export function ReportBTable({
   const notBClassifications = classifications.filter((c) => !c.isBRow);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className={cn(
+        "flex flex-col gap-4",
+        dashboardMode && "gap-2"
+      )}
+    >
       <div
         data-gate-exempt
         className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
         dir="rtl"
       >
-        {currentUserId ? (
+        {workLogUserId ? (
           <ReportWorkLogDialog
             reportKey={resolvedAuditReportKey}
-            userId={currentUserId}
+            userId={workLogUserId}
+            userRole={workLogUserRole}
           />
         ) : null}
         <Input
@@ -692,6 +586,7 @@ export function ReportBTable({
         />
       </div>
 
+      {!dashboardMode ? (
       <div
           data-gate-exempt
           className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
@@ -806,6 +701,7 @@ export function ReportBTable({
             </div>
           </div>
         </div>
+      ) : null}
 
       <SimpleDialog
         open={gateDialogOpen}
@@ -841,6 +737,7 @@ export function ReportBTable({
         </div>
       </SimpleDialog>
 
+      {!dashboardMode ? (
       <div
         className={cn(
           "sticky top-14 z-30 mb-3 rounded-2xl border bg-card/90 p-4 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 dark:border-border/50",
@@ -965,46 +862,6 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
-          <aside
-            data-gate-exempt
-            className="w-full shrink-0 rounded-xl border border-border/60 bg-muted/20 p-3 shadow-sm dark:bg-muted/15 lg:w-auto lg:min-w-[12rem]"
-          >
-            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-muted-foreground">
-              تلوين الصفوف
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {REPORT_B_PALETTE.map(({ hex }) => (
-                <div key={hex} className="flex min-w-0 flex-col gap-0.5">
-                  <button
-                    type="button"
-                    title={hex}
-                    className={`mx-auto h-5 w-8 shrink-0 rounded-sm border shadow-sm transition ${
-                      selectedColor === hex
-                        ? "border-primary ring-1 ring-primary"
-                        : "border-border/60"
-                    }`}
-                    style={{ backgroundColor: hex }}
-                    onClick={() =>
-                      setSelectedColor((prev) => (prev === hex ? null : hex))
-                    }
-                  />
-                  <Input
-                    className="h-6 min-h-6 px-1 text-[11px] leading-tight"
-                    placeholder="وصف"
-                    value={legends[hex] ?? ""}
-                    onChange={(e) =>
-                      setLegends((prev) => ({ ...prev, [hex]: e.target.value }))
-                    }
-                    dir="rtl"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
-              اختر لوناً ثم انقر على صف لتلوينه. انقر مرة أخرى على نفس اللون
-              لإلغاء اختياره.
-            </p>
-          </aside>
         </div>
         {(violationMessage() ||
           visitOverdueFilterMessage() ||
@@ -1031,6 +888,7 @@ export function ReportBTable({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       <TooltipProvider delayDuration={180}>
       <div
@@ -1039,7 +897,11 @@ export function ReportBTable({
         className="min-w-0 w-full rounded-xl border border-border/60 shadow-sm"
       >
           <Table
-            containerClassName="max-h-[min(70vh,calc(100vh-11rem))]"
+            containerClassName={
+              dashboardMode
+                ? "max-h-[min(38vh,320px)]"
+                : "max-h-[min(70vh,calc(100vh-11rem))]"
+            }
             className={cn(
               "min-w-[3200px] text-sm [&_td]:whitespace-normal [&_td]:align-top",
               "[&_th]:!border-s [&_th]:!border-border/50 [&_td]:!border-s [&_td]:!border-border/50",
@@ -1064,18 +926,12 @@ export function ReportBTable({
                 <TableHead className="min-w-[120px]">تاريخ التوصية</TableHead>
                 <TableHead className="min-w-[90px]">سيلز</TableHead>
                 <TableHead className="min-w-[10rem] whitespace-normal text-start leading-tight">
-                  <span className="block font-semibold">شركة</span>
-                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
-                    اسم المنشأة كما في السجل
-                  </span>
+                  شركة
                 </TableHead>
                 <TableHead className="w-12">أيام</TableHead>
                 <TableHead className="min-w-[100px]">اتصال</TableHead>
                 <TableHead className="min-w-[9rem] whitespace-normal text-start leading-tight">
-                  <span className="block font-semibold">اسم المسئول</span>
-                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
-                    مسؤول الاتصال (الشخص)
-                  </span>
+                  اسم المسئول
                 </TableHead>
                 <TableHead className="min-w-[9rem]">نشاط</TableHead>
                 <TableHead className="min-w-[9rem]">وظيفة</TableHead>
@@ -1084,10 +940,7 @@ export function ReportBTable({
                 <TableHead className="min-w-[72px]">عرض سعر</TableHead>
                 <TableHead className="min-w-[120px]">تفصيل السعر</TableHead>
                 <TableHead className="min-w-[10rem] max-w-[13rem] whitespace-normal text-start leading-tight">
-                  <span className="block font-semibold">ملخص المكالمة</span>
-                  <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
-                    والموقف الحالي
-                  </span>
+                  ملخص المكالمة والموقف
                 </TableHead>
                 <TableHead className="min-w-[120px]">ملاحظات سيلز</TableHead>
                 <TableHead className="min-w-[8rem]">تصنيف</TableHead>
@@ -1140,20 +993,12 @@ export function ReportBTable({
                       ?.label ??
                     (r.classificationId ? r.classificationId : "")
                 );
-                const rowBg = styleMap[r.id]?.color;
-                const bgStyle = rowBg
-                  ? { backgroundColor: hexToRgba(rowBg, 0.22) }
-                  : undefined;
                 const rowHighlightStyle: CSSProperties | undefined =
-                  rowBg || focusedRowId === r.id
+                  focusedRowId === r.id
                     ? {
-                        ...bgStyle,
-                        ...(focusedRowId === r.id
-                          ? {
-                              boxShadow:
-                                "inset 0 0 0 9999px rgba(16, 185, 129, 0.13)",
-                            }
-                          : {}),
+                        boxShadow: dashboardMode
+                          ? "inset 0 0 0 9999px rgba(16, 185, 129, 0.06)"
+                          : "inset 0 0 0 9999px rgba(16, 185, 129, 0.13)",
                       }
                     : undefined;
 
@@ -1178,7 +1023,6 @@ export function ReportBTable({
                         )
                       )
                         return;
-                      if (selectedColor) void applyPaletteToRow(r.id);
                     }}
                   >
                     {toolbar === "closed" ? (
@@ -1246,18 +1090,6 @@ export function ReportBTable({
                               ? "جاري…"
                               : "إعادة العميل"}
                           </Button>
-                        ) : null}
-                        {styleMap[r.id]?.color ? (
-                          <button
-                            type="button"
-                            className="text-[10px] text-destructive underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void clearRowStyle(r.id);
-                            }}
-                          >
-                            × إزالة اللون
-                          </button>
                         ) : null}
                         {toolbar !== "closed" ? (
                         <StatusPopoverBlock

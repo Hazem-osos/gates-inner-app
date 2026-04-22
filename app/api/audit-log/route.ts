@@ -77,6 +77,10 @@ export async function GET(req: Request) {
   const end = new Date(to);
   end.setHours(23, 59, 59, 999);
 
+  const salesKey = searchParams.get("sales")?.trim() ?? "";
+  const salesFilterActive =
+    salesKey !== "" && salesKey !== "all" && (session.role === "ADMIN" || session.role === "MANAGER");
+
   try {
     const baseWhere: Prisma.AuditLogWhereInput = {
       userId: userIdParam,
@@ -85,7 +89,7 @@ export async function GET(req: Request) {
     };
 
     /** MySQL يتطلب مسار JSON صالحاً (مثل `$.reportKey`) — بدون `$.` يفشل الاستعلام ويُرجع خطأ 500. */
-    const where: Prisma.AuditLogWhereInput = reportKey
+    const withReport: Prisma.AuditLogWhereInput = reportKey
       ? {
           ...baseWhere,
           meta: {
@@ -95,11 +99,23 @@ export async function GET(req: Request) {
         }
       : baseWhere;
 
+    const where: Prisma.AuditLogWhereInput = salesFilterActive
+      ? {
+          ...withReport,
+          client: { is: { assignedUserId: salesKey } },
+        }
+      : withReport;
+
     const logs = await prisma.auditLog.findMany({
       where,
       include: {
         client: {
-          select: { id: true, name: true, company: true },
+          select: {
+            id: true,
+            name: true,
+            company: true,
+            assignedUser: { select: { name: true } },
+          },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -115,6 +131,7 @@ export async function GET(req: Request) {
         byClient.set(cid, {
           clientId: cid,
           clientName: l.client?.name ?? "—",
+          assignedSalesName: l.client?.assignedUser?.name ?? null,
           company: l.client?.company ?? null,
           events: [],
         });
@@ -126,17 +143,29 @@ export async function GET(req: Request) {
       });
     }
 
-    const groups = Array.from(byClient.values()).sort((a, b) => {
-      const ta = Math.max(
-        0,
-        ...a.events.map((e) => new Date(e.createdAt).getTime())
-      );
-      const tb = Math.max(
-        0,
-        ...b.events.map((e) => new Date(e.createdAt).getTime())
-      );
-      return tb - ta;
-    });
+    const groups = Array.from(byClient.values())
+      .map((g) => ({
+        ...g,
+        events: [...g.events].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        ),
+      }))
+      .sort((a, b) => {
+        const minA =
+          a.events.length > 0
+            ? Math.min(
+                ...a.events.map((e) => new Date(e.createdAt).getTime())
+              )
+            : 0;
+        const minB =
+          b.events.length > 0
+            ? Math.min(
+                ...b.events.map((e) => new Date(e.createdAt).getTime())
+              )
+            : 0;
+        return minA - minB;
+      });
 
     return NextResponse.json({ groups });
   } catch (e) {

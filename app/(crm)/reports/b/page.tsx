@@ -8,7 +8,6 @@ import {
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { listClientClassifications } from "@/lib/data/classifications";
-import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
@@ -25,7 +24,7 @@ export default async function ReportBPage({
   searchParams: Promise<{ sales?: string; sort?: string; dir?: string }>;
 }) {
   const user = await requireSessionUser();
-  const stylesUserId = (await resolveSessionDbUserId(user)) ?? user.id;
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
@@ -41,12 +40,6 @@ export default async function ReportBPage({
     }),
     listClientClassifications(),
   ]);
-
-  const rowStyles = await listReportRowStylesForClients({
-    userId: stylesUserId,
-    reportKey: "report-b",
-    clientIds: clients.map((c) => c.id),
-  });
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
 
@@ -76,13 +69,22 @@ export default async function ReportBPage({
         dir="rtl"
       >
         <ReportPageExportsToolbar config={exportsConfig} />
-        <SalesFilterLinks
-          bare
-          role={user.role}
-          pathname="/reports/b"
-          searchParams={{}}
-          currentSales={salesKey}
-        />
+        {user.role !== "SALES" ? (
+          <div className="flex min-w-0 max-w-full flex-col items-end gap-1 self-center">
+            <SalesFilterLinks
+              bare
+              role={user.role}
+              pathname="/reports/b"
+              searchParams={{}}
+              currentSales={salesKey}
+            />
+            {salesKey !== "all" ? (
+              <p className="max-w-sm text-right text-xs font-medium text-destructive">
+                يوجد فلتر نشط على النتائج المعروضة.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <ReportRecordsCount count={rows.length} />
@@ -90,8 +92,8 @@ export default async function ReportBPage({
       <ReportBTable
         rows={rows}
         classifications={classifications}
-        rowStyles={rowStyles}
-        currentUserId={stylesUserId}
+        workLogUserId={workLogUserId}
+        workLogUserRole={user.role}
       />
     </div>
   );

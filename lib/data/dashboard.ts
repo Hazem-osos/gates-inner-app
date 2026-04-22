@@ -1,27 +1,40 @@
-import type { UserRole } from "@prisma/client";
-
 import { prisma } from "@/lib/prisma";
+import { todayInputDate } from "@/lib/date-arabic";
+import {
+  managementRecommendationDateWindowWhere,
+  RECOMMENDATIONS_WIDE_RANGE_START_YMD,
+  ymdRangeToBounds,
+} from "@/lib/recommendations-report-search";
 
-export async function getDashboardData(role: UserRole, userId: string) {
-  const unreadAlerts = await prisma.alert.findMany({
-    where: { userId, readAt: null },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: { client: { select: { id: true, name: true, company: true } } },
-  });
+/**
+ * توصيات موجّهة للمندوب (targetUserId) بلا «إجراء متخذ» في نفس نطاق التواريخ
+ * المستخدم في تقرير «لم يتخذ إجراء».
+ */
+export async function countPendingActionRecommendationsForUser(
+  userId: string
+): Promise<number> {
+  const toYmd = todayInputDate();
+  const { rangeStart, rangeEnd } = ymdRangeToBounds(
+    RECOMMENDATIONS_WIDE_RANGE_START_YMD,
+    toYmd
+  );
 
-  const openRecs = await prisma.managementRecommendation.findMany({
+  return prisma.managementRecommendation.count({
     where: {
-      targetUserId: userId,
-      acknowledgedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-    include: {
-      client: { select: { id: true, name: true, company: true } },
-      author: { select: { name: true } },
+      AND: [
+        { targetUserId: userId },
+        managementRecommendationDateWindowWhere(rangeStart, rangeEnd),
+        {
+          OR: [{ actionTaken: null }, { actionTaken: "" }],
+        },
+      ],
     },
   });
+}
 
-  return { unreadAlerts, openRecs };
+export async function getDashboardData(userId: string) {
+  const pendingActionRecommendationsCount =
+    await countPendingActionRecommendationsForUser(userId);
+
+  return { pendingActionRecommendationsCount };
 }

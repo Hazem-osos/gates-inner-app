@@ -1,5 +1,7 @@
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
+import { RecommendationsDateFilter } from "@/components/reports/recommendations-date-filter";
 import {
   RecommendationsReportTable,
   type RecommendationReportRow,
@@ -7,10 +9,18 @@ import {
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { buttonVariants } from "@/components/ui/button";
-import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { todayInputDate } from "@/lib/date-arabic";
 import { recommendationsExportExcelHref } from "@/lib/export-excel-href";
+import { authorNamesByClientAndBody } from "@/lib/recommendation-author-lookup";
 import { prisma } from "@/lib/prisma";
+import {
+  buildRecommendationsReportHref,
+  clientPendingRecommendationDateWindowWhere,
+  managementRecommendationDateWindowWhere,
+  resolveRecommendationsDateSearchParams,
+  ymdRangeToBounds,
+} from "@/lib/recommendations-report-search";
 import { cn } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
@@ -20,7 +30,13 @@ export const dynamic = "force-dynamic";
 export default async function RecommendationsReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; sales?: string }>;
+  searchParams: Promise<{
+    filter?: string;
+    sales?: string;
+    from?: string;
+    to?: string;
+    full?: string;
+  }>;
 }) {
   const user = await requireSessionUser();
   const dbUserId = (await resolveSessionDbUserId(user)) ?? user.id;
@@ -28,19 +44,40 @@ export default async function RecommendationsReportPage({
   const sp = await searchParams;
   const filter = sp.filter ?? "all";
   const salesKey = sp.sales ?? "all";
+  const todayYmd = todayInputDate();
+  const dateResolved = resolveRecommendationsDateSearchParams(sp);
+  const { fromYmd, toYmd, fullDb: fullDbView } = dateResolved;
+  const hasExplicitDateParams = Boolean(sp.from || sp.to);
+  const { rangeStart, rangeEnd } = ymdRangeToBounds(fromYmd, toYmd);
+
+  const dateLinkExtra: { fromYmd?: string; toYmd?: string; fullDb?: boolean } =
+    fullDbView
+      ? { fullDb: true }
+      : hasExplicitDateParams
+        ? { fromYmd, toYmd }
+        : {};
 
   /** التوصية تُوجَّه للمندوب عبر targetUserId — لا تعتمد على مسند العميل الحالي. */
-  const recommendationWhere =
+  const recommendationWhereBase: Prisma.ManagementRecommendationWhereInput =
     user.role === "SALES"
       ? { targetUserId: dbUserId }
       : salesKey !== "all"
         ? { targetUserId: salesKey }
         : {};
 
+  const recommendationWhere: Prisma.ManagementRecommendationWhereInput =
+    !fullDbView
+      ? {
+          AND: [
+            recommendationWhereBase,
+            managementRecommendationDateWindowWhere(rangeStart, rangeEnd),
+          ],
+        }
+      : recommendationWhereBase;
+
   const allRecRows = await prisma.managementRecommendation.findMany({
     where: recommendationWhere,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: 500,
     include: {
       client: {
         select: {
@@ -65,7 +102,7 @@ export default async function RecommendationsReportPage({
     rows = rows.filter((r) => !!(r.actionTaken ?? "").trim());
   }
 
-  const clientWhere: Prisma.ClientWhereInput = {
+  const clientWhereBase: Prisma.ClientWhereInput = {
     managementRecommendationText: { not: null },
     ...(user.role === "SALES"
       ? { assignedUserId: dbUserId }
@@ -74,9 +111,17 @@ export default async function RecommendationsReportPage({
         : {}),
   };
 
+  const clientWhere: Prisma.ClientWhereInput = !fullDbView
+    ? {
+        AND: [
+          clientWhereBase,
+          clientPendingRecommendationDateWindowWhere(rangeStart, rangeEnd),
+        ],
+      }
+    : clientWhereBase;
+
   const clientsWithReportText = await prisma.client.findMany({
     where: clientWhere,
-    take: 500,
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -102,14 +147,23 @@ export default async function RecommendationsReportPage({
     actionTaken: r.actionTaken,
   }));
 
-  const fromClientOnly: RecommendationReportRow[] = [];
+  const clientOnlyCandidates: { c: (typeof clientsWithReportText)[0]; t: string; key: string }[] = [];
   for (const c of clientsWithReportText) {
     const t = (c.managementRecommendationText ?? "").trim();
     if (!t) continue;
     const key = `${c.id}\0${t}`;
     if (recKeysForDedupe.has(key)) continue;
     if (filter === "done") continue;
-    fromClientOnly.push({
+    clientOnlyCandidates.push({ c, t, key });
+  }
+
+  const authorByKey = await authorNamesByClientAndBody(
+    clientOnlyCandidates.map((x) => ({ clientId: x.c.id, body: x.t })),
+    recommendationWhereBase
+  );
+
+  const fromClientOnly: RecommendationReportRow[] = clientOnlyCandidates.map(
+    ({ c, t, key }) => ({
       id: `pending-sync:${c.id}`,
       clientId: c.id,
       clientName: c.name,
@@ -118,11 +172,11 @@ export default async function RecommendationsReportPage({
       recommendationDateIso:
         c.managementRecommendationDate?.toISOString() ?? null,
       createdAtIso: c.updatedAt.toISOString(),
-      authorName: "عمود تقرير B",
+      authorName: authorByKey.get(key) ?? "—",
       workDateIso: null,
       actionTaken: null,
-    });
-  }
+    })
+  );
 
   const tableRows = [...fromRecs, ...fromClientOnly].sort((a, b) => {
     const da = new Date(
@@ -134,14 +188,18 @@ export default async function RecommendationsReportPage({
     return db - da;
   });
 
-  const filterActive = filter !== "all" || salesKey !== "all";
+  const filterActive =
+    filter !== "all" ||
+    salesKey !== "all" ||
+    hasExplicitDateParams ||
+    sp.full === "1";
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
       <PageHeader
         fullWidthBar
         title="توصيات الإدارة"
-        subtitle="عرض التوصيات وحفظ التاريخ والإجراء المتخذ لكل عميل."
+        subtitle="عرض التوصيات وحفظ التاريخ والإجراء المتخذ لكل عميل. الافتراضي: يوم العمل الحالي."
       />
 
       <SalesFilterLinks
@@ -149,13 +207,31 @@ export default async function RecommendationsReportPage({
         pathname="/reports/recommendations"
         searchParams={{
           ...(filter !== "all" ? { filter } : {}),
+          ...(!fullDbView && hasExplicitDateParams
+            ? { from: fromYmd, to: toYmd }
+            : {}),
+          ...(fullDbView ? { full: "1" } : {}),
         }}
         currentSales={salesKey}
       />
 
+      <RecommendationsDateFilter
+        key={`${fromYmd}\0${toYmd}\0${fullDbView ? 1 : 0}`}
+        fromYmd={fromYmd}
+        toYmd={toYmd}
+        fullDb={fullDbView}
+        todayYmd={todayYmd}
+        filter={filter}
+        salesKey={salesKey}
+      />
+
       <div className="flex flex-wrap gap-2">
         <Link
-          href={`/reports/recommendations${salesKey !== "all" ? `?sales=${salesKey}` : ""}`}
+          href={buildRecommendationsReportHref({
+            filter: "all",
+            sales: salesKey,
+            ...dateLinkExtra,
+          })}
           className={cn(
             buttonVariants({ variant: filter === "all" ? "default" : "outline", size: "sm" })
           )}
@@ -163,7 +239,11 @@ export default async function RecommendationsReportPage({
           كل التوصيات
         </Link>
         <Link
-          href={`/reports/recommendations?filter=pending${salesKey !== "all" ? `&sales=${salesKey}` : ""}`}
+          href={buildRecommendationsReportHref({
+            filter: "pending",
+            sales: salesKey,
+            ...dateLinkExtra,
+          })}
           className={cn(
             buttonVariants({
               variant: filter === "pending" ? "default" : "outline",
@@ -174,7 +254,11 @@ export default async function RecommendationsReportPage({
           توصيات لم يتم اتخاذ إجراء
         </Link>
         <Link
-          href={`/reports/recommendations?filter=done${salesKey !== "all" ? `&sales=${salesKey}` : ""}`}
+          href={buildRecommendationsReportHref({
+            filter: "done",
+            sales: salesKey,
+            ...dateLinkExtra,
+          })}
           className={cn(
             buttonVariants({
               variant: filter === "done" ? "default" : "outline",
@@ -196,12 +280,16 @@ export default async function RecommendationsReportPage({
         <ReportWorkLogDialog
           reportKey="report-recommendations"
           userId={workLogUserId}
+          userRole={user.role}
         />
         <ExportToolbar
           mappedReportKind="report-recommendations"
           excelHref={recommendationsExportExcelHref({
             filter,
             sales: salesKey,
+            ...(fullDbView
+              ? { full: true }
+              : { from: fromYmd, to: toYmd }),
           })}
         />
       </div>

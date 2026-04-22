@@ -67,15 +67,23 @@ export function warmingExportExcelHref(args: {
   return `/api/export/excel?${u.toString()}`;
 }
 
-/** توصيات الإدارة */
+/** توصيات الإدارة (نطاق تاريخ = كصفحة التقرير) */
 export function recommendationsExportExcelHref(args: {
   filter?: string;
   sales?: string;
+  from?: string;
+  to?: string;
+  full?: boolean;
 }): string {
   const u = new URLSearchParams();
   u.set("kind", "report-recommendations");
   if (args.filter && args.filter !== "all") u.set("filter", args.filter);
   if (args.sales && args.sales !== "all") u.set("sales", args.sales);
+  if (args.full) u.set("full", "1");
+  else {
+    if (args.from) u.set("from", args.from);
+    if (args.to) u.set("to", args.to);
+  }
   return `/api/export/excel?${u.toString()}`;
 }
 

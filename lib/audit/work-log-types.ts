@@ -7,6 +7,8 @@ export type AuditWorkEvent = {
 export type AuditWorkClientGroup = {
   clientId: string;
   clientName: string;
+  /** مندوب المبيعات المسند إليه العميل */
+  assignedSalesName: string | null;
   /** اسم الشركة / المسؤول — للعرض في سجل العمل */
   company: string | null;
   events: AuditWorkEvent[];

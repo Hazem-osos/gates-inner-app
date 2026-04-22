@@ -9,7 +9,6 @@ import {
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
-import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
@@ -33,7 +32,7 @@ export default async function ReportClosedPage({
   }>;
 }) {
   const user = await requireSessionUser();
-  const stylesUserId = (await resolveSessionDbUserId(user)) ?? user.id;
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
@@ -61,12 +60,6 @@ export default async function ReportClosedPage({
             c.notBClassification === classKey
         )
       : clients;
-
-  const rowStyles = await listReportRowStylesForClients({
-    userId: stylesUserId,
-    reportKey: "report-closed",
-    clientIds: filtered.map((c) => c.id),
-  });
 
   const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
 
@@ -173,10 +166,10 @@ export default async function ReportClosedPage({
       <ReportBTable
         rows={rows}
         classifications={classifications}
-        rowStyles={rowStyles}
-        currentUserId={stylesUserId}
         rowStyleReportType="closed"
         toolbar="closed"
+        workLogUserId={workLogUserId}
+        workLogUserRole={user.role}
       />
     </div>
   );

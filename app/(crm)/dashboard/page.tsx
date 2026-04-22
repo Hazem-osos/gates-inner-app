@@ -2,25 +2,27 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { DashboardShortcuts } from "@/components/dashboard/dashboard-shortcuts";
-import { MarkAlertButton } from "@/components/dashboard/mark-alert-button";
 import { ReportBTable } from "@/components/reports/report-b-table";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
 import { getDashboardData } from "@/lib/data/dashboard";
-import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { dashboardFollowupsExportHref } from "@/lib/export-excel-href";
 import { passesNeglected } from "@/lib/report-b-utils";
-import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { cn } from "@/lib/utils";
+import { todayInputDate } from "@/lib/date-arabic";
+import {
+  buildRecommendationsReportHref,
+  RECOMMENDATIONS_WIDE_RANGE_START_YMD,
+} from "@/lib/recommendations-report-search";
+import { buttonVariants } from "@/components/ui/button";
+import { requireSessionUser } from "@/lib/auth-helpers";
 import { endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +31,21 @@ export default async function DashboardPage() {
   const user = await requireSessionUser();
 
   const [
-    { unreadAlerts, openRecs },
+    { pendingActionRecommendationsCount },
     followupClients,
     classifications,
   ] = await Promise.all([
-    getDashboardData(user.role, user.id),
+    getDashboardData(user.id),
     listClientsForDashboardFollowups(user.role, user.id),
     listClientClassifications(),
   ]);
+
+  const todayYmd = todayInputDate();
+  const recommendationsPendingHref = buildRecommendationsReportHref({
+    filter: "pending",
+    fromYmd: RECOMMENDATIONS_WIDE_RANGE_START_YMD,
+    toYmd: todayYmd,
+  });
 
   const rowsAll = followupClients.map(clientEntityToReportBRow);
   const todayStart = startOfDay(new Date());
@@ -50,23 +59,8 @@ export default async function DashboardPage() {
 
   const overdueRows = rowsAll.filter((r) => passesNeglected(r));
 
-  const clientIds = [
-    ...new Set([...todayRows, ...overdueRows].map((r) => r.id)),
-  ];
-
-  const reportRowStyleUserId =
-    (await resolveSessionDbUserId(user)) ?? user.id;
-
-  const rowStyles = await listReportRowStylesForClients({
-    userId: reportRowStyleUserId,
-    reportKey: "report-b",
-    clientIds,
-  });
-
   const reportBTableSharedProps = {
     classifications,
-    rowStyles,
-    currentUserId: reportRowStyleUserId,
   } as const;
 
   return (
@@ -74,51 +68,34 @@ export default async function DashboardPage() {
       <PageHeader
         fullWidthBar
         title="لوحة إرشادية بالمتابعات اليومية"
-        subtitle={`مرحباً ${user.name} — متابعاتك وتنبيهاتك.`}
+        subtitle={`مرحباً ${user.name} — متابعاتك اليومية.`}
       />
 
       <ExportToolbar excelHref={dashboardFollowupsExportHref()} />
 
-      <DashboardShortcuts />
-
-      <Card>
+      <Card className="border-amber-200/80 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            تنبيهات غير مقروءة
-            {unreadAlerts.length > 0 ? (
-              <Badge variant="destructive">{unreadAlerts.length}</Badge>
-            ) : null}
-          </CardTitle>
-          <CardDescription>توصيات الإدارة والتنبيهات الأخرى</CardDescription>
+          <CardTitle>توصيات إدارة — لم يُتخذ إجراء</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {unreadAlerts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لا توجد تنبيهات جديدة.</p>
-          ) : (
-            unreadAlerts.map((a) => (
-              <div
-                key={a.id}
-                className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-medium">{a.title}</p>
-                  {a.message ? (
-                    <p className="text-sm text-muted-foreground">{a.message}</p>
-                  ) : null}
-                  {a.client ? (
-                    <Link
-                      href={`/clients/${a.client.id}`}
-                      className="text-sm text-primary underline-offset-4 hover:underline"
-                    >
-                      {a.client.name}
-                      {a.client.company ? ` — ${a.client.company}` : ""}
-                    </Link>
-                  ) : null}
-                </div>
-                <MarkAlertButton alertId={a.id} />
-              </div>
-            ))
-          )}
+        <CardContent className="space-y-4 text-sm text-foreground">
+          <p className="text-muted-foreground" dir="rtl">
+            يُحصى فقط ما هو <span className="font-medium text-foreground">موجّه لك</span>{" "}
+            (كمسند تابع للتوصية) ولا يزال حقل «الإجراء المتخذ» فارغاً، من بداية تسجيل
+            التوصيات حتى <span className="font-medium text-foreground">{todayYmd}</span>.
+            مندوبو المبيعات يرون طلباتهم فقط؛ الإدارة ترى التقرير حسب فلتر السيلز
+            داخل صفحة التوصيات.
+          </p>
+          <p className="text-lg font-semibold tabular-nums text-amber-900 dark:text-amber-100" dir="rtl">
+            {pendingActionRecommendationsCount === 0
+              ? "لا توجد لديك توصيات بلا إجراء في هذا النطاق."
+              : `يوجد ${pendingActionRecommendationsCount} توصية لم يُتخذ بشأنها إجراء حتى تاريخه.`}
+          </p>
+          <Link
+            href={recommendationsPendingHref}
+            className={cn(buttonVariants({ variant: "default" }))}
+          >
+            عرض التوصيات في التقرير
+          </Link>
         </CardContent>
       </Card>
 
@@ -141,6 +118,7 @@ export default async function DashboardPage() {
               rows={todayRows}
               {...reportBTableSharedProps}
               auditReportKey="report-b"
+              toolbar="dashboard"
             />
           )}
         </div>
@@ -163,38 +141,11 @@ export default async function DashboardPage() {
               rows={overdueRows}
               {...reportBTableSharedProps}
               auditReportKey="report-b"
+              toolbar="dashboard"
             />
           )}
         </div>
       </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>توصيات بحاجة لتأكيدك</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {openRecs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لا توجد توصيات مفتوحة.</p>
-          ) : (
-            openRecs.map((r) => (
-              <div key={r.id} className="rounded-md border border-border/50 p-3 text-sm">
-                <p className="text-muted-foreground">
-                  من {r.author.name} — {r.client?.name}
-                </p>
-                <p className="mt-1 whitespace-pre-wrap" dir="rtl">
-                  {r.body}
-                </p>
-                <Link
-                  href={`/clients/${r.clientId}`}
-                  className="mt-2 inline-block text-xs text-primary underline-offset-4 hover:underline"
-                >
-                  فتح بطاقة العميل
-                </Link>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

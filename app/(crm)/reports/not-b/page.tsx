@@ -9,7 +9,6 @@ import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
-import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
@@ -33,7 +32,7 @@ export default async function ReportNotBPage({
   }>;
 }) {
   const user = await requireSessionUser();
-  const stylesUserId = (await resolveSessionDbUserId(user)) ?? user.id;
+  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
@@ -60,12 +59,6 @@ export default async function ReportNotBPage({
             c.notBClassification === classKey
         )
       : clients;
-
-  const rowStyles = await listReportRowStylesForClients({
-    userId: stylesUserId,
-    reportKey: "report-not-b",
-    clientIds: filtered.map((c) => c.id),
-  });
 
   const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
 
@@ -102,18 +95,27 @@ export default async function ReportNotBPage({
         dir="rtl"
       >
         <ReportPageExportsToolbar config={exportsConfig} />
-        <SalesFilterLinks
-          bare
-          role={user.role}
-          pathname="/reports/not-b"
-          searchParams={{
-            ...(sp.q ? { q: sp.q } : {}),
-            ...(classKey && classKey !== "all"
-              ? { class: classKey }
-              : {}),
-          }}
-          currentSales={salesKey}
-        />
+        {user.role !== "SALES" ? (
+          <div className="flex min-w-0 max-w-full flex-col items-end gap-1 self-center">
+            <SalesFilterLinks
+              bare
+              role={user.role}
+              pathname="/reports/not-b"
+              searchParams={{
+                ...(sp.q ? { q: sp.q } : {}),
+                ...(classKey && classKey !== "all"
+                  ? { class: classKey }
+                  : {}),
+              }}
+              currentSales={salesKey}
+            />
+            {salesKey !== "all" ? (
+              <p className="max-w-sm text-right text-xs font-medium text-destructive">
+                يوجد فلتر نشط على النتائج المعروضة.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/reports/not-b" method="get">
@@ -159,9 +161,9 @@ export default async function ReportNotBPage({
       <ReportBTable
         rows={rows}
         classifications={classifications}
-        rowStyles={rowStyles}
-        currentUserId={stylesUserId}
         rowStyleReportType="not-b"
+        workLogUserId={workLogUserId}
+        workLogUserRole={user.role}
       />
     </div>
   );
