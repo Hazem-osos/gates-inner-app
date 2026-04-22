@@ -7,11 +7,17 @@ import { cn } from "@/lib/utils"
 function Table({
   className,
   containerClassName,
+  containerDir,
   ...props
-}: React.ComponentProps<"table"> & { containerClassName?: string }) {
+}: React.ComponentProps<"table"> & {
+  containerClassName?: string
+  /** اتجاه حاوية التمرير (مفيد للتمرير الأفقي المتسق مع scrollLeft) */
+  containerDir?: "ltr" | "rtl"
+}) {
   return (
     <div
       data-slot="table-container"
+      dir={containerDir}
       className={cn("relative w-full overflow-auto", containerClassName)}
     >
       <table

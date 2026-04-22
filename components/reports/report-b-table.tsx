@@ -15,7 +15,13 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -218,15 +224,31 @@ export function ReportBTable({
   const scrollReportBHorizontal = useCallback((direction: -1 | 1) => {
     const root = reportBScrollRef.current;
     if (!root) return;
-    /** `Table` wraps `<table>` in an inner div that actually scrolls horizontally. */
+    /** `Table` uses `containerDir="ltr"` so scrollLeft 0 = أقصى يسار المحتوى وmax = أقصى يمين. */
     const el =
       root.querySelector<HTMLElement>('[data-slot="table-container"]') ?? root;
     if (el.scrollWidth <= el.clientWidth + 1) return;
     const step = Math.max(280, Math.round(el.clientWidth * 0.42));
-    const rtl = getComputedStyle(el).direction === "rtl";
-    const leftDelta = (rtl ? -1 : 1) * direction * step;
+    const leftDelta = direction * step;
     el.scrollBy({ left: leftDelta, behavior: "smooth" });
   }, []);
+
+  const scrollReportBHorizontalToEdge = useCallback(
+    (edge: "start" | "end") => {
+      const root = reportBScrollRef.current;
+      if (!root) return;
+      const el =
+        root.querySelector<HTMLElement>('[data-slot="table-container"]') ??
+        root;
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      el.scrollTo({
+        left: edge === "start" ? 0 : max,
+        behavior: "smooth",
+      });
+    },
+    []
+  );
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [reopeningClientId, setReopeningClientId] = useState<string | null>(
     null
@@ -897,6 +919,7 @@ export function ReportBTable({
         className="min-w-0 w-full rounded-xl border border-border/60 shadow-sm"
       >
           <Table
+            containerDir="ltr"
             containerClassName={
               dashboardMode
                 ? "max-h-[min(38vh,320px)]"
@@ -1140,18 +1163,32 @@ export function ReportBTable({
                         </Button>
                         <div
                           dir="ltr"
-                          className="mt-1.5 flex items-center justify-center gap-1 border-t border-border/50 pt-1.5 dark:border-border/40"
+                          className="mt-1.5 flex flex-nowrap items-center justify-center gap-0.5 border-t border-border/50 pt-1.5 dark:border-border/40"
                         >
                           <Button
                             type="button"
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليمين"
-                            aria-label="تمرير الجدول لليمين"
+                            title="الانتقال لأقصى اليسار (بداية الصف في التمرير)"
+                            aria-label="الانتقال لأقصى اليسار"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(1);
+                              scrollReportBHorizontalToEdge("start");
+                            }}
+                          >
+                            <ArrowLeftToLine className="size-4" aria-hidden />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="size-7 shrink-0"
+                            title="تمرير نحو اليسار"
+                            aria-label="تمرير نحو اليسار"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              scrollReportBHorizontal(-1);
                             }}
                           >
                             <ChevronLeft className="size-4" aria-hidden />
@@ -1161,14 +1198,28 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليسار"
-                            aria-label="تمرير الجدول لليسار"
+                            title="تمرير نحو اليمين"
+                            aria-label="تمرير نحو اليمين"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(-1);
+                              scrollReportBHorizontal(1);
                             }}
                           >
                             <ChevronRight className="size-4" aria-hidden />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="size-7 shrink-0"
+                            title="الانتقال لأقصى اليمين (نهاية الصف في التمرير)"
+                            aria-label="الانتقال لأقصى اليمين"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              scrollReportBHorizontalToEdge("end");
+                            }}
+                          >
+                            <ArrowRightToLine className="size-4" aria-hidden />
                           </Button>
                         </div>
                       </div>
