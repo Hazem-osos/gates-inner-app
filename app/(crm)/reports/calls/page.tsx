@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import {
   Table,
   TableBody,
@@ -56,26 +58,29 @@ export default async function CallsReportPage({
   /** created = عملاء أُضيفوا للنظام في الفترة؛ initial = من لهم أول اتصال في الفترة */
   const dateMode = sp.dateMode === "initial" ? "initial" : "created";
 
-  const clients = await prisma.client.findMany({
-    where:
-      dateMode === "initial"
-        ? {
-            ...scope,
-            initialCallDate: { gte: from, lte: to },
-          }
-        : {
-            ...scope,
-            createdAt: { gte: from, lte: to },
-          },
-    include: {
-      assignedUser: { select: { name: true } },
-    },
-    orderBy:
-      dateMode === "initial"
-        ? { initialCallDate: "desc" }
-        : { createdAt: "desc" },
-    take: 800,
-  });
+  const [clients, activeSalesName] = await Promise.all([
+    prisma.client.findMany({
+      where:
+        dateMode === "initial"
+          ? {
+              ...scope,
+              initialCallDate: { gte: from, lte: to },
+            }
+          : {
+              ...scope,
+              createdAt: { gte: from, lte: to },
+            },
+      include: {
+        assignedUser: { select: { name: true } },
+      },
+      orderBy:
+        dateMode === "initial"
+          ? { initialCallDate: "desc" }
+          : { createdAt: "desc" },
+      take: 800,
+    }),
+    resolveActiveSalesName(user.role, salesKey),
+  ]);
 
   const filtered = clients.filter((c) => {
     const hasVisit = Boolean(c.visitAppointmentDate);
@@ -184,10 +189,10 @@ export default async function CallsReportPage({
         {stats.unscheduled}
       </p>
 
-      {filterActive ? (
-        <p className="text-sm font-medium text-destructive">
-          يوجد فلتر نشط على النتائج المعروضة.
-        </p>
+      {activeSalesName ? (
+        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+      ) : filterActive ? (
+        <GenericFilterActiveNotice />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">

@@ -7,8 +7,10 @@ import {
   WarmingReportTable,
   type WarmingReportRow,
 } from "@/components/reports/warming-report-table";
+import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -50,30 +52,33 @@ export default async function ReportWarmingPage({
     salesUserId: salesKey,
   });
 
-  const clients = await prisma.client.findMany({
-    where: scope,
-    select: {
-      id: true,
-      name: true,
-      activity: true,
-      phone: true,
-      initialCallDate: true,
-      clientWarmingText: true,
-      warmingTools: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: {
-          day1Done: true,
-          day2Done: true,
-          day3Done: true,
-          day2Content: true,
-          day3Content: true,
+  const [clients, activeSalesName] = await Promise.all([
+    prisma.client.findMany({
+      where: scope,
+      select: {
+        id: true,
+        name: true,
+        activity: true,
+        phone: true,
+        initialCallDate: true,
+        clientWarmingText: true,
+        warmingTools: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            day1Done: true,
+            day2Done: true,
+            day3Done: true,
+            day2Content: true,
+            day3Content: true,
+          },
         },
       },
-    },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-    take: 800,
-  });
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: 800,
+    }),
+    resolveActiveSalesName(user.role, salesKey),
+  ]);
 
   const today = new Date();
   let rows: WarmingReportRow[] = clients.map((c) => {
@@ -138,10 +143,10 @@ export default async function ReportWarmingPage({
         </Link>
       </div>
 
-      {filterActive ? (
-        <p className="text-sm font-medium text-destructive">
-          يوجد فلتر نشط على النتائج المعروضة.
-        </p>
+      {activeSalesName ? (
+        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+      ) : filterActive ? (
+        <GenericFilterActiveNotice />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">

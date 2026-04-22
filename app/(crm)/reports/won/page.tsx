@@ -4,9 +4,11 @@ import { connection } from "next/server";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
@@ -95,15 +97,18 @@ async function ReportWonContent({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
-  const clients = await listClientsForReport({
-    role: user.role,
-    userId: user.id,
-    salesUserId: salesKey,
-    status: ClientStatus.WON,
-    sort,
-    sortDir: dir,
-    take: 500,
-  });
+  const [clients, activeSalesName] = await Promise.all([
+    listClientsForReport({
+      role: user.role,
+      userId: user.id,
+      salesUserId: salesKey,
+      status: ClientStatus.WON,
+      sort,
+      sortDir: dir,
+      take: 500,
+    }),
+    resolveActiveSalesName(user.role, salesKey),
+  ]);
 
   const from = safeStartOfDayFromYmd(sp.from);
   const to = safeEndOfDayFromYmd(sp.to);
@@ -171,10 +176,10 @@ async function ReportWonContent({
         يعرض العملاء الذين تم البيع لهم فقط (مع فلتر التاريخ إن وُجد).
       </p>
 
-      {filterActive ? (
-        <p className="text-sm font-medium text-destructive">
-          يوجد فلتر نشط على النتائج المعروضة.
-        </p>
+      {activeSalesName ? (
+        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+      ) : filterActive ? (
+        <GenericFilterActiveNotice />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">

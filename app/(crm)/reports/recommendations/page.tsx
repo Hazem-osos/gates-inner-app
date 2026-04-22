@@ -6,8 +6,10 @@ import {
   RecommendationsReportTable,
   type RecommendationReportRow,
 } from "@/components/reports/recommendations-report-table";
+import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { todayInputDate } from "@/lib/date-arabic";
@@ -45,6 +47,7 @@ export default async function RecommendationsReportPage({
   const sp = await searchParams;
   const filter = sp.filter ?? "all";
   const salesKey = sp.sales ?? "all";
+  const activeSalesName = await resolveActiveSalesName(user.role, salesKey);
   const todayYmd = todayInputDate();
   const dateResolved = resolveRecommendationsDateSearchParams(sp);
   const { fromYmd, toYmd, fullDb: fullDbView } = dateResolved;
@@ -279,10 +282,10 @@ export default async function RecommendationsReportPage({
         </Link>
       </div>
 
-      {filterActive ? (
-        <p className="text-sm font-medium text-destructive">
-          يوجد فلتر نشط على النتائج المعروضة.
-        </p>
+      {activeSalesName ? (
+        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+      ) : filterActive ? (
+        <GenericFilterActiveNotice />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-2">

@@ -10,8 +10,8 @@ import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-tab
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
-import { prisma } from "@/lib/prisma";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { parseReportSortParams } from "@/lib/report-sort-params";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export default async function ReportBPage({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
-  const [clients, classifications] = await Promise.all([
+  const [clients, classifications, activeSalesName] = await Promise.all([
     listClientsForReport({
       role: user.role,
       userId: user.id,
@@ -40,19 +40,10 @@ export default async function ReportBPage({
       sortDir: dir,
     }),
     listClientClassifications(),
+    resolveActiveSalesName(user.role, salesKey),
   ]);
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
-
-  const activeSalesName =
-    user.role !== "SALES" && salesKey !== "all"
-      ? (
-          await prisma.user.findUnique({
-            where: { id: salesKey },
-            select: { name: true },
-          })
-        )?.name ?? null
-      : null;
 
   const exportsConfig: ReportToolbarExportsConfig = {
     excelHref: reportExportExcelHref({

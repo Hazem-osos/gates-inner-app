@@ -6,7 +6,9 @@ import {
   ReportPageExportsToolbar,
   type ReportToolbarExportsConfig,
 } from "@/components/reports/report-page-exports-toolbar";
+import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { Button } from "@/components/ui/button";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForReport } from "@/lib/data/report-queries";
@@ -37,7 +39,7 @@ export default async function ReportClosedPage({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
-  const [clients, classifications] = await Promise.all([
+  const [clients, classifications, activeSalesName] = await Promise.all([
     listClientsForReport({
       role: user.role,
       userId: user.id,
@@ -49,6 +51,7 @@ export default async function ReportClosedPage({
       take: 500,
     }),
     listClientClassifications(),
+    resolveActiveSalesName(user.role, salesKey),
   ]);
 
   const classKey = sp.class?.trim();
@@ -155,13 +158,13 @@ export default async function ReportClosedPage({
         {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
 
-      <ReportRecordsCount count={rows.length} />
-
-      {filterActive ? (
-        <p className="text-sm font-medium text-destructive">
-          يوجد فلتر نشط على النتائج المعروضة.
-        </p>
+      {activeSalesName ? (
+        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+      ) : filterActive ? (
+        <GenericFilterActiveNotice />
       ) : null}
+
+      <ReportRecordsCount count={rows.length} />
 
       <ReportBTable
         rows={rows}

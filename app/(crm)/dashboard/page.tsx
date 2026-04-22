@@ -2,7 +2,9 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { REPORT_FILTER_EXPORTS_BAR_CLASS } from "@/components/reports/report-page-exports-toolbar";
 import { ReportBTable } from "@/components/reports/report-b-table";
 import {
@@ -44,12 +46,14 @@ export default async function DashboardPage({
     { pendingActionRecommendationsCount },
     followupClients,
     classifications,
+    activeSalesName,
   ] = await Promise.all([
     getDashboardData(recCountUserId),
     listClientsForDashboardFollowups(user.role, user.id, {
       salesUserId: salesKey,
     }),
     listClientClassifications(),
+    resolveActiveSalesName(user.role, salesKey),
   ]);
 
   const todayYmd = todayInputDate();
@@ -117,14 +121,15 @@ export default async function DashboardPage({
               searchParams={{}}
               currentSales={salesKey}
             />
-            {salesKey !== "all" ? (
-              <p className="max-w-sm text-right text-xs font-medium text-destructive">
-                يوجد فلتر نشط على النتائج المعروضة.
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>
+
+      {user.role !== "SALES" && activeSalesName ? (
+        <div className="w-full">
+          <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+        </div>
+      ) : null}
 
       <Card className="border-amber-200/80 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20">
         <CardHeader>

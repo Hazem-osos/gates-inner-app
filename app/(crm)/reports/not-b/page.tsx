@@ -13,7 +13,7 @@ import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
+import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ export default async function ReportNotBPage({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
-  const [clients, classifications] = await Promise.all([
+  const [clients, classifications, activeSalesName] = await Promise.all([
     listClientsForReport({
       role: user.role,
       userId: user.id,
@@ -49,6 +49,7 @@ export default async function ReportNotBPage({
       sortDir: dir,
     }),
     listClientClassifications(),
+    resolveActiveSalesName(user.role, salesKey),
   ]);
 
   const classKey = sp.class?.trim();
@@ -66,16 +67,6 @@ export default async function ReportNotBPage({
   const classFilter =
     classKey && classKey !== "all"
       ? classifications.find((x) => x.id === classKey)?.label ?? classKey
-      : null;
-
-  const activeSalesName =
-    user.role !== "SALES" && salesKey !== "all"
-      ? (
-          await prisma.user.findUnique({
-            where: { id: salesKey },
-            select: { name: true },
-          })
-        )?.name ?? null
       : null;
 
   const exportsConfig: ReportToolbarExportsConfig = {
