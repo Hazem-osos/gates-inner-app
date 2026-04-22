@@ -237,6 +237,7 @@ export async function buildExportPayload(
           select: {
             id: true,
             name: true,
+            company: true,
             assignedUser: { select: { name: true, deletedAt: true } },
           },
         },
@@ -283,6 +284,7 @@ export async function buildExportPayload(
       select: {
         id: true,
         name: true,
+        company: true,
         updatedAt: true,
         managementRecommendationText: true,
         managementRecommendationDate: true,
@@ -307,6 +309,7 @@ export async function buildExportPayload(
         ).getTime(),
         row: {
           العميل: r.client?.name ?? "",
+          الشركة: r.client?.company ?? "",
           سيلز: salesLine(r.targetUser, r.client?.assignedUser),
           التوصية: r.body,
           تاريخ_التوصية: formatExportDateOnly(
@@ -341,6 +344,7 @@ export async function buildExportPayload(
           ).getTime(),
           row: {
             العميل: c.name,
+            الشركة: c.company ?? "",
             سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
             التوصية: t,
             تاريخ_التوصية: formatExportDateOnly(

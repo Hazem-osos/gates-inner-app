@@ -84,6 +84,7 @@ export default async function RecommendationsReportPage({
         select: {
           id: true,
           name: true,
+          company: true,
           assignedUser: { select: { name: true, deletedAt: true } },
         },
       },
@@ -127,6 +128,7 @@ export default async function RecommendationsReportPage({
     select: {
       id: true,
       name: true,
+      company: true,
       updatedAt: true,
       managementRecommendationText: true,
       managementRecommendationDate: true,
@@ -138,6 +140,7 @@ export default async function RecommendationsReportPage({
     id: r.id,
     clientId: r.clientId,
     clientName: r.client?.name ?? "—",
+    company: r.client?.company ?? null,
     salesName: (() => {
       const u = r.targetUser ?? r.client?.assignedUser;
       return u ? userDisplayName(u) : null;
@@ -170,6 +173,7 @@ export default async function RecommendationsReportPage({
       id: `pending-sync:${c.id}`,
       clientId: c.id,
       clientName: c.name,
+      company: c.company ?? null,
       salesName: c.assignedUser
         ? userDisplayName(c.assignedUser)
         : null,

@@ -20,6 +20,7 @@ export type RecommendationReportRow = {
   id: string;
   clientId: string;
   clientName: string;
+  company: string | null;
   salesName: string | null;
   body: string;
   recommendationDateIso: string | null;
@@ -39,7 +40,12 @@ export function RecommendationsReportTable({
       <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
         <TableHeader>
           <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
-            <TableHead className="min-w-[130px]">اسم العميل</TableHead>
+            <TableHead className="w-[6.5rem] max-w-[6.5rem] min-w-[5rem]">
+              اسم العميل
+            </TableHead>
+            <TableHead className="w-[5.5rem] max-w-[6rem] min-w-[4rem]">
+              الشركة
+            </TableHead>
             <TableHead>موظف السيلز</TableHead>
             <TableHead className="min-w-[200px]">التوصية</TableHead>
             <TableHead>تاريخ التوصية</TableHead>
@@ -52,7 +58,7 @@ export function RecommendationsReportTable({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 لا توجد توصيات. تظهر هنا التوصيات المسجّلة من بطاقة العميل أو من عمود «توصيات
                 الإدارة» في تقرير B بعد الحفظ.
               </TableCell>
@@ -116,12 +122,25 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
 
   return (
     <TableRow>
-      <TableCell>
-        <Link href={`/clients/${r.clientId}`} className="text-primary underline">
+      <TableCell className="max-w-[6.5rem] p-2 align-top">
+        <Link
+          href={`/clients/${r.clientId}`}
+          className="line-clamp-2 break-words text-sm text-primary underline"
+        >
           {r.clientName}
         </Link>
       </TableCell>
-      <TableCell>{r.salesName ?? "—"}</TableCell>
+      <TableCell
+        className="max-w-[6rem] p-2 align-top text-sm text-muted-foreground"
+        title={r.company ?? undefined}
+      >
+        {r.company?.trim() ? (
+          <span className="line-clamp-2 break-words">{r.company}</span>
+        ) : (
+          "—"
+        )}
+      </TableCell>
+      <TableCell className="text-sm">{r.salesName ?? "—"}</TableCell>
       <TableCell>
         <Textarea
           rows={3}
