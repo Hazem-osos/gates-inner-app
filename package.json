@@ -17,6 +17,7 @@
     "db:wipe:keep-users-classifications": "npx tsx scripts/wipe-db-keep-users-classifications.ts",
     "db:seed:core-labels": "npx tsx scripts/seed-core-field-labels.ts",
     "db:generate": "prisma generate",
+    "test:register-duplicate": "npx tsx scripts/test-register-duplicate-email.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

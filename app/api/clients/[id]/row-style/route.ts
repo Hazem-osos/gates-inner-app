@@ -169,6 +169,7 @@ export async function DELETE(
         action: "ROW_STYLE_CLEAR",
         kind: "REPORT_ROW_STYLE",
         summary: `إزالة تلوين صف من ${reportKey}`,
+        meta: { reportKey } as unknown as Prisma.InputJsonValue,
       },
     });
 

@@ -22,22 +22,22 @@ export default async function RecommendationsReportPage({
   searchParams: Promise<{ filter?: string; sales?: string }>;
 }) {
   const user = await requireSessionUser();
-  const workLogUserId = (await resolveSessionDbUserId(user)) ?? user.id;
+  const dbUserId = (await resolveSessionDbUserId(user)) ?? user.id;
+  const workLogUserId = dbUserId;
   const sp = await searchParams;
   const filter = sp.filter ?? "all";
   const salesKey = sp.sales ?? "all";
 
-  const clientScope =
+  /** التوصية تُوجَّه للمندوب عبر targetUserId — لا تعتمد على مسند العميل الحالي. */
+  const recommendationWhere =
     user.role === "SALES"
-      ? { assignedUserId: user.id }
+      ? { targetUserId: dbUserId }
       : salesKey !== "all"
-        ? { assignedUserId: salesKey }
+        ? { targetUserId: salesKey }
         : {};
 
   let rows = await prisma.managementRecommendation.findMany({
-    where: {
-      client: clientScope,
-    },
+    where: recommendationWhere,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 500,
     include: {
@@ -49,6 +49,7 @@ export default async function RecommendationsReportPage({
         },
       },
       author: { select: { name: true } },
+      targetUser: { select: { name: true } },
     },
   });
 
@@ -62,7 +63,8 @@ export default async function RecommendationsReportPage({
     id: r.id,
     clientId: r.clientId,
     clientName: r.client?.name ?? "—",
-    salesName: r.client?.assignedUser?.name ?? null,
+    salesName:
+      r.targetUser?.name ?? r.client?.assignedUser?.name ?? null,
     body: r.body,
     recommendationDateIso: r.recommendationDate?.toISOString() ?? null,
     createdAtIso: r.createdAt.toISOString(),

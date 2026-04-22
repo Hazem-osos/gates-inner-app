@@ -26,17 +26,21 @@ export function ReportWorkLogDialog({
   const [auditTo, setAuditTo] = useState(todayInputDate());
   const [auditGroups, setAuditGroups] = useState<AuditWorkClientGroup[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const t = todayInputDate();
     setAuditFrom(t);
     setAuditTo(t);
+    setAuditError(null);
+    setAuditGroups([]);
   }, [open]);
 
   const loadAudit = useCallback(async () => {
     if (!userId) return;
     setAuditLoading(true);
+    setAuditError(null);
     try {
       const p = new URLSearchParams({
         from: `${auditFrom}T00:00:00`,
@@ -51,11 +55,13 @@ export function ReportWorkLogDialog({
       };
       if (!res.ok) {
         setAuditGroups([]);
+        setAuditError(data.message ?? `فشل التحميل (${res.status}).`);
       } else {
         setAuditGroups(data.groups ?? []);
       }
     } catch {
       setAuditGroups([]);
+      setAuditError("تعذر الاتصال بالخادم.");
     } finally {
       setAuditLoading(false);
     }
@@ -114,6 +120,11 @@ export function ReportWorkLogDialog({
             />
           </label>
         </div>
+        {auditError ? (
+          <p className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+            {auditError}
+          </p>
+        ) : null}
         <div className="mt-5 max-h-[min(70vh,620px)] overflow-auto rounded-2xl border border-border/70 bg-gradient-to-b from-muted/30 to-background p-1 shadow-inner">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -178,7 +189,7 @@ export function ReportWorkLogDialog({
               ))}
             </tbody>
           </table>
-          {auditGroups.length === 0 && !auditLoading ? (
+          {auditGroups.length === 0 && !auditLoading && !auditError ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
               لا توجد سجلات لهذا التقرير في الفترة — اضغط موافق بعد اختيار التواريخ.
             </p>

@@ -46,6 +46,11 @@ const tailLinks: NavLink[] = [
     label: "نسخ احتياطي للقاعدة",
     adminOnly: true,
   },
+  {
+    href: "/settings/users",
+    label: "المستخدمون وكلمة المرور",
+    adminOnly: true,
+  },
   { href: "/admin/custom-fields", label: "الحقول المخصصة", adminOnly: true },
   { href: "/admin/core-labels", label: "تسميات الحقول", adminOnly: true },
 ];
@@ -58,6 +63,19 @@ function filterLinks<
   return items.filter(
     (l) => (!l.adminOnly || isAdmin) && (!l.managerPlus || managerPlus)
   );
+}
+
+function roleLabelAr(role: UserRole): string {
+  switch (role) {
+    case "ADMIN":
+      return "أدمن";
+    case "MANAGER":
+      return "مدير";
+    case "SALES":
+      return "سيلز";
+    default:
+      return role;
+  }
 }
 
 function isActive(pathname: string, href: string): boolean {
@@ -291,9 +309,9 @@ export function CrmNav({
 
         <div className="flex shrink-0 items-center gap-2 border-border/70 ps-2 sm:gap-3 sm:border-s sm:ps-4">
           <div
-            className="flex max-w-[min(17rem,calc(100vw-9rem))] items-center gap-2.5 rounded-2xl border border-border/70 bg-card/80 py-1.5 pe-3 ps-2 shadow-sm backdrop-blur-md dark:bg-card/60"
+            className="flex max-w-[min(19rem,calc(100vw-9rem))] items-center gap-2.5 rounded-2xl border border-border/70 bg-card/80 py-1.5 pe-3 ps-2 shadow-sm backdrop-blur-md dark:bg-card/60"
             dir="rtl"
-            aria-label={`مرحباً ${userName}`}
+            aria-label={`مرحباً ${userName}، ${roleLabelAr(role)}`}
           >
             <span
               className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20"
@@ -305,8 +323,16 @@ export function CrmNav({
               <span className="mb-0.5 block text-[0.6875rem] font-medium leading-none text-muted-foreground">
                 مرحباً
               </span>
-              <span className="block truncate text-[0.9375rem] font-semibold leading-snug tracking-tight text-foreground">
-                {userName}
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="truncate text-[0.9375rem] font-semibold leading-snug tracking-tight text-foreground">
+                  {userName}
+                </span>
+                <span
+                  className="shrink-0 rounded-md bg-muted/90 px-1.5 py-0.5 text-[0.625rem] font-medium leading-none text-muted-foreground ring-1 ring-border/60"
+                  title="الوظيفة في النظام"
+                >
+                  {roleLabelAr(role)}
+                </span>
               </span>
             </span>
           </div>

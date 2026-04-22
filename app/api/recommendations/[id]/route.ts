@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { getSessionUser } from "@/lib/auth-helpers";
+import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
@@ -25,9 +25,10 @@ export async function PATCH(
   }
 
   if (session.role === "SALES") {
-    if (rec.client.assignedUserId !== session.id) {
+    const dbId = (await resolveSessionDbUserId(session)) ?? session.id;
+    if (rec.targetUserId !== dbId) {
       return NextResponse.json(
-        { message: "غير مصرح بالوصول إلى بيانات هذا العميل." },
+        { message: "غير مصرح — التوصية ليست موجهة لحسابك." },
         { status: 403 }
       );
     }

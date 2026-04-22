@@ -4,7 +4,11 @@ import { AlertType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getSessionUser, isManagerOrAdmin } from "@/lib/auth-helpers";
+import {
+  getSessionUser,
+  isManagerOrAdmin,
+  resolveSessionDbUserId,
+} from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -62,6 +66,7 @@ export async function createRecommendationAction(
 
     revalidatePath(`/clients/${clientId}`);
     revalidatePath("/dashboard");
+    revalidatePath("/reports/recommendations");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -78,7 +83,8 @@ export async function acknowledgeRecommendationAction(
   const rec = await prisma.managementRecommendation.findUnique({
     where: { id: recommendationId },
   });
-  if (!rec || rec.targetUserId !== session.id) {
+  const dbId = (await resolveSessionDbUserId(session)) ?? session.id;
+  if (!rec || rec.targetUserId !== dbId) {
     return { ok: false, message: "غير مصرح." };
   }
 
@@ -89,5 +95,6 @@ export async function acknowledgeRecommendationAction(
 
   revalidatePath(`/clients/${rec.clientId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/reports/recommendations");
   return { ok: true };
 }

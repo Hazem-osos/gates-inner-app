@@ -638,7 +638,7 @@ export function ReportBTable({
         : null;
     }
     if (violation === "neglected")
-      return "يعرض العملاء التي انتهى موعد متابعتهم ولم تُسجَّل متابعة جديدة بعد ذلك في الجدول";
+      return "يعرض التقرير العملاء الذين تجاوز تاريخ المتابعة التالية تاريخ اليوم دون تسجيل متابعة لاحقة في خانات المتابعة بالجدول، أو الذين لا يوجد لهم تاريخ متابعة تالية محدد في ذلك العمود.";
     if (violation === "no_answer")
       return "يعرض العملاء المسجَّل في متابعاتهم عدم الرد";
     return null;
@@ -926,6 +926,7 @@ export function ReportBTable({
                   type="button"
                   variant="ghost"
                   className={violChip(violation === "neglected")}
+                  title="يشمل من تجاوز موعد المتابعة دون متابعة مسجّلة لاحقاً، ومن لا يوجد لهم تاريخ متابعة تالية محدد."
                   onClick={() =>
                     setViolation((v) =>
                       v === "neglected" ? null : "neglected"
@@ -1008,17 +1009,23 @@ export function ReportBTable({
           visitOverdueFilterMessage() ||
           visitBanner()) ? (
           <div
-            className="mt-4 space-y-1.5 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm leading-relaxed text-destructive dark:bg-destructive/10"
+            className="mt-4 space-y-2 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-4 text-base leading-relaxed text-destructive dark:bg-destructive/10"
             role="status"
           >
             {violationMessage() ? (
-              <p className="font-medium">{violationMessage()}</p>
+              <p className="text-[0.95rem] font-semibold leading-relaxed sm:text-[1.05rem]">
+                {violationMessage()}
+              </p>
             ) : null}
             {visitOverdueFilterMessage() ? (
-              <p className="font-medium">{visitOverdueFilterMessage()}</p>
+              <p className="text-[0.95rem] font-semibold leading-relaxed sm:text-[1.05rem]">
+                {visitOverdueFilterMessage()}
+              </p>
             ) : null}
             {visitBanner() ? (
-              <p className="text-destructive/90">{visitBanner()}</p>
+              <p className="text-[0.95rem] font-semibold leading-relaxed text-destructive/95 sm:text-[1.05rem]">
+                {visitBanner()}
+              </p>
             ) : null}
           </div>
         ) : null}

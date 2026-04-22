@@ -199,15 +199,15 @@ export async function buildExportPayload(
   if (kind === "report-recommendations") {
     const filter = sp.get("filter") ?? "all";
     const salesKey = sp.get("sales") ?? "all";
-    const clientScope =
+    const recommendationWhere =
       user.role === "SALES"
-        ? { assignedUserId: user.id }
+        ? { targetUserId: user.id }
         : salesKey !== "all"
-          ? { assignedUserId: salesKey }
+          ? { targetUserId: salesKey }
           : {};
 
     let rowsDb = await prisma.managementRecommendation.findMany({
-      where: { client: clientScope },
+      where: recommendationWhere,
       orderBy: { createdAt: "desc" },
       take: 500,
       include: {
@@ -218,6 +218,7 @@ export async function buildExportPayload(
           },
         },
         author: { select: { name: true } },
+        targetUser: { select: { name: true } },
       },
     });
 
@@ -229,7 +230,8 @@ export async function buildExportPayload(
 
     const rows = rowsDb.map((r) => ({
       العميل: r.client?.name ?? "",
-      سيلز: r.client?.assignedUser?.name ?? "",
+      سيلز:
+        r.targetUser?.name ?? r.client?.assignedUser?.name ?? "",
       التوصية: r.body,
       تاريخ_التوصية:
         formatExportDateOnly(r.recommendationDate ?? r.createdAt),

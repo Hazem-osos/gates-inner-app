@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Database,
   Flame,
+  KeyRound,
   LayoutDashboard,
   PhoneCall,
   SlidersHorizontal,
@@ -55,6 +56,12 @@ export const CRM_RIBBON_SHORTCUTS: CrmRibbonShortcut[] = [
     href: "/settings/backup",
     label: "نسخ احتياطي للقاعدة",
     Icon: Database,
+    adminOnly: true,
+  },
+  {
+    href: "/settings/users",
+    label: "المستخدمون وكلمة المرور",
+    Icon: KeyRound,
     adminOnly: true,
   },
   {

@@ -84,11 +84,12 @@ export async function GET(req: Request) {
       createdAt: { gte: from, lte: end },
     };
 
+    /** MySQL يتطلب مسار JSON صالحاً (مثل `$.reportKey`) — بدون `$.` يفشل الاستعلام ويُرجع خطأ 500. */
     const where: Prisma.AuditLogWhereInput = reportKey
       ? {
           ...baseWhere,
           meta: {
-            path: "reportKey",
+            path: "$.reportKey",
             equals: reportKey,
           },
         }

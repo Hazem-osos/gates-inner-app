@@ -14,7 +14,6 @@ export async function getDashboardData(role: UserRole, userId: string) {
     where: {
       targetUserId: userId,
       acknowledgedAt: null,
-      ...(role === "SALES" ? { client: { assignedUserId: userId } } : {}),
     },
     orderBy: { createdAt: "desc" },
     take: 30,

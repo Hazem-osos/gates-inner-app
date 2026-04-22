@@ -97,10 +97,16 @@ export function passesFollowCount(row: ReportBFilterRow, minCount: number): bool
   return n >= minCount;
 }
 
-/** انتهى موعد المتابعة دون تسجيل متابعة لاحقة في الجدول */
+/**
+ * عملاء مهملين:
+ * - لا يوجد تاريخ متابعة تالية في العمود (فارغ / غير صالح)، أو
+ * - انتهى موعد المتابعة قبل اليوم دون تسجيل متابعة لاحقة في خانات المتابعة بالجدول.
+ */
 export function passesNeglected(row: ReportBFilterRow): boolean {
-  const nf = parseIsoDate(row.nextFollowUpAt);
-  if (!nf || nf >= startOfToday()) return false;
+  const raw = (row.nextFollowUpAt ?? "").trim();
+  const nf = raw ? parseIsoDate(raw) : null;
+  if (!nf) return true;
+  if (nf >= startOfToday()) return false;
   const slots = normalizeSlotsSimple(row.followUpSlots);
   const recorded = slots.some((s) => {
     const d = parseIsoDate(s.date || null);
