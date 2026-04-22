@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 
-import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
 import { Button } from "@/components/ui/button";
 import { buildReportFlatImportFields } from "@/lib/import/report-flat-import-fields";
 import {
@@ -10,6 +10,26 @@ import {
   maxFollowUpSlotIndexFromHeaders,
 } from "@/lib/import/follow-up-slot-columns";
 import { cn } from "@/lib/utils";
+
+const DynamicExcelImporter = dynamic(
+  () =>
+    import("@/components/import/dynamic-excel-importer").then((m) => ({
+      default: m.DynamicExcelImporter,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="flex min-h-[12rem] items-center justify-center rounded-xl border border-dashed border-border/50 bg-muted/15"
+        role="status"
+        aria-busy="true"
+        aria-label="جاري تحميل أداة الاستيراد"
+      >
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    ),
+  }
+);
 
 type Props = {
   reportKind: string;

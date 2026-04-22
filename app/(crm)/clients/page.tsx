@@ -1,31 +1,15 @@
 import { FileSpreadsheet, Upload } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
-import { TransferClientDialog } from "@/components/clients/transfer-client-dialog";
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
-import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { aggregateClientsForScope } from "@/lib/data/client-aggregates";
-import {
-  buildClientsListWhere,
-  listClientsForUser,
-} from "@/lib/data/clients-list";
-import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
-import { formatDateArabicLong } from "@/lib/date-arabic";
-import { prisma } from "@/lib/prisma";
-import {
-  clientsImportTemplateHref,
-  clientsListExportHref,
-} from "@/lib/export-excel-href";
-import { statusLabelAr } from "@/lib/clients-form-values";
+  ClientsListCardSkeleton,
+  ClientsStatsLineSkeleton,
+} from "@/components/skeletons/crm-skeletons";
+import { clientsImportTemplateHref, clientsListExportHref } from "@/lib/export-excel-href";
 import { buttonVariants } from "@/components/ui/button";
 import {
   REPORT_EXCEL_EXPORT_ICON_CLASS,
@@ -34,7 +18,8 @@ import {
   REPORT_EXCEL_IMPORT_LINK_SOLID_CLASS,
 } from "@/lib/ui/report-export-import-classes";
 import { cn } from "@/lib/utils";
-import { ClientStatus } from "@prisma/client";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { ClientsListData } from "./_components/clients-list-data";
 
 export const dynamic = "force-dynamic";
 
@@ -49,63 +34,6 @@ export default async function ClientsListPage({
   const salesKey = sp.sales ?? "all";
   const qRaw = sp.q?.trim() ?? "";
   const q = qRaw || undefined;
-  /** نفس منطق تصدير Excel: لا تمرير `sales` عند «كل السيلز» */
-  const salesFilter =
-    salesKey && salesKey !== "all" ? salesKey : undefined;
-
-  const clients = await listClientsForUser(
-    user.role,
-    dbUserId,
-    salesFilter,
-    q
-  );
-
-  const salesUsers =
-    user.role === "ADMIN" || user.role === "MANAGER"
-      ? await prisma.user.findMany({
-          where: { isActive: true, role: "SALES", deletedAt: null },
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
-        })
-      : [];
-
-  const scopeWhere = buildClientsListWhere(
-    user.role,
-    dbUserId,
-    salesFilter,
-    q
-  );
-
-  const [{ total, byStatus, byClassification }, classifications] =
-    await Promise.all([
-      aggregateClientsForScope(scopeWhere),
-      prisma.clientClassification.findMany({
-        orderBy: { sortOrder: "asc" },
-        select: { id: true, label: true },
-      }),
-    ]);
-
-  const statusCount = (s: ClientStatus) =>
-    byStatus.find((x) => x.status === s)?._count._all ?? 0;
-
-  const bCount = statusCount(ClientStatus.B);
-  const nullClassCount =
-    byClassification.find((x) => x.classificationId === null)?._count._all ??
-    0;
-
-  const classParts = classifications.map((cl) => {
-    const n =
-      byClassification.find((x) => x.classificationId === cl.id)?._count
-        ._all ?? 0;
-    return `${cl.label}: ${n}`;
-  });
-
-  const statsParts = [
-    `إجمالي العملاء: ${total}`,
-    `B: ${bCount}`,
-    ...classParts,
-    ...(nullClassCount > 0 ? [`بدون تصنيف: ${nullClassCount}`] : []),
-  ];
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
@@ -135,7 +63,10 @@ export default async function ClientsListPage({
           <input type="hidden" name="sales" value={salesKey} />
         ) : null}
         <div className="min-w-0 flex-1 space-y-1">
-          <label htmlFor="clients-q" className="text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="clients-q"
+            className="text-xs font-medium text-muted-foreground"
+          >
             بحث
           </label>
           <input
@@ -198,56 +129,23 @@ export default async function ClientsListPage({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-destructive">{statsParts.join(" | ")}</p>
-        </div>
-        <Link
-          href="/clients/new"
-          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          + إضافة عميل
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>القائمة</CardTitle>
-          <CardDescription>آخر التحديثات أولاً</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {clients.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لا يوجد عملاء بعد.</p>
-          ) : (
-            clients.map((c) => (
-              <div
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-3 transition-colors hover:bg-muted/40"
-              >
-                <Link href={`/clients/${c.id}`} className="min-w-0 flex-1">
-                  <p className="font-medium hover:underline">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.company ?? "—"} ·{" "}
-                    <span dir="ltr">{c.phone}</span>
-                  </p>
-                </Link>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{statusLabelAr(c.status)}</Badge>
-                  {c.nextFollowUpAt ? (
-                    <span className="text-xs text-muted-foreground" dir="ltr">
-                      متابعة:{" "}
-                      {formatDateArabicLong(new Date(c.nextFollowUpAt))}
-                    </span>
-                  ) : null}
-                  {salesUsers.length > 0 ? (
-                    <TransferClientDialog clientId={c.id} salesUsers={salesUsers} />
-                  ) : null}
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <ClientsStatsLineSkeleton />
+            <ClientsListCardSkeleton />
+          </div>
+        }
+        key={`${salesKey}-${qRaw}`}
+      >
+        <ClientsListData
+          role={user.role}
+          dbUserId={dbUserId}
+          salesKey={salesKey}
+          q={q}
+          qRaw={qRaw}
+        />
+      </Suspense>
     </div>
   );
 }

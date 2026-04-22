@@ -8,6 +8,7 @@ import {
   resolveSessionDbUserId,
   type SessionUser,
 } from "@/lib/auth-helpers";
+import { classificationResolvesToBPath } from "@/lib/pipeline-choice";
 import { prisma } from "@/lib/prisma";
 
 export type TransitionResult = { ok: true } | { ok: false; message: string };
@@ -147,7 +148,7 @@ export async function reopenClosedClientFromReport(
     const client = await prisma.client.findUnique({
       where: { id: clientId },
       include: {
-        classification: { select: { id: true, isBRow: true } },
+        classification: { select: { id: true, isBRow: true, slug: true } },
       },
     });
     if (!client) return { ok: false, message: "العميل غير موجود." };
@@ -169,16 +170,24 @@ export async function reopenClosedClientFromReport(
       targetStatus = null;
     }
     if (!targetStatus) {
-      if (client.classification?.isBRow) targetStatus = ClientStatus.B;
-      else if (client.classificationId) targetStatus = ClientStatus.NOT_B;
-      else targetStatus = ClientStatus.B;
+      if (
+        client.classification &&
+        classificationResolvesToBPath(client.classification)
+      ) {
+        targetStatus = ClientStatus.B;
+      } else if (client.classificationId) {
+        targetStatus = ClientStatus.NOT_B;
+      } else {
+        targetStatus = ClientStatus.B;
+      }
     }
 
-    const bRowCls = await prisma.clientClassification.findFirst({
-      where: { isBRow: true },
+    const bRowCandidates = await prisma.clientClassification.findMany({
       orderBy: { sortOrder: "asc" },
-      select: { id: true },
+      select: { id: true, slug: true, isBRow: true },
     });
+    const bRowCls =
+      bRowCandidates.find((c) => classificationResolvesToBPath(c)) ?? null;
 
     await prisma.$transaction(async (tx) => {
       const data: Prisma.ClientUncheckedUpdateInput = {
@@ -189,7 +198,9 @@ export async function reopenClosedClientFromReport(
 
       if (targetStatus === ClientStatus.B) {
         data.notBClassification = null;
-        const curIsB = client.classification?.isBRow === true;
+        const curIsB =
+          !!client.classification &&
+          classificationResolvesToBPath(client.classification);
         if (!curIsB && bRowCls) {
           data.classificationId = bRowCls.id;
         }
@@ -269,8 +280,9 @@ export async function moveClientToNotBFromReport(
     where: { id: cid },
   });
   if (!cls) return { ok: false, message: "تصنيف غير موجود." };
-  if (cls.isBRow)
+  if (classificationResolvesToBPath(cls)) {
     return { ok: false, message: "اختر تصنيفاً غير مسار B." };
+  }
 
   try {
     const client = await prisma.client.findUnique({ where: { id: clientId } });

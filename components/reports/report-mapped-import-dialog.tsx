@@ -1,16 +1,31 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { DynamicExcelImporter } from "@/components/import/dynamic-excel-importer";
 import { ReportDynamicExcelImport } from "@/components/import/report-dynamic-excel-import";
 import { Button } from "@/components/ui/button";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { getReportImportExpectedFields } from "@/lib/import/report-import-expected-fields";
 import { REPORT_EXCEL_IMPORT_SOLID_CLASS } from "@/lib/ui/report-export-import-classes";
 import { cn } from "@/lib/utils";
+
+const DynamicExcelImporter = dynamic(
+  () =>
+    import("@/components/import/dynamic-excel-importer").then((m) => ({
+      default: m.DynamicExcelImporter,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[10rem] items-center justify-center rounded-lg border border-dashed border-border/50 bg-muted/10">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    ),
+  }
+);
 
 type Props = {
   kind: string;

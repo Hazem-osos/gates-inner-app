@@ -1,20 +1,17 @@
 "use client";
 
 import { ClientStatus, type UserRole } from "@prisma/client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Fragment,
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
-  type CSSProperties,
 } from "react";
-import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   ArrowLeftToLine,
@@ -25,16 +22,9 @@ import {
 import { toast } from "sonner";
 
 import {
-  closeClientFromReport,
-  markClientSoldFromReport,
-  moveClientToNotBFromReport,
-  reopenClosedClientFromReport,
-} from "@/app/actions/report-b-transitions";
-import {
   patchClientReportFields,
   type ReportClientPatchInput,
 } from "@/app/actions/report-client-patch";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,11 +46,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
+import { ReportBTableBodyRow } from "@/components/reports/report-b-table-body-row";
 import type { ClassificationRow } from "@/lib/data/classifications";
-import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
-import { sanitizeDisplayLabel } from "@/lib/display-text";
-import { daysElapsedSinceContact } from "@/lib/days-elapsed";
 import {
   matchesSearch,
   passesActuallyVisited,
@@ -71,20 +58,17 @@ import {
   passesVisitOverdue,
   passesVisitScheduledOnly,
   sortRows,
-  startOfToday,
   type SortTriState,
   type ViolationKind,
 } from "@/lib/report-b-utils";
+import { classificationResolvesToBPath } from "@/lib/pipeline-choice";
+import {
+  followSlotsToJson,
+  nextFollowUpMeetsGate,
+  normalizeFollowSlots,
+  trimTrailingEmptyFollowSlots,
+} from "@/lib/report-b-table-helpers";
 import { cn } from "@/lib/utils";
-
-/** Compact default; user can resize textareas via corner handle. */
-const reportBInput =
-  "h-8 min-w-[6.5rem] border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit] dark:border-border/55";
-/** Resizable (drag corner) so users can enlarge/shrink while typing. */
-const reportBTextarea =
-  "min-h-[2rem] min-w-[7rem] max-h-[36rem] max-w-[min(100vw,42rem)] resize border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit] dark:border-border/55";
-const reportBSelectTrigger =
-  "h-8 min-w-[6.5rem] border border-border/70 text-xs dark:border-border/55";
 
 export type ReportBRow = {
   id: string;
@@ -136,80 +120,10 @@ type Props = {
   workLogUserRole?: UserRole;
 };
 
-type FollowSlot = { order: number; note: string; date: string };
-
-function normalizeSlots(raw: unknown): FollowSlot[] {
-  if (!Array.isArray(raw)) return [];
-  const out: FollowSlot[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    const item = raw[i] as Record<string, unknown>;
-    if (typeof item !== "object" || item === null) continue;
-    out.push({
-      order: typeof item.order === "number" ? item.order : i + 1,
-      note: typeof item.note === "string" ? item.note : "",
-      date: typeof item.date === "string" ? item.date : "",
-    });
-  }
-  return out.sort((a, b) => a.order - b.order);
-}
-
-function slotsToJson(slots: FollowSlot[]): unknown {
-  return slots.map((s, i) => ({ ...s, order: i + 1 }));
-}
-
-/** يزيل المتابعات الفارغة من نهاية السجل قبل الحفظ في القاعدة */
-function trimTrailingEmptyFollowSlots(slots: FollowSlot[]): FollowSlot[] {
-  if (slots.length === 0) return [];
-  let end = slots.length;
-  while (
-    end > 0 &&
-    !(slots[end - 1]?.note ?? "").trim() &&
-    !(slots[end - 1]?.date ?? "").trim()
-  ) {
-    end--;
-  }
-  return slots.slice(0, end).map((s, i) => ({
-    ...s,
-    order: i + 1,
-  }));
-}
-
-function mergedCallAndSituation(call: string | null, sit: string | null): string {
-  const a = (call ?? "").trim();
-  const b = (sit ?? "").trim();
-  if (!a && !b) return "";
-  if (!a) return b;
-  if (!b) return a;
-  return `${a}\n---\n${b}`;
-}
-
-/** عند التمرير على الحقل يظهر نص التلميح بالمحتوى الكامل */
-function fullCellTooltip(value: string | null | undefined): string {
-  const s = value ?? "";
-  return s.trim() ? s : "— فارغ —";
-}
-
-function splitCallAndSituation(combined: string): {
-  callSummary: string;
-  currentSituation: string;
-} {
-  const sep = "\n---\n";
-  if (!combined.includes(sep)) {
-    return { callSummary: combined, currentSituation: "" };
-  }
-  const [callSummary, ...rest] = combined.split(sep);
-  return { callSummary, currentSituation: rest.join(sep) };
-}
-
-function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
-  if (!iso) return false;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
-  return d >= startOfToday();
-}
-
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
-  const slots = trimTrailingEmptyFollowSlots(normalizeSlots(row.followUpSlots));
+  const slots = trimTrailingEmptyFollowSlots(
+    normalizeFollowSlots(row.followUpSlots)
+  );
 
   const out: ReportClientPatchInput = {
     name: row.name,
@@ -234,7 +148,7 @@ function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
     visitAppointmentScheduled: row.visitAppointmentScheduled,
     visitAppointmentDate: row.visitAppointmentDate,
     qqAnswer: row.qqAnswer,
-    followUpSlots: slotsToJson(slots),
+    followUpSlots: followSlotsToJson(slots),
     classificationId: row.classificationId,
   };
 
@@ -257,6 +171,8 @@ export function ReportBTable({
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
+  /** فلاتر/فرز على نسخة مؤجّلة من ‎local‎ حتى لا يُعاد تمرير آلاف الحقول عند كل حرف في المحرر */
+  const deferredLocal = useDeferredValue(local);
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const reportBScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -270,8 +186,10 @@ export function ReportBTable({
   }, []);
 
   /**
-   * حاوية ‎dir=ltr‎ + جدول ‎dir=rtl‎ → ‎scrollLeft: 0‎ = يظهر أقصى يسار المحتوى (نهاية الصف/حقول)
-   * و‎max‎ = أقصى يمين (عمود الإجراءات/البداية في القراءة).
+   * حاوية ‎dir=ltr‎ + جدول واسع ‎min-w-[3200px]‎:
+   * ‎scrollLeft: 0‎ = يظهر جانب **بداية** شريط التمرير (يسار المربع الواسع = أوّل أعمدة الـDOM).
+   * ‎scrollLeft: max‎ = يظهر جانب **نهاية** شريط التمرير = غالباً عمود «إجراءات» (يمين) — الافتراضي بعد ‎F5/refresh.
+   * بعد التحميل ‎scrollWidth‎ قد يتأخّر؛ نستخدم ‎ResizeObserver‎ + إعادات قصيرة.
    */
   const scrollReportBHorizontal = useCallback(
     (direction: -1 | 1) => {
@@ -295,6 +213,51 @@ export function ReportBTable({
     },
     [getReportBScrollContainer]
   );
+
+  /** مفتاح بيانات الصفوف — يتغيّر عند إعادة جلب القائمة فيُعاد محاذاة التمرير. */
+  const rowDataSignature = useMemo(
+    () => rows.map((r) => r.id).join("\0"),
+    [rows]
+  );
+
+  useLayoutEffect(() => {
+    const el = getReportBScrollContainer();
+    if (!el) return;
+
+    /** وضع التمرير على «أوّل» الجدول بمعنى **عمود الإجراءات** (يمين / ‎scrollLeft = max). */
+    const alignTableToActionColumn = () => {
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      el.scrollTo({ left: max, behavior: "auto" });
+    };
+
+    const runWithRetries = () => {
+      alignTableToActionColumn();
+      const r1 = requestAnimationFrame(() => {
+        requestAnimationFrame(alignTableToActionColumn);
+      });
+      const t0 = setTimeout(alignTableToActionColumn, 0);
+      const t1 = setTimeout(alignTableToActionColumn, 100);
+      const t2 = setTimeout(alignTableToActionColumn, 400);
+      return () => {
+        cancelAnimationFrame(r1);
+        clearTimeout(t0);
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    };
+
+    const cleanRetries = runWithRetries();
+    const ro = new ResizeObserver(() => {
+      alignTableToActionColumn();
+    });
+    ro.observe(el);
+    return () => {
+      cleanRetries();
+      ro.disconnect();
+    };
+  }, [getReportBScrollContainer, rowDataSignature, toolbar, rowStyleReportType]);
+
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [reopeningClientId, setReopeningClientId] = useState<string | null>(
     null
@@ -303,7 +266,7 @@ export function ReportBTable({
   const tableClassificationOptions = useMemo(
     () =>
       rowStyleReportType === "not-b"
-        ? classifications.filter((c) => !c.isBRow)
+        ? classifications.filter((c) => !classificationResolvesToBPath(c))
         : classifications,
     [rowStyleReportType, classifications]
   );
@@ -319,9 +282,13 @@ export function ReportBTable({
   const dashboardMode = toolbar === "dashboard";
 
   const [searchQ, setSearchQ] = useState("");
+  /** يؤخر إعادة فلترة/فرز الجدول الكبير حتى يبقى حقل البحث سريع الاستجابة */
+  const deferredSearchQ = useDeferredValue(searchQ);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
   const [followInput, setFollowInput] = useState("");
+  const deferredDaysInput = useDeferredValue(daysInput);
+  const deferredFollowInput = useDeferredValue(followInput);
   const [daysActive, setDaysActive] = useState(false);
   const [followActive, setFollowActive] = useState(false);
 
@@ -364,7 +331,7 @@ export function ReportBTable({
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
 
-  /** مهم للأداء: لا تُنسَخ صفوف بلا ‎local‎ — وإلا يُعاد رسم الجدول كله عند كل حرف. */
+  /** عرض/حفظ/بوابة: دمج فوري — القيم تظهر فور الكتابة. */
   const merged = useMemo(() => {
     return rows.map((r) => {
       const patch = local[r.id];
@@ -372,6 +339,15 @@ export function ReportBTable({
       return { ...r, ...patch };
     });
   }, [rows, local]);
+
+  /** فلاتر وترتيب وقائمة الظهور: دمج مؤجّل — يُرخى عن الحلقة الثقيلة أثناء الكتابة. */
+  const mergedForFilters = useMemo(() => {
+    return rows.map((r) => {
+      const patch = deferredLocal[r.id];
+      if (patch == null) return r;
+      return { ...r, ...patch };
+    });
+  }, [rows, deferredLocal]);
 
   const mergedMap = useMemo(() => {
     const m = new Map<string, ReportBRow>();
@@ -425,9 +401,10 @@ export function ReportBTable({
   }, [gateInvalid, gateClientId]);
 
   const saveRow = useCallback(
-    async (id: string) => {
-      const row = mergedMapRef.current.get(id);
-      if (!row) return;
+    async (id: string, pendingOverlay?: Partial<ReportBRow>) => {
+      const base = mergedMapRef.current.get(id);
+      if (!base) return false;
+      const row = { ...base, ...pendingOverlay };
       setSavingRowId(id);
       try {
         const res = await patchClientReportFields(
@@ -445,9 +422,12 @@ export function ReportBTable({
             return n;
           });
           router.refresh();
-        } else {
-          toast.error(res.message);
+          return true;
         }
+        toast.error(res.message);
+        return false;
+      } catch {
+        return false;
       } finally {
         setSavingRowId(null);
       }
@@ -456,7 +436,7 @@ export function ReportBTable({
   );
 
   const onField = useCallback(
-    (id: string, _base: ReportBRow, patch: Partial<ReportBRow>) => {
+    (id: string, patch: Partial<ReportBRow>) => {
       setLocal((prev) => ({
         ...prev,
         [id]: { ...(prev[id] ?? {}), ...patch },
@@ -466,14 +446,14 @@ export function ReportBTable({
   );
 
   const filteredByViolation = useMemo(() => {
-    const list = merged.filter((r) => {
+    const list = mergedForFilters.filter((r) => {
       if (violation === "days_over") {
-        const n = Number(daysInput);
+        const n = Number(deferredDaysInput);
         if (!Number.isFinite(n)) return false;
         return passesDaysOver(r, n);
       }
       if (violation === "follow_count") {
-        const n = Number(followInput);
+        const n = Number(deferredFollowInput);
         if (!Number.isFinite(n)) return false;
         return passesFollowCount(r, n);
       }
@@ -483,7 +463,13 @@ export function ReportBTable({
     });
     if (!visitOverdueOnly) return list;
     return list.filter((r) => passesVisitOverdue(r));
-  }, [merged, violation, daysInput, followInput, visitOverdueOnly]);
+  }, [
+    mergedForFilters,
+    violation,
+    deferredDaysInput,
+    deferredFollowInput,
+    visitOverdueOnly,
+  ]);
 
   const filteredVisit = useMemo(() => {
     if (visitExtra === "scheduled")
@@ -494,10 +480,10 @@ export function ReportBTable({
   }, [filteredByViolation, visitExtra]);
 
   const searched = useMemo(() => {
-    const q = searchQ.trim().toLowerCase();
+    const q = deferredSearchQ.trim().toLowerCase();
     if (!q) return filteredVisit;
     return filteredVisit.filter((r) => matchesSearch(r, q));
-  }, [filteredVisit, searchQ]);
+  }, [filteredVisit, deferredSearchQ]);
 
   const visibleRows = useMemo(() => {
     const base = searched.filter((r) => !hiddenIds.has(r.id));
@@ -523,7 +509,7 @@ export function ReportBTable({
   const maxFollowCols = useMemo(() => {
     let m = 0;
     for (const r of merged) {
-      const n = normalizeSlots(r.followUpSlots).length;
+      const n = normalizeFollowSlots(r.followUpSlots).length;
       if (n > m) m = n;
     }
     const base = Math.max(m, 1);
@@ -590,7 +576,9 @@ export function ReportBTable({
     );
   }
 
-  const notBClassifications = classifications.filter((c) => !c.isBRow);
+  const notBClassifications = classifications.filter(
+    (c) => !classificationResolvesToBPath(c)
+  );
 
   return (
     <div
@@ -1011,832 +999,41 @@ export function ReportBTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleRows.map((r) => {
-                const days = daysElapsedSinceContact(
-                  r.initialCallDate ? new Date(r.initialCallDate) : null
-                );
-                const slots = normalizeSlots(r.followUpSlots);
-                const mgmtDateStr = r.managementRecommendationDate
-                  ? isoToDateInput(r.managementRecommendationDate)
-                  : todayInputDate();
-                const combinedNote = mergedCallAndSituation(
-                  r.callSummary,
-                  r.currentSituation
-                );
-                const classificationTooltip = fullCellTooltip(
-                  r.classificationLabel ??
-                    classifications.find((c) => c.id === r.classificationId)
-                      ?.label ??
-                    (r.classificationId ? r.classificationId : "")
-                );
-                const rowHighlightStyle: CSSProperties | undefined =
-                  focusedRowId === r.id
-                    ? {
-                        boxShadow: dashboardMode
-                          ? "inset 0 0 0 9999px rgba(16, 185, 129, 0.06)"
-                          : "inset 0 0 0 9999px rgba(16, 185, 129, 0.13)",
-                      }
-                    : undefined;
-
+              {visibleRows.map((rFiltered) => {
+                const r = mergedMap.get(rFiltered.id) ?? rFiltered;
                 return (
-                  <TableRow
+                  <ReportBTableBodyRow
                     key={r.id}
-                    data-gate-row={gateClientId === r.id ? r.id : undefined}
-                    data-focused-row={focusedRowId === r.id ? "true" : undefined}
-                    className="cursor-pointer align-top transition-shadow duration-200"
-                    style={rowHighlightStyle}
-                    onPointerDownCapture={() => setFocusedRowId(r.id)}
-                    onClick={(e) => {
-                      if (gateInvalid && gateClientId === r.id) {
-                        e.preventDefault();
-                        setGateDialogOpen(true);
-                        return;
-                      }
-                      const t = e.target as HTMLElement;
-                      if (
-                        t.closest(
-                          "input,textarea,button,a,select,[role=combobox]"
-                        )
-                      )
-                        return;
-                    }}
-                  >
-                    {toolbar === "closed" ? (
-                      <>
-                        <TableCell dir="ltr" className="text-[10px] whitespace-nowrap">
-                          {r.closedLostAt
-                            ? formatDateArabicLong(new Date(r.closedLostAt))
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">مغلق</Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[220px] whitespace-pre-wrap text-[10px]">
-                          {(r.lossReason ?? "").trim() || "—"}
-                        </TableCell>
-                      </>
-                    ) : null}
-                    <TableCell className="sticky right-0 z-10 border-s border-border/55 bg-background dark:border-border/40">
-                      <div className="flex flex-col gap-1">
-                        <Link
-                          href={`/clients/${r.id}`}
-                          className="text-[10px] text-primary underline"
-                          onClick={(e) => {
-                            if (gateInvalid && gateClientId === r.id) {
-                              e.preventDefault();
-                              setGateDialogOpen(true);
-                            }
-                          }}
-                        >
-                          بطاقة
-                        </Link>
-                        {toolbar === "closed" ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="h-7 w-full px-1 text-[11px] leading-tight"
-                            disabled={reopeningClientId === r.id}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              setReopeningClientId(r.id);
-                              try {
-                                const res = await reopenClosedClientFromReport(
-                                  r.id,
-                                  { reportKey: resolvedAuditReportKey }
-                                );
-                                if (res.ok) {
-                                  toast.success(
-                                    "تمت إعادة فتح العميل واستعادة حالته السابقة"
-                                  );
-                                  router.push(
-                                    res.redirectReport === "b"
-                                      ? "/reports/b"
-                                      : "/reports/not-b"
-                                  );
-                                } else {
-                                  toast.error(res.message);
-                                }
-                              } finally {
-                                setReopeningClientId(null);
-                              }
-                            }}
-                          >
-                            {reopeningClientId === r.id
-                              ? "جاري…"
-                              : "إعادة العميل"}
-                          </Button>
-                        ) : null}
-                        {toolbar !== "closed" ? (
-                        <StatusPopoverBlock
-                          clientId={r.id}
-                          classifications={notBClassifications}
-                          auditReportKey={resolvedAuditReportKey}
-                          gateInvalid={
-                            gateInvalid && gateClientId === r.id
-                          }
-                          onBlocked={() => setGateDialogOpen(true)}
-                          onDone={(hid) => {
-                            if (hid)
-                              setHiddenIds((prev) => new Set(prev).add(hid));
-                            setPanel(null);
-                          }}
-                          open={
-                            panel?.clientId === r.id ? panel.view : null
-                          }
-                          setOpen={(v) =>
-                            setPanel(v ? { clientId: r.id, view: v } : null)
-                          }
-                        />
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant={
-                            Object.keys(local[r.id] ?? {}).length > 0
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          className="h-7 w-full px-1 text-[11px] leading-tight"
-                          disabled={
-                            savingRowId !== null ||
-                            Object.keys(local[r.id] ?? {}).length === 0
-                          }
-                          title={
-                            Object.keys(local[r.id] ?? {}).length === 0
-                              ? "عدّل حقلًا في الصف ثم اضغط حفظ"
-                              : "حفظ تعديلات هذا الصف"
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void saveRow(r.id);
-                          }}
-                        >
-                          {savingRowId === r.id ? "جاري…" : "حفظ الصف"}
-                        </Button>
-                        <div
-                          dir="ltr"
-                          className="mt-1.5 flex flex-nowrap items-center justify-center gap-0.5 border-t border-border/50 pt-1.5 dark:border-border/40"
-                        >
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="size-7 shrink-0"
-                            title="قفز لآخر الحقول (نهاية الصف يساراً)"
-                            aria-label="نهاية الحقول"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              scrollReportBToScrollEdge("min");
-                            }}
-                          >
-                            <ArrowLeftToLine className="size-4" aria-hidden />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="size-7 shrink-0"
-                            title="تمرير نحو يسار (نحو نهاية الحقول)"
-                            aria-label="تمرير يسار"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              scrollReportBHorizontal(-1);
-                            }}
-                          >
-                            <ChevronLeft className="size-4" aria-hidden />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="size-7 shrink-0"
-                            title="تمرير نحو يمين (نحو الإجراءات)"
-                            aria-label="تمرير يمين"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              scrollReportBHorizontal(1);
-                            }}
-                          >
-                            <ChevronRight className="size-4" aria-hidden />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="size-7 shrink-0"
-                            title="قفز لعمود الإجراءات (بداية العرض من جهة اليمين)"
-                            aria-label="عمود الإجراءات"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              scrollReportBToScrollEdge("max");
-                            }}
-                          >
-                            <ArrowRightToLine className="size-4" aria-hidden />
-                          </Button>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(
-                          isoToDateInput(r.nextFollowUpAt)
-                        )}
-                      >
-                        <Input
-                          type="date"
-                          className={cn(
-                            reportBInput,
-                            "min-w-[11rem] text-left tabular-nums"
-                          )}
-                          dir="ltr"
-                          disabled={savingRowId === r.id}
-                          value={isoToDateInput(r.nextFollowUpAt)}
-                          onChange={(e) => {
-                            const nextFollowUpAt = dateInputToIso(
-                              e.target.value
-                            );
-                            const nextFollowUpAtStr =
-                              nextFollowUpAt ?? "";
-                            onField(r.id, r, {
-                              nextFollowUpAt: nextFollowUpAtStr,
-                            });
-                            if (
-                              gateClientId === r.id &&
-                              nextFollowUpMeetsGate(nextFollowUpAtStr)
-                            ) {
-                              setGateClientId(null);
-                            }
-                          }}
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(
-                          r.managementRecommendationText
-                        )}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.managementRecommendationText ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, {
-                              managementRecommendationText: e.target.value,
-                            })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(mgmtDateStr)}
-                      >
-                        <Input
-                          type="date"
-                          dir="ltr"
-                          className={cn(reportBInput, "text-left")}
-                          disabled={savingRowId === r.id}
-                          value={mgmtDateStr}
-                          onChange={(e) =>
-                            onField(r.id, r, {
-                              managementRecommendationDate: dateInputToIso(
-                                e.target.value
-                              ),
-                            })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {r.assignedUserName ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.company)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.company ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { company: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell dir="ltr" className="text-muted-foreground">
-                      {days === null ? "—" : `${days} D`}
-                    </TableCell>
-                    <TableCell dir="ltr" className="text-muted-foreground">
-                      {r.initialCallDate
-                        ? formatDateArabicLong(new Date(r.initialCallDate))
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip tooltip={fullCellTooltip(r.name)}>
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.name}
-                          onChange={(e) =>
-                            onField(r.id, r, { name: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.activity)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.activity ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { activity: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.position)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.position ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { position: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.address)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={cn(reportBTextarea, "min-w-[12rem]")}
-                          value={r.address ?? ""}
-                          disabled={savingRowId === r.id}
-                          onChange={(e) =>
-                            onField(r.id, r, { address: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell dir="ltr">
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(
-                          [r.phone, r.phone2].filter(Boolean).join(" / ")
-                        )}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={cn(
-                            reportBTextarea,
-                            "min-w-[11rem] text-left"
-                          )}
-                          value={[r.phone, r.phone2]
-                            .filter(Boolean)
-                            .join(" / ")}
-                          disabled={savingRowId === r.id}
-                          onChange={(e) => {
-                            const parts = e.target.value.split(/\s*\/\s*/);
-                            onField(r.id, r, {
-                              phone: parts[0]?.trim() ?? "",
-                              phone2: parts[1]?.trim() || null,
-                            });
-                          }}
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell dir="ltr">
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.quotePrice)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={cn(
-                            reportBTextarea,
-                            "min-w-[6rem] text-left tabular-nums"
-                          )}
-                          value={r.quotePrice ?? ""}
-                          disabled={savingRowId === r.id}
-                          onChange={(e) =>
-                            onField(r.id, r, { quotePrice: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.quoteDetail)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.quoteDetail ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { quoteDetail: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(combinedNote)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={combinedNote}
-                          onChange={(e) => {
-                            const sp = splitCallAndSituation(e.target.value);
-                            onField(r.id, r, {
-                              callSummary: sp.callSummary,
-                              currentSituation: sp.currentSituation,
-                            });
-                          }}
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.salesNotes)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.salesNotes ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { salesNotes: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip tooltip={classificationTooltip}>
-                      <Select
-                        value={r.classificationId ?? "__none__"}
-                        onValueChange={(v) => {
-                          const id = v === "__none__" ? null : v;
-                          const opt = classifications.find((c) => c.id === v);
-                          onField(r.id, r, {
-                            classificationId: id,
-                            classificationLabel: opt?.label ?? null,
-                            classificationColor: opt?.color ?? null,
-                          });
-                        }}
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            reportBSelectTrigger,
-                            "max-w-full min-w-0 justify-between"
-                          )}
-                          dir="rtl"
-                        >
-                          <SelectValue placeholder="—">
-                            {(v) => {
-                              if (
-                                v == null ||
-                                v === "" ||
-                                v === "__none__"
-                              ) {
-                                return "—";
-                              }
-                              const fromList = classifications.find(
-                                (c) => c.id === String(v)
-                              );
-                              if (fromList) {
-                                const lab = sanitizeDisplayLabel(
-                                  fromList.label
-                                );
-                                return (
-                                  <span
-                                    className="flex min-w-0 flex-1 items-center gap-1.5"
-                                    dir="rtl"
-                                  >
-                                    <span
-                                      className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
-                                      style={{
-                                        backgroundColor: fromList.color,
-                                      }}
-                                      aria-hidden
-                                    />
-                                    <bdi className="min-w-0 truncate">
-                                      {lab}
-                                    </bdi>
-                                  </span>
-                                );
-                              }
-                              const lab = sanitizeDisplayLabel(
-                                r.classificationLabel ?? String(v)
-                              );
-                              const col =
-                                r.classificationColor ?? "#94a3b8";
-                              return (
-                                <span
-                                  className="flex min-w-0 flex-1 items-center gap-1.5"
-                                  dir="rtl"
-                                >
-                                  <span
-                                    className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
-                                    style={{ backgroundColor: col }}
-                                    aria-hidden
-                                  />
-                                  <bdi className="min-w-0 truncate">{lab}</bdi>
-                                </span>
-                              );
-                            }}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__" label="—">
-                            —
-                          </SelectItem>
-                          {(() => {
-                            const base = tableClassificationOptions;
-                            const extra =
-                              r.classificationId &&
-                              !base.some((c) => c.id === r.classificationId)
-                                ? classifications.find(
-                                    (c) => c.id === r.classificationId
-                                  )
-                                : null;
-                            const opts = extra ? [...base, extra] : base;
-                            return opts.map((c) => {
-                              const lab = sanitizeDisplayLabel(c.label);
-                              return (
-                                <SelectItem
-                                  key={c.id}
-                                  value={c.id}
-                                  label={lab}
-                                >
-                                  <span className="flex min-w-0 items-center gap-2">
-                                    <span
-                                      className="inline-block size-2.5 shrink-0 rounded-sm border border-border"
-                                      style={{ backgroundColor: c.color }}
-                                      aria-hidden
-                                    />
-                                    <bdi className="min-w-0 truncate">
-                                      {lab}
-                                    </bdi>
-                                  </span>
-                                </SelectItem>
-                              );
-                            });
-                          })()}
-                        </SelectContent>
-                      </Select>
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.adPlatform)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.adPlatform ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { adPlatform: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.sourceAdName)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.sourceAdName ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, { sourceAdName: e.target.value })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={
-                          r.visitAppointmentScheduled
-                            ? "زيارة مجدولة: نعم"
-                            : "زيارة مجدولة: لا"
-                        }
-                      >
-                        <span className="inline-flex items-center">
-                          <input
-                            type="checkbox"
-                            className="size-4 accent-primary"
-                            checked={r.visitAppointmentScheduled}
-                            disabled={savingRowId === r.id}
-                            onChange={(e) =>
-                              onField(r.id, r, {
-                                visitAppointmentScheduled: e.target.checked,
-                              })
-                            }
-                          />
-                        </span>
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(
-                          isoToDateInput(r.visitAppointmentDate)
-                        )}
-                      >
-                        <Input
-                          type="date"
-                          dir="ltr"
-                          className={cn(reportBInput, "text-left")}
-                          disabled={savingRowId === r.id}
-                          value={isoToDateInput(r.visitAppointmentDate)}
-                          onChange={(e) =>
-                            onField(r.id, r, {
-                              visitAppointmentDate: dateInputToIso(
-                                e.target.value
-                              ),
-                            })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.presentingEmployeeName)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.presentingEmployeeName ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, {
-                              presentingEmployeeName: e.target.value,
-                            })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(
-                          r.qqAnswer === null
-                            ? ""
-                            : r.qqAnswer
-                              ? "نعم"
-                              : "لا"
-                        )}
-                      >
-                        <Select
-                          value={
-                            r.qqAnswer === null
-                              ? "__none__"
-                              : r.qqAnswer
-                                ? "yes"
-                                : "no"
-                          }
-                          onValueChange={(v) =>
-                            onField(r.id, r, {
-                              qqAnswer:
-                                v === "__none__"
-                                  ? null
-                                  : v === "yes"
-                                    ? true
-                                    : false,
-                            })
-                          }
-                        >
-                          <SelectTrigger className={reportBSelectTrigger}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__" label="—">
-                              —
-                            </SelectItem>
-                            <SelectItem value="yes" label="نعم">
-                              نعم
-                            </SelectItem>
-                            <SelectItem value="no" label="لا">
-                              لا
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    <TableCell>
-                      <ReportFieldTooltip
-                        tooltip={fullCellTooltip(r.finalStatusNote)}
-                      >
-                        <Textarea
-                          rows={2}
-                          className={reportBTextarea}
-                          disabled={savingRowId === r.id}
-                          value={r.finalStatusNote ?? ""}
-                          onChange={(e) =>
-                            onField(r.id, r, {
-                              finalStatusNote: e.target.value,
-                            })
-                          }
-                        />
-                      </ReportFieldTooltip>
-                    </TableCell>
-                    {Array.from({ length: maxFollowCols }, (_, i) => {
-                      const slot = slots[i];
-                      return (
-                        <Fragment key={`${r.id}-slot-${i}`}>
-                          <TableCell>
-                            <ReportFieldTooltip
-                              tooltip={fullCellTooltip(slot?.note)}
-                            >
-                              <Textarea
-                                rows={2}
-                                className={reportBTextarea}
-                                disabled={savingRowId === r.id}
-                                value={slot?.note ?? ""}
-                                onChange={(e) => {
-                                  const next = [...slots];
-                                  while (next.length <= i) {
-                                    next.push({
-                                      order: next.length + 1,
-                                      note: "",
-                                      date: "",
-                                    });
-                                  }
-                                  next[i] = {
-                                    ...next[i],
-                                    order: i + 1,
-                                    note: e.target.value,
-                                  };
-                                  onField(r.id, r, {
-                                    followUpSlots: slotsToJson(next),
-                                  });
-                                }}
-                              />
-                            </ReportFieldTooltip>
-                          </TableCell>
-                          <TableCell>
-                            <ReportFieldTooltip
-                              tooltip={fullCellTooltip(
-                                slot?.date
-                                  ? isoToDateInput(slot.date)
-                                  : ""
-                              )}
-                            >
-                              <Input
-                                type="date"
-                                dir="ltr"
-                                className={cn(reportBInput, "text-left")}
-                                disabled={savingRowId === r.id}
-                                value={
-                                  slot?.date
-                                    ? isoToDateInput(slot.date)
-                                    : ""
-                                }
-                                onChange={(e) => {
-                                  const next = [...slots];
-                                  while (next.length <= i) {
-                                    next.push({
-                                      order: next.length + 1,
-                                      note: "",
-                                      date: "",
-                                    });
-                                  }
-                                  next[i] = {
-                                    ...next[i],
-                                    order: i + 1,
-                                    date:
-                                      dateInputToIso(e.target.value) ?? "",
-                                  };
-                                  onField(r.id, r, {
-                                    followUpSlots: slotsToJson(next),
-                                  });
-                                }}
-                              />
-                            </ReportFieldTooltip>
-                          </TableCell>
-                        </Fragment>
-                      );
-                    })}
-                    <TableCell className="w-12 bg-muted/20" aria-hidden />
-                  </TableRow>
+                    r={r}
+                    isGateClientRow={gateClientId === r.id}
+                    isFocused={focusedRowId === r.id}
+                    isSaving={savingRowId === r.id}
+                    savingInProgress={savingRowId !== null}
+                    gateBlockActive={!!(gateInvalid && gateClientId === r.id)}
+                    isReopening={reopeningClientId === r.id}
+                    panelView={
+                      panel?.clientId === r.id ? panel.view : null
+                    }
+                    localEntry={local[r.id]}
+                    maxFollowCols={maxFollowCols}
+                    dashboardMode={dashboardMode}
+                    toolbar={toolbar}
+                    classifications={classifications}
+                    tableClassificationOptions={tableClassificationOptions}
+                    notBClassifications={notBClassifications}
+                    resolvedAuditReportKey={resolvedAuditReportKey}
+                    onField={onField}
+                    onSaveRow={saveRow}
+                    onSetFocusedRowId={setFocusedRowId}
+                    onSetGateDialogOpen={setGateDialogOpen}
+                    onSetHiddenIds={setHiddenIds}
+                    onSetPanel={setPanel}
+                    onSetReopeningClientId={setReopeningClientId}
+                    onSetGateClientId={setGateClientId}
+                    scrollReportBHorizontal={scrollReportBHorizontal}
+                    scrollReportBToScrollEdge={scrollReportBToScrollEdge}
+                    router={router}
+                  />
                 );
               })}
             </TableBody>
@@ -1850,367 +1047,4 @@ export function ReportBTable({
       </TooltipProvider>
     </div>
   );
-}
-
-function StatusPopoverBlock({
-  clientId,
-  classifications,
-  open,
-  setOpen,
-  onDone,
-  gateInvalid,
-  onBlocked,
-  auditReportKey,
-}: {
-  clientId: string;
-  classifications: ClassificationRow[];
-  open: "menu" | "close" | "notb" | "won" | null;
-  setOpen: (v: "menu" | "close" | "notb" | "won" | null) => void;
-  onDone: (hideId?: string) => void;
-  gateInvalid: boolean;
-  onBlocked: () => void;
-  auditReportKey: string;
-}) {
-  const [reason, setReason] = useState("");
-  const [clsId, setClsId] = useState("");
-  const [saleVal, setSaleVal] = useState("");
-  const [saleDate, setSaleDate] = useState(todayInputDate());
-  const [busy, start] = useTransition();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(
-    null
-  );
-
-  const updateAnchor = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el || !open) return;
-    const rect = el.getBoundingClientRect();
-    setAnchor({
-      top: rect.bottom + 4,
-      right: Math.max(8, window.innerWidth - rect.right),
-    });
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setAnchor(null);
-      return;
-    }
-    updateAnchor();
-  }, [open, updateAnchor]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onScroll = () => updateAnchor();
-    const onResize = () => updateAnchor();
-    window.addEventListener("resize", onResize);
-    const scrollRoot = triggerRef.current?.closest("[data-report-b-scroll]");
-    scrollRoot?.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("resize", onResize);
-      scrollRoot?.removeEventListener("scroll", onScroll);
-    };
-  }, [open, updateAnchor]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (triggerRef.current?.contains(t)) return;
-      if (panelRef.current?.contains(t)) return;
-      if (t.closest("[data-slot='select-content']")) return;
-      setOpen(null);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open, setOpen]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
-
-  const clsLabelById = useMemo(() => {
-    const m = new Map<string, { label: string; color: string }>();
-    for (const c of classifications) {
-      m.set(c.id, {
-        label: sanitizeDisplayLabel(c.label),
-        color: c.color,
-      });
-    }
-    return m;
-  }, [classifications]);
-
-  function guard(e: React.MouseEvent) {
-    if (gateInvalid) {
-      e.preventDefault();
-      onBlocked();
-    }
-  }
-
-  const panel =
-    open && anchor ? (
-      <div
-        ref={panelRef}
-        className="fixed z-[80] w-[min(20rem,calc(100vw-1rem))] rounded-md border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md"
-        style={{ top: anchor.top, right: anchor.right }}
-        dir="rtl"
-      >
-        {open === "menu" ? (
-          <div className="flex flex-col gap-1.5">
-            <button
-              type="button"
-              className="w-full rounded-md bg-red-100 px-2 py-2 text-center text-sm font-medium text-red-950 hover:bg-red-200"
-              onClick={() => setOpen("close")}
-            >
-              إغلاق
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-md bg-amber-100 px-2 py-2 text-center text-sm font-medium text-amber-950 hover:bg-amber-200"
-              onClick={() => setOpen("notb")}
-            >
-              Not B
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-md bg-emerald-100 px-2 py-2 text-center text-sm font-medium text-emerald-950 hover:bg-emerald-200"
-              onClick={() => setOpen("won")}
-            >
-              تم البيع
-            </button>
-            <button
-              type="button"
-              className="mt-1 w-full text-center text-xs text-muted-foreground underline"
-              onClick={() => setOpen(null)}
-            >
-              إغلاق اللوحة
-            </button>
-          </div>
-        ) : null}
-        {open === "close" ? (
-          <div className="flex flex-col gap-2">
-            <Textarea
-              placeholder="سبب الإغلاق"
-              rows={3}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              dir="rtl"
-            />
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1"
-                disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const res = await closeClientFromReport(clientId, reason, {
-                      reportKey: auditReportKey,
-                    });
-                    if (res.ok) {
-                      toast.success("تم الإغلاق");
-                      onDone(clientId);
-                    } else toast.error(res.message);
-                  })
-                }
-              >
-                تنفيذ
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setOpen("menu")}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        ) : null}
-        {open === "notb" ? (
-          <div className="flex flex-col gap-2">
-            <Select
-              value={clsId || "__none__"}
-              onValueChange={(v) =>
-                setClsId(!v || v === "__none__" ? "" : v)
-              }
-            >
-              <SelectTrigger
-                className={cn(reportBSelectTrigger, "h-9 w-full")}
-                dir="rtl"
-              >
-                <SelectValue placeholder="التصنيف">
-                  {(v) => {
-                    if (v == null || v === "" || v === "__none__") {
-                      return "التصنيف";
-                    }
-                    const row = clsLabelById.get(String(v));
-                    if (!row) {
-                      return <bdi>{sanitizeDisplayLabel(String(v))}</bdi>;
-                    }
-                    return (
-                      <span
-                        className="flex min-w-0 flex-1 items-center gap-1.5"
-                        dir="rtl"
-                      >
-                        <span
-                          className="inline-block size-3 shrink-0 rounded-sm border border-border"
-                          style={{ backgroundColor: row.color }}
-                          aria-hidden
-                        />
-                        <bdi className="min-w-0 truncate">{row.label}</bdi>
-                      </span>
-                    );
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__" label="—">
-                  —
-                </SelectItem>
-                {classifications.map((c) => {
-                  const lab = sanitizeDisplayLabel(c.label);
-                  return (
-                    <SelectItem key={c.id} value={c.id} label={lab}>
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="inline-block size-3 shrink-0 rounded-sm border border-border"
-                          style={{ backgroundColor: c.color }}
-                          aria-hidden
-                        />
-                        <bdi className="min-w-0 truncate">{lab}</bdi>
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1"
-                disabled={busy || !clsId}
-                onClick={() =>
-                  start(async () => {
-                    const res = await moveClientToNotBFromReport(
-                      clientId,
-                      clsId,
-                      { reportKey: auditReportKey }
-                    );
-                    if (res.ok) {
-                      toast.success("تم النقل");
-                      onDone(clientId);
-                    } else toast.error(res.message);
-                  })
-                }
-              >
-                تنفيذ
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setOpen("menu")}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        ) : null}
-        {open === "won" ? (
-          <div className="flex flex-col gap-2">
-            <Input
-              placeholder="قيمة البيع"
-              dir="ltr"
-              className="text-left"
-              value={saleVal}
-              onChange={(e) => setSaleVal(e.target.value)}
-            />
-            <Input
-              type="date"
-              dir="ltr"
-              value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
-            />
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1"
-                disabled={busy}
-                onClick={() =>
-                  start(async () => {
-                    const res = await markClientSoldFromReport(
-                      clientId,
-                      saleVal,
-                      new Date(saleDate + "T12:00:00").toISOString(),
-                      { reportKey: auditReportKey }
-                    );
-                    if (res.ok) {
-                      toast.success("تم تسجيل البيع");
-                      onDone(clientId);
-                    } else toast.error(res.message);
-                  })
-                }
-              >
-                تنفيذ
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setOpen("menu")}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    ) : null;
-
-  return (
-    <div
-      data-gate-exempt
-      className="relative z-20 text-[10px]"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <Button
-        ref={triggerRef}
-        type="button"
-        size="sm"
-        className="h-7 w-full border-emerald-700 bg-emerald-600 px-1 text-white hover:bg-emerald-700"
-        onClick={(e) => {
-          guard(e);
-          setOpen(open ? null : "menu");
-        }}
-      >
-        حالة
-      </Button>
-      {typeof document !== "undefined" && panel
-        ? createPortal(panel, document.body)
-        : null}
-    </div>
-  );
-}
-
-function isoToDateInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function dateInputToIso(date: string): string | null {
-  if (!date) return null;
-  const d = new Date(date + "T12:00:00");
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }

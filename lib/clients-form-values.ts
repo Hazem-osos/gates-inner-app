@@ -2,6 +2,7 @@ import type { Client, CustomFieldDefinition } from "@prisma/client";
 import { ClientStatus, CustomFieldValueType } from "@prisma/client";
 
 import type { ClassificationRow } from "@/lib/data/classifications";
+import { classificationResolvesToBPath } from "@/lib/pipeline-choice";
 
 function fmtDateOnly(d: Date | null | undefined): string {
   if (!d) return "";
@@ -49,8 +50,8 @@ export function clientToFormValues(
   } else if (client.classificationId) {
     pipelineChoice = `cls:${client.classificationId}`;
   } else {
-    const bRow = classifications.find((c) => c.isBRow);
-    const nonB = classifications.filter((c) => !c.isBRow);
+    const bRow = classifications.find((c) => classificationResolvesToBPath(c));
+    const nonB = classifications.filter((c) => !classificationResolvesToBPath(c));
     if (client.status === ClientStatus.B && bRow) {
       pipelineChoice = `cls:${bRow.id}`;
     } else if (client.status === ClientStatus.NOT_B && nonB.length > 0) {

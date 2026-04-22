@@ -1,7 +1,9 @@
 import type { Prisma, UserRole } from "@prisma/client";
 import { ClientStatus } from "@prisma/client";
 
-import { clientReportExportSelect } from "@/lib/data/report-queries";
+import {
+  clientReportExportSelect,
+} from "@/lib/data/report-queries";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 
@@ -30,20 +32,9 @@ export async function listClientsForDashboardFollowups(
     orderBy,
   };
 
-  if (opts?.forExport) {
-    return prisma.client.findMany({
-      ...base,
-      select: clientReportExportSelect,
-    });
-  }
-
+  /** `clientReportExportSelect` يستبعد ‎customFields‎ والحقول الثقيلة غير المستخدمة في ‎ReportBRow‎. */
   return prisma.client.findMany({
     ...base,
-    include: {
-      assignedUser: { select: { id: true, name: true, deletedAt: true } },
-      classification: {
-        select: { id: true, label: true, color: true, isBRow: true },
-      },
-    },
+    select: clientReportExportSelect,
   });
 }
