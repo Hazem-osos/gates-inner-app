@@ -1,4 +1,4 @@
-import { startOfToday } from "@/lib/report-b-utils";
+import { parseIsoDate, startOfToday } from "@/lib/report-b-utils";
 
 export type ReportBFollowSlot = { order: number; note: string; date: string };
 
@@ -81,16 +81,17 @@ export function splitCallAndSituation(combined: string): {
 }
 
 export function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
-  if (!iso) return false;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
+  const d = parseIsoDate(iso);
+  if (!d) return false;
   return d >= startOfToday();
 }
 
 export function isoToDateInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
+  if (iso == null) return "";
+  const s = String(iso).trim();
+  if (!s) return "";
+  const d = parseIsoDate(s);
+  if (!d) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

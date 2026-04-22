@@ -24,6 +24,8 @@ export function ReportWorkLogDialog({
   userRole,
   className,
 }: Props) {
+  const reportKeyParam = (reportKey?.trim() || "report-b") as string;
+
   const [open, setOpen] = useState(false);
   const [auditFrom, setAuditFrom] = useState(todayInputDate());
   const [auditTo, setAuditTo] = useState(todayInputDate());
@@ -36,15 +38,15 @@ export function ReportWorkLogDialog({
   const showSalesFilter =
     userRole === "ADMIN" || userRole === "MANAGER";
 
-  useEffect(() => {
-    if (!open) return;
+  const resetForSession = useCallback(() => {
     const t = todayInputDate();
     setAuditFrom(t);
     setAuditTo(t);
     setSalesKey("all");
     setAuditError(null);
     setAuditGroups([]);
-  }, [open]);
+    setAuditLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!open || !showSalesFilter) return;
@@ -59,17 +61,24 @@ export function ReportWorkLogDialog({
     })();
   }, [open, showSalesFilter]);
 
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next) resetForSession();
+    },
+    [resetForSession]
+  );
+
   const loadAudit = useCallback(async () => {
     if (!userId) return;
     setAuditLoading(true);
     setAuditError(null);
     try {
-      const p = new URLSearchParams({
-        from: `${auditFrom}T00:00:00`,
-        to: `${auditTo}T23:59:59`,
-        userId,
-        reportKey,
-      });
+      const p = new URLSearchParams();
+      p.set("from", `${auditFrom}T00:00:00`);
+      p.set("to", `${auditTo}T23:59:59`);
+      p.set("userId", userId);
+      p.set("reportKey", reportKeyParam);
       if (showSalesFilter && salesKey !== "all") {
         p.set("sales", salesKey);
       }
@@ -90,28 +99,35 @@ export function ReportWorkLogDialog({
     } finally {
       setAuditLoading(false);
     }
-  }, [auditFrom, auditTo, userId, reportKey, salesKey, showSalesFilter]);
+  }, [auditFrom, auditTo, userId, reportKeyParam, salesKey, showSalesFilter]);
 
   return (
     <>
       <Button
         type="button"
         className={cn("bg-black text-white hover:bg-black/90", className)}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          resetForSession();
+          setOpen(true);
+        }}
       >
         سجل العمل
       </Button>
 
       <SimpleDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         title="سجل العمل"
         contentClassName="max-w-[min(96vw,1320px)] w-[min(96vw,1320px)]"
         closeOnBackdrop={false}
         closeOnEscape={false}
         footer={
           <>
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleOpenChange(false)}
+            >
               إغلاق
             </Button>
             <Button type="button" onClick={() => void loadAudit()} disabled={auditLoading}>

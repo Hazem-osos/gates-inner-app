@@ -58,7 +58,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "غير مصرح بعرض سجل مستخدم آخر." }, { status: 403 });
   }
 
-  const reportKey = searchParams.get("reportKey")?.trim() || null;
+  const reportKey = searchParams.get("reportKey")?.trim() ?? "";
+  if (reportKey.length === 0) {
+    return NextResponse.json(
+      { message: "مفتاح التقرير (reportKey) مطلوب لتصفية سجل العمل." },
+      { status: 400 }
+    );
+  }
 
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
@@ -89,16 +95,14 @@ export async function GET(req: Request) {
       createdAt: { gte: from, lte: end },
     };
 
-    /** MySQL يتطلب مسار JSON صالحاً (مثل `$.reportKey`) — بدون `$.` يفشل الاستعلام ويُرجع خطأ 500. */
-    const withReport: Prisma.AuditLogWhereInput = reportKey
-      ? {
-          ...baseWhere,
-          meta: {
-            path: "$.reportKey",
-            equals: reportKey,
-          },
-        }
-      : baseWhere;
+    /** MySQL: مسار ‎`$.reportKey`‎ + إلزام ‎`reportKey`‎ من الطلب حتى لا يُرجع سجل «كل التقارير» بخطأ. */
+    const withReport: Prisma.AuditLogWhereInput = {
+      ...baseWhere,
+      meta: {
+        path: "$.reportKey",
+        equals: reportKey,
+      },
+    };
 
     const where: Prisma.AuditLogWhereInput = salesFilterActive
       ? {

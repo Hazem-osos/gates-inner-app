@@ -24,7 +24,8 @@ export async function listClientsForDashboardFollowups(
   const base = {
     where: {
       ...scope,
-      status: { in: [ClientStatus.B, ClientStatus.NOT_B] as ClientStatus[] },
+      /** نفس نطاق «تقرير B» (عملاء B فقط) حتى تطابق المتابعات المتأخرة العرض/السجل. */
+      status: ClientStatus.B,
       nextFollowUpAt: { not: null },
     },
     take: MAX_CLIENT_ROWS_FOR_UI,

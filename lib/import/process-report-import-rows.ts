@@ -505,6 +505,7 @@ export async function processReportImportRows(
         const res = await patchClientReportFields(clientId, patch, {
           reportKey: reportKeyForExcelImportKind(kind),
           importActor: { dbUserId, role: sessionRole },
+          allowNextFollowUpInPast: true,
         });
         if (!res.ok) {
           errors.push(`صف ${rowNum}: ${res.message}`);

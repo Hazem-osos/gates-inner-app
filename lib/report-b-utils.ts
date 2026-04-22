@@ -47,10 +47,55 @@ export function startOfToday(): Date {
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
 }
 
-function parseIsoDate(iso: string | null | undefined): Date | null {
-  if (!iso) return null;
-  const d = new Date(iso);
+/**
+ * يحلّل تاريخ المتابعة (كامل ISO أو تاريخ بصيغة yyyy-MM-dd فقط) كيوم تقويم محلي
+ * — يتفادى حقول <input type="date"> الفارغة بسبب صيغة غير مفهومة لـ new Date.
+ */
+export function parseIsoDate(iso: string | null | undefined): Date | null {
+  if (iso == null) return null;
+  const t = String(iso).trim();
+  if (!t) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+    const [y, m, d] = t.split("-").map((x) => parseInt(x, 10));
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+      return null;
+    }
+    const dt = new Date(y, m - 1, d, 12, 0, 0, 0);
+    if (Number.isNaN(dt.getTime())) return null;
+    if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
+      return null;
+    }
+    return dt;
+  }
+  const d = new Date(t);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * يتحقق من «المتابعة التالية» قبل حفظ صف التقرير: إن وُجد تاريخ
+ * يجب أن يكون بداية ذلك اليوم ≥ بداية اليوم الحالي (اليوم أو لاحقاً).
+ */
+export function validateNextFollowUpAtForRowSave(
+  nextFollowUpAt: string | null | undefined
+): { ok: true } | { ok: false; message: string } {
+  const raw = (nextFollowUpAt ?? "").trim();
+  if (!raw) return { ok: true };
+  const nf = parseIsoDate(raw);
+  if (!nf) {
+    return {
+      ok: false,
+      message:
+        "التاريخ في «المتابعة التالية» غير صالح. صححه ثم اضغط «حفظ الصف» مرة أخرى.",
+    };
+  }
+  if (nf < startOfToday()) {
+    return {
+      ok: false,
+      message:
+        "لا يمكن الحفظ: تاريخ «المتابعة التالية» يجب أن يكون اليوم أو تاريخاً لاحقاً (غير مسموح بحفظ تاريخ سابق).",
+    };
+  }
+  return { ok: true };
 }
 
 /** تطبيع مصفوفة المتابعات من JSON — للتصدير والفلاتر */
@@ -98,14 +143,14 @@ export function passesFollowCount(row: ReportBFilterRow, minCount: number): bool
 }
 
 /**
- * عملاء مهملين:
- * - لا يوجد تاريخ متابعة تالية في العمود (فارغ / غير صالح)، أو
- * - انتهى موعد المتابعة قبل اليوم دون تسجيل متابعة لاحقة في خانات المتابعة بالجدول.
+ * عملاء مهمولين: يجب أن يكون لدى العميل **تاريخ متابعة تالية (قبل بداية اليوم الحالي)**
+ * ولم تُسجَّل في خانات المتابعة متابعة لاحقة بتاريخ ≥ ذلك الموعد (مع ملاحظة).
+ * — بدون تاريخ متابعة تالية صالح لا يُصنّف مهمولاً (لن يظهر في فلتر «مهمولين»/متابعات متأخرة).
  */
 export function passesNeglected(row: ReportBFilterRow): boolean {
   const raw = (row.nextFollowUpAt ?? "").trim();
   const nf = raw ? parseIsoDate(raw) : null;
-  if (!nf) return true;
+  if (!nf) return false;
   if (nf >= startOfToday()) return false;
   const slots = normalizeSlotsSimple(row.followUpSlots);
   const recorded = slots.some((s) => {

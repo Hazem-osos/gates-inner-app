@@ -59,6 +59,7 @@ import {
   passesVisitOverdue,
   passesVisitScheduledOnly,
   sortRows,
+  validateNextFollowUpAtForRowSave,
   type SortTriState,
   type ViolationKind,
 } from "@/lib/report-b-utils";
@@ -409,6 +410,11 @@ export function ReportBTable({
       const base = mergedMapRef.current.get(id);
       if (!base) return false;
       const row = { ...base, ...pendingOverlay };
+      const followUpCheck = validateNextFollowUpAtForRowSave(row.nextFollowUpAt);
+      if (!followUpCheck.ok) {
+        toast.error(followUpCheck.message);
+        return false;
+      }
       setSavingRowId(id);
       try {
         const res = await patchClientReportFields(
@@ -551,7 +557,7 @@ export function ReportBTable({
         : null;
     }
     if (violation === "neglected")
-      return "يعرض التقرير العملاء الذين تجاوز تاريخ المتابعة التالية تاريخ اليوم دون تسجيل متابعة لاحقة في خانات المتابعة بالجدول، أو الذين لا يوجد لهم تاريخ متابعة تالية محدد في ذلك العمود.";
+      return "يعرض العملاء الذين جاء تاريخ «المتابعة التالية» لهم قبل اليوم (قبل بداية اليوم الحالي) ولم تُسجَّل لهم في خانات المتابعة متابعة بتاريخ/ملاحظة لاحق عن ذلك الموعد.";
     if (violation === "no_answer")
       return "يعرض العملاء المسجَّل في متابعاتهم عدم الرد";
     return null;
@@ -604,6 +610,7 @@ export function ReportBTable({
       >
         {workLogUserId ? (
           <ReportWorkLogDialog
+            key={resolvedAuditReportKey}
             reportKey={resolvedAuditReportKey}
             userId={workLogUserId}
             userRole={workLogUserRole}
