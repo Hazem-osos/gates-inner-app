@@ -59,7 +59,7 @@ export async function DashboardFollowupBlocks({
             <ReportBTable
               rows={todayRows}
               {...reportBTableSharedProps}
-              auditReportKey="report-b"
+              auditReportKey="report-dashboard-followups"
               toolbar="dashboard"
             />
           )}
@@ -82,7 +82,7 @@ export async function DashboardFollowupBlocks({
             <ReportBTable
               rows={overdueRows}
               {...reportBTableSharedProps}
-              auditReportKey="report-b"
+              auditReportKey="report-dashboard-followups"
               toolbar="dashboard"
             />
           )}

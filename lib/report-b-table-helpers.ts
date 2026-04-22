@@ -4,11 +4,11 @@ export type ReportBFollowSlot = { order: number; note: string; date: string };
 
 /** فئات Tailwind المشتركة لحقول جدول التقارير B / Not B */
 export const reportBInput =
-  "h-8 min-w-[6.5rem] border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit] dark:border-border/55";
+  "h-8 min-w-[6.5rem] border border-border/70 bg-background text-xs leading-snug focus:text-base focus:leading-normal [color-scheme:inherit] dark:border-border/55";
 export const reportBTextarea =
-  "min-h-[2rem] min-w-[7rem] max-h-[36rem] max-w-[min(100vw,42rem)] resize border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit] dark:border-border/55";
+  "min-h-[2rem] min-w-[7rem] max-h-[36rem] max-w-[min(100vw,42rem)] resize border border-border/70 bg-background text-xs leading-snug focus:text-base focus:leading-normal [color-scheme:inherit] dark:border-border/55";
 export const reportBSelectTrigger =
-  "h-8 min-w-[6.5rem] border border-border/70 text-xs dark:border-border/55";
+  "h-8 min-w-[6.5rem] border border-border/70 text-xs focus:text-base focus:leading-normal dark:border-border/55";
 
 export function normalizeFollowSlots(
   raw: unknown

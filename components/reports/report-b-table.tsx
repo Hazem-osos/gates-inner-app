@@ -72,6 +72,18 @@ import {
 } from "@/lib/report-b-table-helpers";
 import { cn } from "@/lib/utils";
 
+/** توست أوضح وأكبر خطاً عند رفض حفظ الصف (مثل تاريخ «المتابعة التالية» غير المسموح). */
+const reportRowSaveErrorToast = {
+  duration: 12_000,
+  classNames: {
+    toast:
+      "w-[min(32rem,calc(100vw-1.5rem))] !items-start !gap-3 !py-4 !px-4 sm:!px-5",
+    title: "!text-base sm:!text-lg !font-semibold !leading-relaxed",
+    content: "!text-base sm:!text-lg !font-semibold !leading-relaxed",
+    icon: "!size-6 shrink-0 [&_svg]:!size-6",
+  },
+} as const;
+
 export type ReportBRow = {
   id: string;
   name: string;
@@ -412,7 +424,7 @@ export function ReportBTable({
       const row = { ...base, ...pendingOverlay };
       const followUpCheck = validateNextFollowUpAtForRowSave(row.nextFollowUpAt);
       if (!followUpCheck.ok) {
-        toast.error(followUpCheck.message);
+        toast.error(followUpCheck.message, reportRowSaveErrorToast);
         return false;
       }
       setSavingRowId(id);
@@ -434,7 +446,7 @@ export function ReportBTable({
           router.refresh();
           return true;
         }
-        toast.error(res.message);
+        toast.error(res.message, reportRowSaveErrorToast);
         return false;
       } catch {
         return false;
@@ -557,7 +569,7 @@ export function ReportBTable({
         : null;
     }
     if (violation === "neglected")
-      return "يعرض العملاء الذين جاء تاريخ «المتابعة التالية» لهم قبل اليوم (قبل بداية اليوم الحالي) ولم تُسجَّل لهم في خانات المتابعة متابعة بتاريخ/ملاحظة لاحق عن ذلك الموعد.";
+      return "يعرض العملاء المهمولين: إمّا لا يوجد تاريخ «متابعة تالية» صالح (فارغ أو غير مقروء)، أو تاريخ المتابعة التالية قبل اليوم ولم تُسجَّل لهم في خانات المتابعة متابعة بتاريخ وملاحظة لاحقة عن ذلك الموعد.";
     if (violation === "no_answer")
       return "يعرض العملاء المسجَّل في متابعاتهم عدم الرد";
     return null;

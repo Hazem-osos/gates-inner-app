@@ -143,14 +143,17 @@ export function passesFollowCount(row: ReportBFilterRow, minCount: number): bool
 }
 
 /**
- * عملاء مهمولين: يجب أن يكون لدى العميل **تاريخ متابعة تالية (قبل بداية اليوم الحالي)**
- * ولم تُسجَّل في خانات المتابعة متابعة لاحقة بتاريخ ≥ ذلك الموعد (مع ملاحظة).
- * — بدون تاريخ متابعة تالية صالح لا يُصنّف مهمولاً (لن يظهر في فلتر «مهمولين»/متابعات متأخرة).
+ * عملاء مهمولين / مهملين — يظهرون عند أحد ما يلي:
+ * 1) حقل «المتابعة التالية» فارغ أو غير قابل للتحليل كتاريخ.
+ * 2) تاريخ المتابعة التالية قبل بداية اليوم ولم تُسجَّل متابعة لاحقة في خانات المتابعة
+ *    (ملاحظة + تاريخ ≥ موعد المتابعة التالية).
+ * — التواريخ اليوم أو لاحقة: لا يُصنَّف مهمولاً.
  */
 export function passesNeglected(row: ReportBFilterRow): boolean {
   const raw = (row.nextFollowUpAt ?? "").trim();
-  const nf = raw ? parseIsoDate(raw) : null;
-  if (!nf) return false;
+  if (!raw) return true;
+  const nf = parseIsoDate(raw);
+  if (!nf) return true;
   if (nf >= startOfToday()) return false;
   const slots = normalizeSlotsSimple(row.followUpSlots);
   const recorded = slots.some((s) => {
