@@ -73,7 +73,7 @@ export async function GET() {
         return NextResponse.json(
           {
             message:
-              "لم يُعثر على mysqldump. ثبّت عميل MySQL (على macOS: brew install mysql-client) أو عيّن MYSQLDUMP_PATH لمسار التنفيذي الكامل لـ mysqldump.",
+              "لم يُعثر على mysqldump. macOS: brew install mysql-client ثم brew link mysql-client. أو عيّن MYSQLDUMP_PATH. إذا شغّلت الخادم من IDE، قد تحتاج إضافة /opt/homebrew/bin إلى PATH أو MYSQLDUMP_PATH=/opt/homebrew/bin/mysqldump",
           },
           { status: 500 }
         );
@@ -159,7 +159,7 @@ export async function GET() {
       return NextResponse.json(
         {
           message:
-            "لم يُعثر على mysqldump. ثبّت عميل MySQL أو عيّن MYSQLDUMP_PATH لمسار التنفيذي الكامل.",
+            "لم يُعثر على mysqldump. ثبّت mysql-client وربطه (brew link) أو عيّن MYSQLDUMP_PATH (مثلاً /opt/homebrew/bin/mysqldump).",
         },
         { status: 500 }
       );

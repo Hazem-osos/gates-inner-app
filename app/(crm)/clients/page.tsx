@@ -18,7 +18,7 @@ import {
   buildClientsListWhere,
   listClientsForUser,
 } from "@/lib/data/clients-list";
-import { requireSessionUser } from "@/lib/auth-helpers";
+import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
 import {
@@ -44,12 +44,21 @@ export default async function ClientsListPage({
   searchParams: Promise<{ sales?: string; q?: string }>;
 }) {
   const user = await requireSessionUser();
+  const dbUserId = (await resolveSessionDbUserId(user)) ?? user.id;
   const sp = await searchParams;
   const salesKey = sp.sales ?? "all";
   const qRaw = sp.q?.trim() ?? "";
   const q = qRaw || undefined;
+  /** نفس منطق تصدير Excel: لا تمرير `sales` عند «كل السيلز» */
+  const salesFilter =
+    salesKey && salesKey !== "all" ? salesKey : undefined;
 
-  const clients = await listClientsForUser(user.role, user.id, salesKey, q);
+  const clients = await listClientsForUser(
+    user.role,
+    dbUserId,
+    salesFilter,
+    q
+  );
 
   const salesUsers =
     user.role === "ADMIN" || user.role === "MANAGER"
@@ -62,8 +71,8 @@ export default async function ClientsListPage({
 
   const scopeWhere = buildClientsListWhere(
     user.role,
-    user.id,
-    salesKey,
+    dbUserId,
+    salesFilter,
     q
   );
 

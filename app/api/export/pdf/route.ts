@@ -20,10 +20,8 @@ export async function GET(req: Request) {
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
-  const dbUserId = await resolveSessionDbUserId(session);
-  if (!dbUserId) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const dbUserId =
+    (await resolveSessionDbUserId(session)) ?? session.id;
 
   const { searchParams } = new URL(req.url);
   const kind = searchParams.get("kind") ?? "report-b";

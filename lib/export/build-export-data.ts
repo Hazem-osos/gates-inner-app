@@ -1,4 +1,4 @@
-import { ClientStatus, type UserRole } from "@prisma/client";
+import { ClientStatus, Prisma, type UserRole } from "@prisma/client";
 import { addDays, endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 import { formatExportDateOnly, todayInputDate } from "@/lib/date-arabic";
@@ -191,21 +191,24 @@ export async function buildExportPayload(
 
   if (kind === "report-recommendations") {
     const filter = sp.get("filter") ?? "all";
-    const salesKey = sp.get("sales") ?? "all";
+    const salesKeyParam = sp.get("sales") ?? "all";
+
+    /** يطابق صفحة التقرير: user.id = معرّف DB من مسار التصدير */
     const recommendationWhere =
       user.role === "SALES"
         ? { targetUserId: user.id }
-        : salesKey !== "all"
-          ? { targetUserId: salesKey }
+        : salesKeyParam !== "all"
+          ? { targetUserId: salesKeyParam }
           : {};
 
-    let rowsDb = await prisma.managementRecommendation.findMany({
+    const allRecRows = await prisma.managementRecommendation.findMany({
       where: recommendationWhere,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 500,
       include: {
         client: {
           select: {
+            id: true,
             name: true,
             assignedUser: { select: { name: true } },
           },
@@ -215,23 +218,89 @@ export async function buildExportPayload(
       },
     });
 
+    const recKeysForDedupe = new Set(
+      allRecRows.map((r) => `${r.clientId}\0${r.body.trim()}`)
+    );
+
+    let rowsDb = allRecRows;
     if (filter === "pending") {
       rowsDb = rowsDb.filter((r) => !(r.actionTaken ?? "").trim());
     } else if (filter === "done") {
       rowsDb = rowsDb.filter((r) => !!(r.actionTaken ?? "").trim());
     }
 
-    const rows = rowsDb.map((r) => ({
-      العميل: r.client?.name ?? "",
-      سيلز:
-        r.targetUser?.name ?? r.client?.assignedUser?.name ?? "",
-      التوصية: r.body,
-      تاريخ_التوصية:
-        formatExportDateOnly(r.recommendationDate ?? r.createdAt),
-      من_كتب: r.author.name,
-      تاريخ_العمل: formatExportDateOnly(r.workDate),
-      الإجراء_المتخذ: r.actionTaken ?? "",
-    }));
+    const clientWhere: Prisma.ClientWhereInput = {
+      managementRecommendationText: { not: null },
+      ...(user.role === "SALES"
+        ? { assignedUserId: user.id }
+        : salesKeyParam !== "all"
+          ? { assignedUserId: salesKeyParam }
+          : {}),
+    };
+
+    const clientsWithReportText = await prisma.client.findMany({
+      where: clientWhere,
+      take: 500,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        updatedAt: true,
+        managementRecommendationText: true,
+        managementRecommendationDate: true,
+        assignedUser: { select: { name: true } },
+      },
+    });
+
+    type RecExportRow = Record<string, string>;
+
+    const merged: { sortMs: number; row: RecExportRow }[] = rowsDb.map(
+      (r) => ({
+        sortMs: new Date(
+          r.recommendationDate ?? r.createdAt
+        ).getTime(),
+        row: {
+          العميل: r.client?.name ?? "",
+          سيلز:
+            r.targetUser?.name ?? r.client?.assignedUser?.name ?? "",
+          التوصية: r.body,
+          تاريخ_التوصية: formatExportDateOnly(
+            r.recommendationDate ?? r.createdAt
+          ),
+          من_كتب: r.author.name,
+          تاريخ_العمل: formatExportDateOnly(r.workDate),
+          الإجراء_المتخذ: r.actionTaken ?? "",
+        },
+      })
+    );
+
+    if (filter !== "done") {
+      for (const c of clientsWithReportText) {
+        const t = (c.managementRecommendationText ?? "").trim();
+        if (!t) continue;
+        const key = `${c.id}\0${t}`;
+        if (recKeysForDedupe.has(key)) continue;
+        merged.push({
+          sortMs: new Date(
+            c.managementRecommendationDate ?? c.updatedAt
+          ).getTime(),
+          row: {
+            العميل: c.name,
+            سيلز: c.assignedUser?.name ?? "",
+            التوصية: t,
+            تاريخ_التوصية: formatExportDateOnly(
+              c.managementRecommendationDate ?? c.updatedAt
+            ),
+            من_كتب: "عمود تقرير B",
+            تاريخ_العمل: "",
+            الإجراء_المتخذ: "",
+          },
+        });
+      }
+    }
+
+    merged.sort((a, b) => b.sortMs - a.sortMs);
+    const rows = merged.map((m) => m.row);
 
     return {
       filename: "توصيات_الإدارة.xlsx",

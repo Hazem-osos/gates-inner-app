@@ -33,10 +33,8 @@ export async function GET(req: Request) {
   if (!session) {
     return NextResponse.json({ message: "غير مصرح." }, { status: 401 });
   }
-  const dbUserId = await resolveSessionDbUserId(session);
-  if (!dbUserId) {
-    return NextResponse.json({ message: "غير مصرح." }, { status: 401 });
-  }
+  const dbUserId =
+    (await resolveSessionDbUserId(session)) ?? session.id;
 
   const { searchParams } = new URL(req.url);
   const kind = searchParams.get("kind") ?? "report-b";
