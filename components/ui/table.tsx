@@ -8,11 +8,14 @@ function Table({
   className,
   containerClassName,
   containerDir,
+  tableDir,
   ...props
 }: React.ComponentProps<"table"> & {
   containerClassName?: string
-  /** اتجاه حاوية التمرير (مفيد للتمرير الأفقي المتسق مع scrollLeft) */
+  /** اتجاه حاوية التمرير — ‎ltr‎ يوحّد ‎scrollLeft‎ بين المتصفحات; انقل ‎dir‎ للجدول بـ ‎tableDir‎ */
   containerDir?: "ltr" | "rtl"
+  /** اتجاه عرض أعمدة ‎<table>‎ (منفصل عن حاوية التمرير) */
+  tableDir?: "ltr" | "rtl"
 }) {
   return (
     <div
@@ -22,6 +25,7 @@ function Table({
     >
       <table
         data-slot="table"
+        dir={tableDir}
         className={cn(
           "w-full border-collapse caption-bottom text-sm",
           className

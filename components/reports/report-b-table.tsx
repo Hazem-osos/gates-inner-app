@@ -221,34 +221,41 @@ export function ReportBTable({
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const reportBScrollRef = useRef<HTMLDivElement | null>(null);
-  /**
-   * تمرير أفقي — ‎scrollLeft‎ موحّد في المتصفحات الحديثة حتى مع ‎dir=rtl‎ على الحاوية
-   * (البداية ‎0‎، النهاية ‎scrollWidth − clientWidth‎). لا نعكس حسب ‎rtl‎ حتى لا تنعكس السهام.
-   */
-  const scrollReportBHorizontal = useCallback((direction: -1 | 1) => {
+
+  /** حاوية التمرير فعلياً (وليس الـ div الخارجي). */
+  const getReportBScrollContainer = useCallback((): HTMLElement | null => {
     const root = reportBScrollRef.current;
-    if (!root) return;
-    const el =
-      root.querySelector<HTMLElement>('[data-slot="table-container"]') ?? root;
-    if (el.scrollWidth <= el.clientWidth + 1) return;
-    const step = Math.max(280, Math.round(el.clientWidth * 0.42));
-    el.scrollBy({ left: direction * step, behavior: "smooth" });
+    if (!root) return null;
+    return (
+      root.querySelector<HTMLElement>('[data-slot="table-container"]') ?? root
+    );
   }, []);
 
-  /** أقصى بداية المسار ‎(0)‎ أو نهايته ‎(max)‎ — كما في ‎scrollLeft‎ الموحّد. */
-  const scrollReportBHorizontalToEdge = useCallback(
-    (edge: "start" | "end") => {
-      const root = reportBScrollRef.current;
-      if (!root) return;
-      const el =
-        root.querySelector<HTMLElement>('[data-slot="table-container"]') ??
-        root;
+  /**
+   * حاوية ‎dir=ltr‎ + جدول ‎dir=rtl‎ → ‎scrollLeft: 0‎ = يظهر أقصى يسار المحتوى (نهاية الصف/حقول)
+   * و‎max‎ = أقصى يمين (عمود الإجراءات/البداية في القراءة).
+   */
+  const scrollReportBHorizontal = useCallback(
+    (direction: -1 | 1) => {
+      const el = getReportBScrollContainer();
+      if (!el) return;
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      const step = Math.max(280, Math.round(el.clientWidth * 0.42));
+      el.scrollBy({ left: direction * step, behavior: "smooth" });
+    },
+    [getReportBScrollContainer]
+  );
+
+  const scrollReportBToScrollEdge = useCallback(
+    (edge: "min" | "max") => {
+      const el = getReportBScrollContainer();
+      if (!el) return;
       if (el.scrollWidth <= el.clientWidth + 1) return;
       const max = Math.max(0, el.scrollWidth - el.clientWidth);
-      const left = edge === "start" ? 0 : max;
+      const left = edge === "min" ? 0 : max;
       el.scrollTo({ left, behavior: "smooth" });
     },
-    []
+    [getReportBScrollContainer]
   );
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [reopeningClientId, setReopeningClientId] = useState<string | null>(
@@ -920,7 +927,8 @@ export function ReportBTable({
         className="min-w-0 w-full rounded-xl border border-border/60 shadow-sm"
       >
           <Table
-            containerDir="rtl"
+            containerDir="ltr"
+            tableDir="rtl"
             containerClassName={
               dashboardMode
                 ? "max-h-[min(38vh,320px)]"
@@ -1171,11 +1179,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="الانتقال لبداية المسار الأفقي"
-                            aria-label="بداية المسار الأفقي"
+                            title="قفز لآخر الحقول (نهاية الصف يساراً)"
+                            aria-label="نهاية الحقول"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontalToEdge("start");
+                              scrollReportBToScrollEdge("min");
                             }}
                           >
                             <ArrowLeftToLine className="size-4" aria-hidden />
@@ -1185,8 +1193,8 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير نحو بداية الصف (نقصان التمرير)"
-                            aria-label="تمرير نحو بداية المسار"
+                            title="تمرير نحو يسار (نحو نهاية الحقول)"
+                            aria-label="تمرير يسار"
                             onClick={(e) => {
                               e.stopPropagation();
                               scrollReportBHorizontal(-1);
@@ -1199,8 +1207,8 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير نحو نهاية الصف (زيادة التمرير)"
-                            aria-label="تمرير نحو نهاية المسار"
+                            title="تمرير نحو يمين (نحو الإجراءات)"
+                            aria-label="تمرير يمين"
                             onClick={(e) => {
                               e.stopPropagation();
                               scrollReportBHorizontal(1);
@@ -1213,11 +1221,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="الانتقال لنهاية المسار الأفقي"
-                            aria-label="نهاية المسار الأفقي"
+                            title="قفز لعمود الإجراءات (بداية العرض من جهة اليمين)"
+                            aria-label="عمود الإجراءات"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontalToEdge("end");
+                              scrollReportBToScrollEdge("max");
                             }}
                           >
                             <ArrowRightToLine className="size-4" aria-hidden />
