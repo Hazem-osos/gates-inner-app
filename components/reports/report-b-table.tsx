@@ -221,6 +221,10 @@ export function ReportBTable({
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const reportBScrollRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * تمرير أفقي — ‎scrollLeft‎ موحّد في المتصفحات الحديثة حتى مع ‎dir=rtl‎ على الحاوية
+   * (البداية ‎0‎، النهاية ‎scrollWidth − clientWidth‎). لا نعكس حسب ‎rtl‎ حتى لا تنعكس السهام.
+   */
   const scrollReportBHorizontal = useCallback((direction: -1 | 1) => {
     const root = reportBScrollRef.current;
     if (!root) return;
@@ -228,12 +232,10 @@ export function ReportBTable({
       root.querySelector<HTMLElement>('[data-slot="table-container"]') ?? root;
     if (el.scrollWidth <= el.clientWidth + 1) return;
     const step = Math.max(280, Math.round(el.clientWidth * 0.42));
-    const rtl = getComputedStyle(el).direction === "rtl";
-    const leftDelta = (rtl ? -1 : 1) * direction * step;
-    el.scrollBy({ left: leftDelta, behavior: "smooth" });
+    el.scrollBy({ left: direction * step, behavior: "smooth" });
   }, []);
 
-  /** نفس أطراف المسار في الوضعين LTR/RTL: يسار الشاشة = min / يمين = max مع عكس عند rtl. */
+  /** أقصى بداية المسار ‎(0)‎ أو نهايته ‎(max)‎ — كما في ‎scrollLeft‎ الموحّد. */
   const scrollReportBHorizontalToEdge = useCallback(
     (edge: "start" | "end") => {
       const root = reportBScrollRef.current;
@@ -243,9 +245,7 @@ export function ReportBTable({
         root;
       if (el.scrollWidth <= el.clientWidth + 1) return;
       const max = Math.max(0, el.scrollWidth - el.clientWidth);
-      const rtl = getComputedStyle(el).direction === "rtl";
-      const left =
-        edge === "start" ? (rtl ? max : 0) : (rtl ? 0 : max);
+      const left = edge === "start" ? 0 : max;
       el.scrollTo({ left, behavior: "smooth" });
     },
     []
@@ -1171,8 +1171,8 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="الانتقال لأقصى اليسار (بداية الصف في التمرير)"
-                            aria-label="الانتقال لأقصى اليسار"
+                            title="الانتقال لبداية المسار الأفقي"
+                            aria-label="بداية المسار الأفقي"
                             onClick={(e) => {
                               e.stopPropagation();
                               scrollReportBHorizontalToEdge("start");
@@ -1185,11 +1185,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليمين"
-                            aria-label="تمرير الجدول لليمين"
+                            title="تمرير نحو بداية الصف (نقصان التمرير)"
+                            aria-label="تمرير نحو بداية المسار"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(1);
+                              scrollReportBHorizontal(-1);
                             }}
                           >
                             <ChevronLeft className="size-4" aria-hidden />
@@ -1199,11 +1199,11 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="تمرير الجدول لليسار"
-                            aria-label="تمرير الجدول لليسار"
+                            title="تمرير نحو نهاية الصف (زيادة التمرير)"
+                            aria-label="تمرير نحو نهاية المسار"
                             onClick={(e) => {
                               e.stopPropagation();
-                              scrollReportBHorizontal(-1);
+                              scrollReportBHorizontal(1);
                             }}
                           >
                             <ChevronRight className="size-4" aria-hidden />
@@ -1213,8 +1213,8 @@ export function ReportBTable({
                             variant="secondary"
                             size="icon"
                             className="size-7 shrink-0"
-                            title="الانتقال لأقصى اليمين (نهاية الصف في التمرير)"
-                            aria-label="الانتقال لأقصى اليمين"
+                            title="الانتقال لنهاية المسار الأفقي"
+                            aria-label="نهاية المسار الأفقي"
                             onClick={(e) => {
                               e.stopPropagation();
                               scrollReportBHorizontalToEdge("end");

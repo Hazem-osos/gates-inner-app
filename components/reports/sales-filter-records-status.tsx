@@ -2,7 +2,7 @@ import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { cn } from "@/lib/utils";
 
 const SALES_FILTER_MESSAGE_CLASS =
-  "min-w-0 w-full text-balance text-center text-xs sm:text-sm font-normal leading-snug text-muted-foreground";
+  "min-w-0 w-full text-balance text-center text-base sm:text-lg font-semibold leading-relaxed text-destructive";
 
 /** عند تفعيل فلترات أخرى دون اختيار مندوب محدد (نص موحّد + منتصف). */
 export function GenericFilterActiveNotice({ className }: { className?: string }) {
@@ -21,7 +21,7 @@ export function GenericFilterActiveNotice({ className }: { className?: string })
 }
 
 /**
- * نص فلتر السيلز الموحّد — سطر قصير، خط صغير (لا نسخة طويلة).
+ * نص فلتر السيلز — سطر واضح، مميز (أحمر، خط أكبر).
  */
 export function SalesFilterActiveMessage({
   activeSalesName,
