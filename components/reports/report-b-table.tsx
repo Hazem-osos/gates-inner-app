@@ -208,6 +208,44 @@ function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
   return d >= startOfToday();
 }
 
+function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
+  const slots = trimTrailingEmptyFollowSlots(normalizeSlots(row.followUpSlots));
+
+  const out: ReportClientPatchInput = {
+    name: row.name,
+    phone: row.phone,
+    phone2: row.phone2,
+    company: row.company,
+    position: row.position,
+    address: row.address,
+    activity: row.activity,
+    quotePrice: row.quotePrice,
+    quoteDetail: row.quoteDetail,
+    callSummary: row.callSummary,
+    currentSituation: row.currentSituation,
+    salesNotes: row.salesNotes,
+    finalStatusNote: row.finalStatusNote,
+    clientWarmingText: row.clientWarmingText,
+    presentingEmployeeName: row.presentingEmployeeName,
+    sourceAdName: row.sourceAdName,
+    adPlatform: row.adPlatform,
+    managementRecommendationText: row.managementRecommendationText,
+    nextFollowUpAt: row.nextFollowUpAt ?? "",
+    visitAppointmentScheduled: row.visitAppointmentScheduled,
+    visitAppointmentDate: row.visitAppointmentDate,
+    qqAnswer: row.qqAnswer,
+    followUpSlots: slotsToJson(slots),
+    classificationId: row.classificationId,
+  };
+
+  out.managementRecommendationDate =
+    row.managementRecommendationDate && row.managementRecommendationDate.trim() !== ""
+      ? row.managementRecommendationDate
+      : "";
+
+  return out;
+}
+
 export function ReportBTable({
   rows,
   classifications,
@@ -326,8 +364,13 @@ export function ReportBTable({
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, []);
 
+  /** مهم للأداء: لا تُنسَخ صفوف بلا ‎local‎ — وإلا يُعاد رسم الجدول كله عند كل حرف. */
   const merged = useMemo(() => {
-    return rows.map((r) => ({ ...r, ...(local[r.id] ?? {}) }));
+    return rows.map((r) => {
+      const patch = local[r.id];
+      if (patch == null) return r;
+      return { ...r, ...patch };
+    });
   }, [rows, local]);
 
   const mergedMap = useMemo(() => {
@@ -335,6 +378,9 @@ export function ReportBTable({
     for (const r of merged) m.set(r.id, r);
     return m;
   }, [merged]);
+
+  const mergedMapRef = useRef(mergedMap);
+  mergedMapRef.current = mergedMap;
 
   useEffect(() => {
     if (!gateClientId) return;
@@ -378,53 +424,19 @@ export function ReportBTable({
     return () => document.removeEventListener("click", block, true);
   }, [gateInvalid, gateClientId]);
 
-  function patchFromRow(row: ReportBRow): ReportClientPatchInput {
-    const slots = trimTrailingEmptyFollowSlots(normalizeSlots(row.followUpSlots));
-
-    const out: ReportClientPatchInput = {
-      name: row.name,
-      phone: row.phone,
-      phone2: row.phone2,
-      company: row.company,
-      position: row.position,
-      address: row.address,
-      activity: row.activity,
-      quotePrice: row.quotePrice,
-      quoteDetail: row.quoteDetail,
-      callSummary: row.callSummary,
-      currentSituation: row.currentSituation,
-      salesNotes: row.salesNotes,
-      finalStatusNote: row.finalStatusNote,
-      clientWarmingText: row.clientWarmingText,
-      presentingEmployeeName: row.presentingEmployeeName,
-      sourceAdName: row.sourceAdName,
-      adPlatform: row.adPlatform,
-      managementRecommendationText: row.managementRecommendationText,
-      nextFollowUpAt: row.nextFollowUpAt ?? "",
-      visitAppointmentScheduled: row.visitAppointmentScheduled,
-      visitAppointmentDate: row.visitAppointmentDate,
-      qqAnswer: row.qqAnswer,
-      followUpSlots: slotsToJson(slots),
-      classificationId: row.classificationId,
-    };
-
-    out.managementRecommendationDate =
-      row.managementRecommendationDate && row.managementRecommendationDate.trim() !== ""
-        ? row.managementRecommendationDate
-        : "";
-
-    return out;
-  }
-
   const saveRow = useCallback(
     async (id: string) => {
-      const row = mergedMap.get(id);
+      const row = mergedMapRef.current.get(id);
       if (!row) return;
       setSavingRowId(id);
       try {
-        const res = await patchClientReportFields(id, patchFromRow(row), {
-          reportKey: resolvedAuditReportKey,
-        });
+        const res = await patchClientReportFields(
+          id,
+          patchFromReportBRow(row),
+          {
+            reportKey: resolvedAuditReportKey,
+          }
+        );
         if (res.ok) {
           toast.success("تم حفظ الصف");
           setLocal((p) => {
@@ -440,7 +452,7 @@ export function ReportBTable({
         setSavingRowId(null);
       }
     },
-    [mergedMap, router, resolvedAuditReportKey]
+    [router, resolvedAuditReportKey]
   );
 
   const onField = useCallback(
@@ -506,15 +518,7 @@ export function ReportBTable({
       }
     }
     return out;
-  }, [
-    merged,
-    searched,
-    hiddenIds,
-    sortDays,
-    sortPrice,
-    sortCall,
-    sortFollowUp,
-  ]);
+  }, [searched, hiddenIds, sortDays, sortPrice, sortCall, sortFollowUp]);
 
   const maxFollowCols = useMemo(() => {
     let m = 0;
