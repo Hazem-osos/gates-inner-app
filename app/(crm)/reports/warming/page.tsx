@@ -12,6 +12,7 @@ import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
@@ -75,7 +76,7 @@ export default async function ReportWarmingPage({
         },
       },
       orderBy: [{ name: "asc" }, { id: "asc" }],
-      take: 800,
+      take: MAX_CLIENT_ROWS_FOR_UI,
     }),
     resolveActiveSalesName(user.role, salesKey),
   ]);

@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
@@ -63,7 +64,7 @@ export default async function CallsReportPage({
         assignedUser: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 800,
+      take: MAX_CLIENT_ROWS_FOR_UI,
     }),
     resolveActiveSalesName(user.role, salesKey),
   ]);

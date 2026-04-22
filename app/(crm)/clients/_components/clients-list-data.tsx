@@ -120,10 +120,33 @@ export async function ClientsListData({
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-3 transition-colors hover:bg-muted/40"
               >
                 <Link href={`/clients/${c.id}`} className="min-w-0 flex-1">
-                  <p className="font-medium hover:underline">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.company ?? "—"} · <span dir="ltr">{c.phone}</span>
-                  </p>
+                  {c.company?.trim() ? (
+                    <>
+                      <p
+                        className="text-base font-bold leading-snug text-foreground hover:underline"
+                        dir="auto"
+                      >
+                        {c.company}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        <span className="font-normal">{c.name}</span>
+                        {" · "}
+                        <span dir="ltr">{c.phone}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        className="text-base font-bold leading-snug text-foreground hover:underline"
+                        dir="auto"
+                      >
+                        {c.name}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground" dir="ltr">
+                        {c.phone}
+                      </p>
+                    </>
+                  )}
                 </Link>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{statusLabelAr(c.status)}</Badge>

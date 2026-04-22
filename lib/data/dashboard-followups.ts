@@ -1,9 +1,8 @@
 import type { Prisma, UserRole } from "@prisma/client";
 import { ClientStatus } from "@prisma/client";
 
-import {
-  clientReportExportSelect,
-} from "@/lib/data/report-queries";
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
+import { clientReportExportSelect } from "@/lib/data/report-queries";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 
@@ -28,7 +27,7 @@ export async function listClientsForDashboardFollowups(
       status: { in: [ClientStatus.B, ClientStatus.NOT_B] as ClientStatus[] },
       nextFollowUpAt: { not: null },
     },
-    take: 1000,
+    take: MAX_CLIENT_ROWS_FOR_UI,
     orderBy,
   };
 

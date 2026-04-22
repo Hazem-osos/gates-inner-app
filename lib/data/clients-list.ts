@@ -1,6 +1,7 @@
 import type { UserRole } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 
@@ -46,6 +47,6 @@ export async function listClientsForUser(
       initialCallDate: true,
       assignedUser: { select: { name: true, deletedAt: true } },
     },
-    take: 500,
+    take: MAX_CLIENT_ROWS_FOR_UI,
   });
 }

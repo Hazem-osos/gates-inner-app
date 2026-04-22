@@ -2,6 +2,7 @@ import type { ClientStatus, UserRole } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { prisma } from "@/lib/prisma";
 
 export type ReportSearchParams = {
@@ -45,7 +46,7 @@ export async function getReportData(
   const clients = await prisma.client.findMany({
     where,
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    take: 500,
+    take: MAX_CLIENT_ROWS_FOR_UI,
     select: {
       id: true,
       name: true,

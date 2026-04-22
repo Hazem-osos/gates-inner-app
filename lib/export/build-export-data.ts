@@ -1,6 +1,7 @@
 import { ClientStatus, Prisma, type UserRole } from "@prisma/client";
 import { addDays, endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { formatExportDateOnly, todayInputDate } from "@/lib/date-arabic";
 import { listClientsForUser } from "@/lib/data/clients-list";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
@@ -151,7 +152,7 @@ export async function buildExportPayload(
         },
       },
       orderBy: { name: "asc" },
-      take: 800,
+      take: MAX_CLIENT_ROWS_FOR_UI,
     });
 
     const today = new Date();
@@ -430,7 +431,7 @@ export async function buildExportPayload(
         assignedUser: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 800,
+      take: MAX_CLIENT_ROWS_FOR_UI,
     });
 
     const filtered = clients.filter((c) => {
@@ -498,7 +499,6 @@ export async function buildExportPayload(
     q: sp.get("q")?.trim() || undefined,
     sort,
     sortDir,
-    take: 4000,
   });
 
   if (kind === "report-not-b") {

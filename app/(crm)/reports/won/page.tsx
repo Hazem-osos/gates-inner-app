@@ -105,7 +105,6 @@ async function ReportWonContent({
       status: ClientStatus.WON,
       sort,
       sortDir: dir,
-      take: 500,
     }),
     resolveActiveSalesName(user.role, salesKey),
   ]);

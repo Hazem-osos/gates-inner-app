@@ -1,5 +1,6 @@
 import { ClientStatus, Prisma } from "@prisma/client";
 
+import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@prisma/client";
@@ -73,7 +74,7 @@ type ReportListArgs = {
 };
 
 function buildReportClientsListQuery(args: ReportListArgs) {
-  const take = args.take ?? 500;
+  const take = args.take ?? MAX_CLIENT_ROWS_FOR_UI;
   const statuses = Array.isArray(args.status) ? args.status : [args.status];
 
   const scope = clientScopeWhere({

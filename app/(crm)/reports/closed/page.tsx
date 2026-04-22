@@ -48,7 +48,6 @@ export default async function ReportClosedPage({
       q: sp.q,
       sort,
       sortDir: dir,
-      take: 500,
     }),
     listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),
