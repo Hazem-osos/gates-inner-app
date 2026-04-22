@@ -19,7 +19,6 @@ import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
 import { callsReportExportExcelHref } from "@/lib/export-excel-href";
-import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { endOfDay, startOfDay } from "date-fns";
 
@@ -155,9 +154,9 @@ export default async function CallsReportPage({
         </button>
       </form>
 
-      <p className={reportPageDescriptionClass}>
-        العملاء المضافون جدد في الفترة (حسب تاريخ الإدخال): {stats.total} | محدد لهم
-        زيارة: {stats.scheduled} | غير محدد: {stats.unscheduled}
+      <p className="mx-auto max-w-4xl text-center text-sm font-medium leading-snug text-muted-foreground">
+        العملاء المضافون جدد في الفترة: {stats.total} | محدد لهم زيارة: {stats.scheduled} |
+        غير محدد: {stats.unscheduled}
       </p>
 
       {activeSalesName ? (
@@ -181,10 +180,7 @@ export default async function CallsReportPage({
       <ReportRecordsCount count={filtered.length} />
 
       <div className="rounded-xl border border-border/80">
-        <Table
-          containerClassName="max-h-[min(70vh,calc(100vh-11rem))]"
-          className="[&_th]:border-s-2 [&_td]:border-s-2 [&_th]:border-border [&_td]:border-border"
-        >
+        <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
           <TableHeader>
             <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
               <TableHead>السيلز</TableHead>

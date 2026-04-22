@@ -15,7 +15,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import { cn } from "@/lib/utils";
+
+/** نص المعاينة في التلميح — مثل تقرير B */
+function fullCellTooltip(value: string | null | undefined): string {
+  const s = value ?? "";
+  return s.trim() ? s : "— فارغ —";
+}
 
 /** مثل تقارير B / Not B: نص مضغوط، وعند التركيز يكبر لسهولة القراءة والكتابة */
 const recTextareaClass = cn(
@@ -53,7 +61,8 @@ export function RecommendationsReportTable({
 }) {
   return (
     <div className="rounded-xl border border-border/80">
-      <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
+      <TooltipProvider delayDuration={180}>
+        <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">
         <TableHeader>
           <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
             <TableHead className="w-[6.5rem] max-w-[6.5rem] min-w-[5rem]">
@@ -83,7 +92,8 @@ export function RecommendationsReportTable({
             rows.map((r) => <RecommendationEditableRow key={r.id} r={r} />)
           )}
         </TableBody>
-      </Table>
+        </Table>
+      </TooltipProvider>
     </div>
   );
 }
@@ -158,41 +168,49 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
       </TableCell>
       <TableCell className="text-sm">{r.salesName ?? "—"}</TableCell>
       <TableCell>
-        <Textarea
-          rows={3}
-          className={cn(recTextareaClass, "min-w-[200px]")}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          dir="rtl"
-        />
+        <ReportFieldTooltip tooltip={fullCellTooltip(body)}>
+          <Textarea
+            rows={3}
+            className={cn(recTextareaClass, "min-w-[200px]")}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            dir="rtl"
+          />
+        </ReportFieldTooltip>
       </TableCell>
       <TableCell>
-        <Input
-          type="date"
-          dir="ltr"
-          className={recDateInputClass}
-          value={recDate}
-          onChange={(e) => setRecDate(e.target.value)}
-        />
+        <ReportFieldTooltip tooltip={fullCellTooltip(recDate)}>
+          <Input
+            type="date"
+            dir="ltr"
+            className={recDateInputClass}
+            value={recDate}
+            onChange={(e) => setRecDate(e.target.value)}
+          />
+        </ReportFieldTooltip>
       </TableCell>
       <TableCell className="text-muted-foreground">{r.authorName}</TableCell>
       <TableCell>
-        <Input
-          type="date"
-          dir="ltr"
-          className={recDateInputClass}
-          value={workDate}
-          onChange={(e) => setWorkDate(e.target.value)}
-        />
+        <ReportFieldTooltip tooltip={fullCellTooltip(workDate)}>
+          <Input
+            type="date"
+            dir="ltr"
+            className={recDateInputClass}
+            value={workDate}
+            onChange={(e) => setWorkDate(e.target.value)}
+          />
+        </ReportFieldTooltip>
       </TableCell>
       <TableCell>
-        <Textarea
-          rows={3}
-          className={cn(recTextareaClass, "min-w-[180px]")}
-          value={actionTaken}
-          onChange={(e) => setActionTaken(e.target.value)}
-          dir="rtl"
-        />
+        <ReportFieldTooltip tooltip={fullCellTooltip(actionTaken)}>
+          <Textarea
+            rows={3}
+            className={cn(recTextareaClass, "min-w-[180px]")}
+            value={actionTaken}
+            onChange={(e) => setActionTaken(e.target.value)}
+            dir="rtl"
+          />
+        </ReportFieldTooltip>
       </TableCell>
       <TableCell>
         <Button type="button" size="sm" disabled={pending} onClick={save}>

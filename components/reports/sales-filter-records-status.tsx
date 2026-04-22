@@ -2,14 +2,14 @@ import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import { cn } from "@/lib/utils";
 
 const SALES_FILTER_MESSAGE_CLASS =
-  "min-w-0 w-full max-w-3xl text-balance text-center text-base font-medium leading-relaxed text-destructive";
+  "min-w-0 w-full text-balance text-center text-xs sm:text-sm font-normal leading-snug text-muted-foreground";
 
 /** عند تفعيل فلترات أخرى دون اختيار مندوب محدد (نص موحّد + منتصف). */
 export function GenericFilterActiveNotice({ className }: { className?: string }) {
   return (
     <p
       className={cn(
-        "w-full text-center text-base font-medium text-destructive",
+        "w-full text-center text-xs sm:text-sm font-normal text-muted-foreground",
         className
       )}
       dir="rtl"
@@ -20,7 +20,9 @@ export function GenericFilterActiveNotice({ className }: { className?: string })
   );
 }
 
-/** نص فلتر المندوب النشط (نفس الحجم في كل الصفحات) — بمحاذاة المنتصف. */
+/**
+ * نص فلتر السيلز الموحّد — سطر قصير، خط صغير (لا نسخة طويلة).
+ */
 export function SalesFilterActiveMessage({
   activeSalesName,
   className,
@@ -28,6 +30,7 @@ export function SalesFilterActiveMessage({
   activeSalesName: string;
   className?: string;
 }) {
+  const line = `فلتر سيلز: «${activeSalesName}»`;
   return (
     <p
       className={cn(
@@ -39,15 +42,13 @@ export function SalesFilterActiveMessage({
       role="status"
       aria-live="polite"
     >
-      يوجد فلتر مندوب مبيعات (سيلز) باسم «{activeSalesName}» في التقرير — الأعداد
-      والسجلات المعروضة في الصفحة (والجدول) مُرشّحة لهذا المندوب فقط.
+      {line}
     </p>
   );
 }
 
 /**
- * عدد السجلات + تنبيه عند تفعيل فلتر مندوب مبيعات (تقرير B / Not B).
- * الرسالة في المنتصف تحت شريط الأدوات.
+ * عدد السجلات + تنبيه فلتر السيلز (B / Not B) — يستدعي `SalesFilterActiveMessage` للنص القصير.
  */
 export function SalesFilterRecordsStatus({
   count,
@@ -70,15 +71,16 @@ export function SalesFilterRecordsStatus({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 text-center",
+        "flex flex-col items-center gap-1 text-center sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-3 sm:gap-y-0.5",
         className
       )}
       dir="rtl"
     >
       <SalesFilterActiveMessage activeSalesName={activeSalesName} />
-      <div className="shrink-0">
-        <ReportRecordsCount count={count} />
-      </div>
+      <ReportRecordsCount
+        count={count}
+        className="text-sm font-normal text-foreground"
+      />
     </div>
   );
 }

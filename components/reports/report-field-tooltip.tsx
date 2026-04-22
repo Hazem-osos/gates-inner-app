@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import {
   Tooltip,
   TooltipContent,
@@ -18,20 +20,26 @@ type Props = {
 };
 
 /**
- * معاينة المحتوى عند التمرير على حقول الجدول — نص كبير بدل تلميح المتصفح الصغير.
+ * معاينة المحتوى — نص كبير. يجب أن يكون child عنصراً واحداً.
+ * يرتبط المُحفِّز بذات حقل الإدخال (وليس span) حتى يعمل التلميح عند التركيز والتمرير مثل تقرير B/Not B.
  */
 export function ReportFieldTooltip({
   tooltip,
   children,
   className,
 }: Props) {
+  const only = React.Children.only(children);
+  if (!React.isValidElement(only)) {
+    return <>{children}</>;
+  }
+  const prevClass = (only.props as { className?: string }).className;
+  const trigger = React.cloneElement(only, {
+    className: cn("block w-full min-w-0", className, prevClass),
+  } as { className?: string });
+
   return (
     <Tooltip delayDuration={180}>
-      <TooltipTrigger asChild>
-        <span className={cn("block w-full min-w-0", className)}>
-          {children}
-        </span>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
       <TooltipContent
         side="top"
         align="center"
