@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** يظهر على صفحات التقارير — عدد الصفوف المعروضة بعد الفلاتر. */
+/** عند الاستدعاء من ‎ReportBTable‎: عدد الصفوف بعد التجاوزات والزيارة والبحث والفرز. */
 export function ReportRecordsCount({
   count,
   className,

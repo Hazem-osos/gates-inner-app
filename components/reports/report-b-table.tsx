@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { SalesFilterRecordsStatus } from "@/components/reports/sales-filter-records-status";
 import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import {
   Table,
@@ -118,6 +119,8 @@ type Props = {
   auditReportKey?: string;
   workLogUserId?: string;
   workLogUserRole?: UserRole;
+  /** فلتر السيلز (نص) — العدد يُحسب داخلياً من الصفوف بعد كل فلاتر الجدول */
+  activeSalesName?: string | null;
 };
 
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
@@ -168,6 +171,7 @@ export function ReportBTable({
   auditReportKey,
   workLogUserId,
   workLogUserRole = "SALES",
+  activeSalesName = null,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -587,6 +591,12 @@ export function ReportBTable({
         dashboardMode && "gap-2"
       )}
     >
+      {!dashboardMode ? (
+        <SalesFilterRecordsStatus
+          count={visibleRows.length}
+          activeSalesName={activeSalesName}
+        />
+      ) : null}
       <div
         data-gate-exempt
         className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"

@@ -6,8 +6,10 @@ import {
   RecommendationsReportTable,
   type RecommendationReportRow,
 } from "@/components/reports/recommendations-report-table";
-import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  GenericFilterActiveNotice,
+  SalesFilterRecordsStatus,
+} from "@/components/reports/sales-filter-records-status";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
@@ -275,9 +277,7 @@ export default async function RecommendationsReportPage({
         </Link>
       </div>
 
-      {activeSalesName ? (
-        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
-      ) : filterActive ? (
+      {!activeSalesName && filterActive ? (
         <GenericFilterActiveNotice />
       ) : null}
 
@@ -299,7 +299,10 @@ export default async function RecommendationsReportPage({
         />
       </div>
 
-      <ReportRecordsCount count={tableRows.length} />
+      <SalesFilterRecordsStatus
+        count={tableRows.length}
+        activeSalesName={activeSalesName}
+      />
 
       <RecommendationsReportTable rows={tableRows} />
     </div>

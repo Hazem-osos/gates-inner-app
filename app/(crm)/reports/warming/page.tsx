@@ -7,8 +7,10 @@ import {
   WarmingReportTable,
   type WarmingReportRow,
 } from "@/components/reports/warming-report-table";
-import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  GenericFilterActiveNotice,
+  SalesFilterRecordsStatus,
+} from "@/components/reports/sales-filter-records-status";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { buttonVariants } from "@/components/ui/button";
@@ -144,9 +146,7 @@ export default async function ReportWarmingPage({
         </Link>
       </div>
 
-      {activeSalesName ? (
-        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
-      ) : filterActive ? (
+      {!activeSalesName && filterActive ? (
         <GenericFilterActiveNotice />
       ) : null}
 
@@ -165,7 +165,10 @@ export default async function ReportWarmingPage({
         />
       </div>
 
-      <ReportRecordsCount count={rows.length} />
+      <SalesFilterRecordsStatus
+        count={rows.length}
+        activeSalesName={activeSalesName}
+      />
 
       <WarmingReportTable rows={rows} />
 

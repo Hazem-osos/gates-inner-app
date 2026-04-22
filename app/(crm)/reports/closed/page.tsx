@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
 import {
   REPORT_FILTER_EXPORTS_BAR_CLASS,
   ReportPageExportsToolbar,
@@ -163,8 +162,6 @@ export default async function ReportClosedPage({
         <GenericFilterActiveNotice />
       ) : null}
 
-      <ReportRecordsCount count={rows.length} />
-
       <ReportBTable
         rows={rows}
         classifications={classifications}
@@ -172,6 +169,7 @@ export default async function ReportClosedPage({
         toolbar="closed"
         workLogUserId={workLogUserId}
         workLogUserRole={user.role}
+        activeSalesName={activeSalesName}
       />
     </div>
   );

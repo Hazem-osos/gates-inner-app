@@ -4,8 +4,10 @@ import { connection } from "next/server";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  GenericFilterActiveNotice,
+  SalesFilterRecordsStatus,
+} from "@/components/reports/sales-filter-records-status";
 import { ReportWorkLogDialog } from "@/components/reports/report-work-log-dialog";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
@@ -175,9 +177,7 @@ async function ReportWonContent({
         يعرض العملاء الذين تم البيع لهم فقط (مع فلتر التاريخ إن وُجد).
       </p>
 
-      {activeSalesName ? (
-        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
-      ) : filterActive ? (
+      {!activeSalesName && filterActive ? (
         <GenericFilterActiveNotice />
       ) : null}
 
@@ -199,7 +199,10 @@ async function ReportWonContent({
         />
       </div>
 
-      <ReportRecordsCount count={filtered.length} />
+      <SalesFilterRecordsStatus
+        count={filtered.length}
+        activeSalesName={activeSalesName}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-border/80">
         <Table>

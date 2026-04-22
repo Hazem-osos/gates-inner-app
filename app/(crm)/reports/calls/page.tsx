@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { GenericFilterActiveNotice, SalesFilterActiveMessage } from "@/components/reports/sales-filter-records-status";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import {
+  GenericFilterActiveNotice,
+  SalesFilterRecordsStatus,
+} from "@/components/reports/sales-filter-records-status";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import {
@@ -160,9 +162,7 @@ export default async function CallsReportPage({
         غير محدد: {stats.unscheduled}
       </p>
 
-      {activeSalesName ? (
-        <SalesFilterActiveMessage activeSalesName={activeSalesName} />
-      ) : filterActive ? (
+      {!activeSalesName && filterActive ? (
         <GenericFilterActiveNotice />
       ) : null}
 
@@ -178,7 +178,10 @@ export default async function CallsReportPage({
         />
       </div>
 
-      <ReportRecordsCount count={filtered.length} />
+      <SalesFilterRecordsStatus
+        count={filtered.length}
+        activeSalesName={activeSalesName}
+      />
 
       <div className="rounded-xl border border-border/80">
         <Table containerClassName="max-h-[min(70vh,calc(100vh-11rem))]">

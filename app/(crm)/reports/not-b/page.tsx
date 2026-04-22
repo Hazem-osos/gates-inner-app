@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { SalesFilterRecordsStatus } from "@/components/reports/sales-filter-records-status";
 import {
   REPORT_FILTER_EXPORTS_BAR_CLASS,
   ReportPageExportsToolbar,
@@ -153,17 +152,13 @@ export default async function ReportNotBPage({
         {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
 
-      <SalesFilterRecordsStatus
-        count={rows.length}
-        activeSalesName={activeSalesName}
-      />
-
       <ReportBTable
         rows={rows}
         classifications={classifications}
         rowStyleReportType="not-b"
         workLogUserId={workLogUserId}
         workLogUserRole={user.role}
+        activeSalesName={activeSalesName}
       />
     </div>
   );
