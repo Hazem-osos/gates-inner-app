@@ -1,0 +1,13 @@
+# Explicit Node + npm for Nixpacks-based image builds (avoids
+# "No package manager inferred, using npm default" and uses lockfile-correct `npm ci`).
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"
