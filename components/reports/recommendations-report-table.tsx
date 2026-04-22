@@ -15,6 +15,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+/** مثل تقارير B / Not B: نص مضغوط، وعند التركيز يكبر لسهولة القراءة والكتابة */
+const recTextareaClass = cn(
+  "min-h-[2.5rem] min-w-[7rem] max-h-[40rem] max-w-[min(100vw,48rem)] resize-y",
+  "border border-border/70 bg-background text-xs leading-snug [color-scheme:inherit]",
+  "transition-[font-size,box-shadow,min-width] duration-150",
+  "focus:z-20 focus:min-w-[12rem] focus:text-base focus:font-normal focus:leading-relaxed",
+  "focus:shadow-md focus:ring-1 focus:ring-primary/20 dark:border-border/55"
+);
 
 export type RecommendationReportRow = {
   id: string;
@@ -144,7 +154,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
       <TableCell>
         <Textarea
           rows={3}
-          className="min-w-[200px] text-xs"
+          className={cn(recTextareaClass, "min-w-[200px]")}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           dir="rtl"
@@ -172,7 +182,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
       <TableCell>
         <Textarea
           rows={3}
-          className="min-w-[160px] text-xs"
+          className={cn(recTextareaClass, "min-w-[180px]")}
           value={actionTaken}
           onChange={(e) => setActionTaken(e.target.value)}
           dir="rtl"
