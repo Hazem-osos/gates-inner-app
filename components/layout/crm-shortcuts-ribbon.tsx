@@ -30,7 +30,7 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
   if (shortcuts.length === 0) {
     return (
       <div
-        className="h-8 border-t border-border/50 bg-muted/15"
+        className="h-11 border-t border-border/50 bg-muted/15"
         aria-hidden
       />
     );
@@ -38,11 +38,11 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
 
   return (
     <nav
-      className="border-t border-border/50 bg-muted/20 py-0.5 dark:bg-muted/10"
+      className="border-t border-border/50 bg-muted/20 py-1.5 dark:bg-muted/10"
       aria-label="اختصارات سريعة"
     >
       <div
-        className="flex min-h-8 items-stretch gap-0.5 overflow-x-auto overflow-y-hidden py-0.5 pl-0.5 pr-1 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] sm:min-h-9 sm:gap-1 sm:px-0 sm:py-1 [&::-webkit-scrollbar]:hidden"
+        className="flex min-h-11 items-stretch gap-1 overflow-x-auto overflow-y-hidden px-1 py-0.5 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] sm:min-h-12 sm:gap-1.5 sm:px-0 sm:py-1 [&::-webkit-scrollbar]:hidden"
       >
         {shortcuts.map(({ href, label, Icon, ribbonMark }, index) => {
           const active = crmRibbonShortcutIsActive(pathname, href);
@@ -56,7 +56,7 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
               aria-current={active ? "page" : undefined}
               title={label}
               className={cn(
-                "group flex min-w-[2.75rem] shrink-0 flex-col items-center justify-center gap-px rounded-md px-0.5 py-0.5 text-center sm:min-w-[3rem] sm:px-1",
+                "group flex min-w-[3.25rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-center sm:min-w-[3.75rem] sm:px-1.5 sm:py-1.5",
                 "transition duration-200 hover:-translate-y-px active:scale-[0.98]",
                 active
                   ? "bg-background shadow-sm ring-1 ring-border/80 dark:bg-background/80"
@@ -66,15 +66,15 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
             >
               <span
                 className={cn(
-                  "flex h-[1.35rem] w-[1.35rem] items-center justify-center sm:h-6 sm:w-6",
-                  "rounded border border-transparent transition-colors",
+                  "flex h-8 w-8 items-center justify-center sm:h-9 sm:w-9",
+                  "rounded-lg border border-transparent transition-colors",
                   active && "border-border/60 bg-muted/50"
                 )}
               >
                 {ribbonMark ? (
                   <span
                     className={cn(
-                      "select-none text-[0.6rem] font-black leading-none sm:text-[0.7rem]",
+                      "select-none text-xs font-black leading-none sm:text-sm",
                       tint.text
                     )}
                     aria-hidden
@@ -84,18 +84,18 @@ export function CrmShortcutsRibbon({ role }: { role: UserRole }) {
                 ) : Icon ? (
                   <Icon
                     className={cn(
-                      "size-3 sm:size-3.5",
+                      "size-4 sm:size-5",
                       active ? "text-foreground" : tint.text
                     )}
-                    strokeWidth={1.85}
+                    strokeWidth={1.9}
                     aria-hidden
                   />
                 ) : null}
               </span>
               <span
                 className={cn(
-                  "line-clamp-1 max-w-[2.6rem] text-[0.45rem] font-medium leading-tight text-muted-foreground",
-                  "sm:max-w-[3rem] sm:text-[0.5rem] sm:leading-none",
+                  "line-clamp-1 max-w-[3.1rem] text-[0.55rem] font-medium leading-tight text-muted-foreground",
+                  "sm:max-w-[3.6rem] sm:text-[0.65rem] sm:leading-tight",
                   "group-hover:text-foreground/90",
                   active && "text-foreground"
                 )}
