@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import { SalesFilterRecordsStatus } from "@/components/reports/sales-filter-records-status";
 import {
   REPORT_FILTER_EXPORTS_BAR_CLASS,
   ReportPageExportsToolbar,
@@ -10,6 +10,7 @@ import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-tab
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
+import { prisma } from "@/lib/prisma";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { parseReportSortParams } from "@/lib/report-sort-params";
@@ -42,6 +43,16 @@ export default async function ReportBPage({
   ]);
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
+
+  const activeSalesName =
+    user.role !== "SALES" && salesKey !== "all"
+      ? (
+          await prisma.user.findUnique({
+            where: { id: salesKey },
+            select: { name: true },
+          })
+        )?.name ?? null
+      : null;
 
   const exportsConfig: ReportToolbarExportsConfig = {
     excelHref: reportExportExcelHref({
@@ -78,16 +89,14 @@ export default async function ReportBPage({
               searchParams={{}}
               currentSales={salesKey}
             />
-            {salesKey !== "all" ? (
-              <p className="max-w-sm text-right text-xs font-medium text-destructive">
-                يوجد فلتر نشط على النتائج المعروضة.
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>
 
-      <ReportRecordsCount count={rows.length} />
+      <SalesFilterRecordsStatus
+        count={rows.length}
+        activeSalesName={activeSalesName}
+      />
 
       <ReportBTable
         rows={rows}

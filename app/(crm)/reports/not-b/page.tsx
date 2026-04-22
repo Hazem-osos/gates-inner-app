@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import { SalesFilterRecordsStatus } from "@/components/reports/sales-filter-records-status";
 import {
   REPORT_FILTER_EXPORTS_BAR_CLASS,
   ReportPageExportsToolbar,
@@ -13,6 +13,7 @@ import { listClientsForReport } from "@/lib/data/report-queries";
 import { parseReportSortParams } from "@/lib/report-sort-params";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,16 @@ export default async function ReportNotBPage({
       ? classifications.find((x) => x.id === classKey)?.label ?? classKey
       : null;
 
+  const activeSalesName =
+    user.role !== "SALES" && salesKey !== "all"
+      ? (
+          await prisma.user.findUnique({
+            where: { id: salesKey },
+            select: { name: true },
+          })
+        )?.name ?? null
+      : null;
+
   const exportsConfig: ReportToolbarExportsConfig = {
     excelHref: reportExportExcelHref({
       kind: "report-not-b",
@@ -109,11 +120,6 @@ export default async function ReportNotBPage({
               }}
               currentSales={salesKey}
             />
-            {salesKey !== "all" ? (
-              <p className="max-w-sm text-right text-xs font-medium text-destructive">
-                يوجد فلتر نشط على النتائج المعروضة.
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -156,7 +162,10 @@ export default async function ReportNotBPage({
         {sp.q ? ` — بحث: «${sp.q}»` : ""}.
       </p>
 
-      <ReportRecordsCount count={rows.length} />
+      <SalesFilterRecordsStatus
+        count={rows.length}
+        activeSalesName={activeSalesName}
+      />
 
       <ReportBTable
         rows={rows}
