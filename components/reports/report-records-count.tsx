@@ -2,12 +2,11 @@
 export function ReportRecordsCount({ count }: { count: number }) {
   return (
     <p
-      className="text-sm tabular-nums text-muted-foreground"
+      className="text-lg font-medium tabular-nums text-black dark:text-zinc-100"
       dir="rtl"
       role="status"
     >
-      المعروض في الصفحة:{" "}
-      <span className="font-semibold text-foreground">{count}</span> سجلًا
+      المعروض في الصفحة: {count} سجلًا
     </p>
   );
 }
