@@ -47,6 +47,22 @@ export function startOfToday(): Date {
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
 }
 
+/** بداية يوم التقويم المحلي (مقارنة ISO من DB مع «اليوم» دون أخطاء UTC) */
+export function startOfLocalCalendarDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** «متابعة تالية» = يوم التقويم المحلي = اليوم (للوحة/التصدير — يتسق مع passesNeglected) */
+export function isNextFollowUpLocalCalendarToday(
+  nextFollowUpAt: string | null | undefined
+): boolean {
+  const raw = (nextFollowUpAt ?? "").trim();
+  if (!raw) return false;
+  const nf = parseIsoDate(raw);
+  if (!nf) return false;
+  return startOfLocalCalendarDay(nf).getTime() === startOfToday().getTime();
+}
+
 /**
  * يحلّل تاريخ المتابعة (كامل ISO أو تاريخ بصيغة yyyy-MM-dd فقط) كيوم تقويم محلي
  * — يتفادى حقول <input type="date"> الفارغة بسبب صيغة غير مفهومة لـ new Date.
@@ -143,26 +159,17 @@ export function passesFollowCount(row: ReportBFilterRow, minCount: number): bool
 }
 
 /**
- * عملاء مهمولين / مهملين — يظهرون عند أحد ما يلي:
- * 1) حقل «المتابعة التالية» فارغ أو غير قابل للتحليل كتاريخ.
- * 2) تاريخ المتابعة التالية قبل بداية اليوم ولم تُسجَّل متابعة لاحقة في خانات المتابعة
- *    (ملاحظة + تاريخ ≥ موعد المتابعة التالية).
- * — التواريخ اليوم أو لاحقة: لا يُصنَّف مهمولاً.
+ * مهمول = حقل «متابعة تالية» فقط: **فارغ**، أو **نص ليس بتاريخ صالح**، أو **يوم التقويم المحلي
+ * قبل اليوم**. اليوم أو أي تاريخ لاحق → ليس مهمولاً.
+ * (خانات المتابعة JSON لا تغيّر هذا الفلتر — العمود هو المرجع.)
  */
 export function passesNeglected(row: ReportBFilterRow): boolean {
   const raw = (row.nextFollowUpAt ?? "").trim();
   if (!raw) return true;
   const nf = parseIsoDate(raw);
   if (!nf) return true;
-  if (nf >= startOfToday()) return false;
-  const slots = normalizeSlotsSimple(row.followUpSlots);
-  const recorded = slots.some((s) => {
-    const d = parseIsoDate(s.date || null);
-    const note = (s.note ?? "").trim();
-    if (!note || !d) return false;
-    return d >= nf;
-  });
-  return !recorded;
+  const day = startOfLocalCalendarDay(nf);
+  return day < startOfToday();
 }
 
 export function passesVisitScheduledOnly(row: ReportBFilterRow): boolean {

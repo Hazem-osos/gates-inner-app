@@ -9,7 +9,10 @@ import type { ReportSortDir, ReportSortKey } from "@/lib/data/report-queries";
 import { listClientsForReportExport } from "@/lib/data/report-queries";
 import { reportBRowToExportRecord } from "@/lib/export/report-b-flat";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
-import { passesNeglected } from "@/lib/report-b-utils";
+import {
+  isNextFollowUpLocalCalendarToday,
+  passesNeglected,
+} from "@/lib/report-b-utils";
 import { authorNamesByClientAndBody } from "@/lib/recommendation-author-lookup";
 import {
   clientPendingRecommendationDateWindowWhere,
@@ -372,14 +375,9 @@ export async function buildExportPayload(
       { forExport: true, salesUserId: salesKey }
     );
     const rowsAll = followupClients.map(clientEntityToReportBRow);
-    const todayStart = startOfDay(new Date());
-    const todayEnd = endOfDay(new Date());
-
-    const todayRows = rowsAll.filter((r) => {
-      if (!r.nextFollowUpAt) return false;
-      const d = new Date(r.nextFollowUpAt);
-      return isWithinInterval(d, { start: todayStart, end: todayEnd });
-    });
+    const todayRows = rowsAll.filter((r) =>
+      isNextFollowUpLocalCalendarToday(r.nextFollowUpAt)
+    );
 
     const overdueRows = rowsAll.filter((r) => passesNeglected(r));
 
@@ -499,6 +497,7 @@ export async function buildExportPayload(
     q: sp.get("q")?.trim() || undefined,
     sort,
     sortDir,
+    noRowLimit: kind === "report-b" || kind === "report-not-b",
   });
 
   if (kind === "report-not-b") {

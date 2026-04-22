@@ -569,7 +569,7 @@ export function ReportBTable({
         : null;
     }
     if (violation === "neglected")
-      return "يعرض العملاء المهمولين: إمّا لا يوجد تاريخ «متابعة تالية» صالح (فارغ أو غير مقروء)، أو تاريخ المتابعة التالية قبل اليوم ولم تُسجَّل لهم في خانات المتابعة متابعة بتاريخ وملاحظة لاحقة عن ذلك الموعد.";
+      return "يعرض العملاء الذين في عمود «متابعة تالية» لا تاريخ، أو تاريخ غير صالح، أو تاريخ قبل اليوم (وفق التوقيت المحلي). من في العمود يوم اليوم أو لاحقاً لا يظهر هنا.";
     if (violation === "no_answer")
       return "يعرض العملاء المسجَّل في متابعاتهم عدم الرد";
     return null;
@@ -875,7 +875,7 @@ export function ReportBTable({
                   type="button"
                   variant="ghost"
                   className={violChip(violation === "neglected")}
-                  title="يشمل من تجاوز موعد المتابعة دون متابعة مسجّلة لاحقاً، ومن لا يوجد لهم تاريخ متابعة تالية محدد."
+                  title="عمود «متابعة تالية» فاضٍ، أو تاريخ غير صالح، أو تاريخ قبل اليوم. الخانات الإضافية لا تلغي الفلتر."
                   onClick={() =>
                     setViolation((v) =>
                       v === "neglected" ? null : "neglected"
@@ -952,7 +952,8 @@ export function ReportBTable({
             tableDir="rtl"
             containerClassName={
               dashboardMode
-                ? "max-h-[min(38vh,320px)]"
+                ? // رأس الجدول (h-11) + ≈3 صفوف — تمرير رأسي لبقية الصفوف
+                  "max-h-[min(17rem,42svh)] overscroll-y-contain"
                 : "max-h-[min(70vh,calc(100vh-11rem))]"
             }
             className={cn(

@@ -37,6 +37,7 @@ export default async function ReportBPage({
       status: ClientStatus.B,
       sort,
       sortDir: dir,
+      noRowLimit: true,
     }),
     listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),

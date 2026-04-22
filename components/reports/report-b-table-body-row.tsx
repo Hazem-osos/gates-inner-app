@@ -407,7 +407,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </div>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(
           isoToDateInput(displayRow.nextFollowUpAt)
         )}
@@ -441,7 +441,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(
           displayRow.managementRecommendationText
         )}
@@ -460,7 +460,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(mgmtDateStr)}
       >
         <Input
@@ -483,7 +483,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       {r.assignedUserName ?? "—"}
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.company)}
       >
         <Textarea
@@ -506,7 +506,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         : "—"}
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native" tooltip={fullCellTooltip(displayRow.name)}>
+      <ReportFieldTooltip tooltip={fullCellTooltip(displayRow.name)}>
         <Textarea
           rows={2}
           className={reportBTextarea}
@@ -519,7 +519,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.activity)}
       >
         <Textarea
@@ -534,7 +534,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.position)}
       >
         <Textarea
@@ -549,7 +549,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.address)}
       >
         <Textarea
@@ -564,7 +564,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell dir="ltr">
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(
           [displayRow.phone, displayRow.phone2].filter(Boolean).join(" / ")
         )}
@@ -590,7 +590,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell dir="ltr">
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.quotePrice)}
       >
         <Textarea
@@ -608,7 +608,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.quoteDetail)}
       >
         <Textarea
@@ -623,7 +623,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(combinedNote)}
       >
         <Textarea
@@ -642,7 +642,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.salesNotes)}
       >
         <Textarea
@@ -657,7 +657,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native" tooltip={classificationTooltip}>
+      <ReportFieldTooltip tooltip={classificationTooltip}>
       <Select
         value={displayRow.classificationId ?? "__none__"}
         onValueChange={(v) => {
@@ -773,7 +773,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.adPlatform)}
       >
         <Textarea
@@ -788,7 +788,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.sourceAdName)}
       >
         <Textarea
@@ -803,7 +803,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={
           displayRow.visitAppointmentScheduled
             ? "زيارة مجدولة: نعم"
@@ -826,7 +826,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(
           isoToDateInput(displayRow.visitAppointmentDate)
         )}
@@ -848,7 +848,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.presentingEmployeeName)}
       >
         <Textarea
@@ -865,7 +865,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(
           displayRow.qqAnswer === null
             ? ""
@@ -911,7 +911,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip preview="native"
+      <ReportFieldTooltip
         tooltip={fullCellTooltip(displayRow.finalStatusNote)}
       >
         <Textarea
@@ -932,7 +932,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       return (
         <Fragment key={`${r.id}-slot-${i}`}>
           <TableCell>
-            <ReportFieldTooltip preview="native"
+            <ReportFieldTooltip
               tooltip={fullCellTooltip(slot?.note)}
             >
               <Textarea
@@ -962,7 +962,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
             </ReportFieldTooltip>
           </TableCell>
           <TableCell>
-            <ReportFieldTooltip preview="native"
+            <ReportFieldTooltip
               tooltip={fullCellTooltip(
                 slot?.date
                   ? isoToDateInput(slot.date)

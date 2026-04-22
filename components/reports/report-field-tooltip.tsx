@@ -9,24 +9,26 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-/** ~٢–٢٥× حجم نص الخلية (تقريباً من text-xs) */
-const PREVIEW_TEXT =
-  "text-[1.35rem] leading-snug sm:text-[1.6rem] sm:leading-relaxed md:text-[1.75rem]";
+/** تلميح واضح شوية من ‎text-sm‎ لكن بعيد عن الحجم الضخم السابق */
+const RADIX_PREVIEW =
+  "text-base leading-normal font-normal px-3 py-2 max-w-[min(92vw,32rem)]";
+/** اسم قديم في بعض الفروع/الكاش — نفس الـ class */
+const RADIX_MINIMAL = RADIX_PREVIEW;
 
 type Props = {
   tooltip: string;
   children: React.ReactNode;
   className?: string;
   /**
-   * ‎radix‎: معاينة كبيرة (أثقل في جداول ضخمة).
-   * ‎native‎: ‎title‎ فقط — أخف بكثير عند الكتابة في تقارير B / Not B واللوحة.
+   * ‎radix‎ (الافتراضي): تلميح ‎text-base‎ — أوضح شوية من غير تكبير مبالغ.
+   * ‎native‎: ‎title‎ فقط من المتصفح (أصغر، أخف).
    */
   preview?: "radix" | "native";
 };
 
 /**
- * معاينة المحتوى — نص كبير. يجب أن يكون child عنصراً واحداً.
- * يرتبط المُحفِّز بذات حقل الإدخال (وليس span) حتى يعمل التلميح عند التركيز والتمرير مثل تقرير B/Not B.
+ * معاينة محتوى الخلية. الافتراضي: تلميح Radix بحجم مريح.
+ * يرتبط المُحفِّز بذات حقل الإدخال حتى يعمل التلميح مع التركيز مثل تقرير B/Not B.
  */
 export const ReportFieldTooltip = React.memo(function ReportFieldTooltip({
   tooltip,
@@ -53,14 +55,14 @@ export const ReportFieldTooltip = React.memo(function ReportFieldTooltip({
   } as { className?: string });
 
   return (
-    <Tooltip delayDuration={220}>
+    <Tooltip delayDuration={200}>
       <TooltipTrigger asChild>{trigger}</TooltipTrigger>
       <TooltipContent
         side="top"
         align="center"
         className={cn(
-          PREVIEW_TEXT,
-          "whitespace-pre-wrap break-words [word-break:break-word]"
+          RADIX_MINIMAL,
+          "whitespace-pre-wrap wrap-break-word [word-break:break-word]"
         )}
       >
         {tooltip}

@@ -46,6 +46,7 @@ export default async function ReportNotBPage({
       q: sp.q,
       sort,
       sortDir: dir,
+      noRowLimit: true,
     }),
     listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),

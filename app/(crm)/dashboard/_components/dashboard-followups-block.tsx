@@ -2,9 +2,11 @@ import { ReportBTable } from "@/components/reports/report-b-table";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
-import { passesNeglected } from "@/lib/report-b-utils";
+import {
+  isNextFollowUpLocalCalendarToday,
+  passesNeglected,
+} from "@/lib/report-b-utils";
 import type { SessionUser } from "@/lib/auth-helpers";
-import { endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 export async function DashboardFollowupBlocks({
   user,
@@ -21,14 +23,10 @@ export async function DashboardFollowupBlocks({
   ]);
 
   const rowsAll = followupClients.map(clientEntityToReportBRow);
-  const todayStart = startOfDay(new Date());
-  const todayEnd = endOfDay(new Date());
 
-  const todayRows = rowsAll.filter((r) => {
-    if (!r.nextFollowUpAt) return false;
-    const d = new Date(r.nextFollowUpAt);
-    return isWithinInterval(d, { start: todayStart, end: todayEnd });
-  });
+  const todayRows = rowsAll.filter((r) =>
+    isNextFollowUpLocalCalendarToday(r.nextFollowUpAt)
+  );
 
   const overdueRows = rowsAll.filter((r) => passesNeglected(r));
 

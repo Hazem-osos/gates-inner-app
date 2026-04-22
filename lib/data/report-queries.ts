@@ -71,10 +71,28 @@ type ReportListArgs = {
   sort?: ReportSortKey;
   sortDir?: ReportSortDir;
   take?: number;
+  /**
+   * true: بدون ‎`take`‎ — كامل العملاء المطابِقين (فلتر مهمولين/متأخرة لا يفقد صفاً بسبب سقف ١٠٠k).
+   * يُفضّل لصفحتي تقرير B / Not B.
+   */
+  noRowLimit?: boolean;
 };
 
-function buildReportClientsListQuery(args: ReportListArgs) {
-  const take = args.take ?? MAX_CLIENT_ROWS_FOR_UI;
+function buildReportClientsListQuery(
+  args: ReportListArgs
+): {
+  where: Prisma.ClientWhereInput;
+  orderBy: Prisma.ClientOrderByWithRelationInput[];
+  take: number | undefined;
+} {
+  let take: number | undefined;
+  if (args.take !== undefined) {
+    take = args.take;
+  } else if (args.noRowLimit) {
+    take = undefined;
+  } else {
+    take = MAX_CLIENT_ROWS_FOR_UI;
+  }
   const statuses = Array.isArray(args.status) ? args.status : [args.status];
 
   const scope = clientScopeWhere({
@@ -135,7 +153,7 @@ export async function listClientsForReport(args: ReportListArgs) {
       classification: { select: { id: true, label: true, color: true, isBRow: true } },
     },
     orderBy,
-    take,
+    ...(take !== undefined ? { take } : {}),
   });
 }
 
@@ -149,6 +167,6 @@ export async function listClientsForReportExport(
     where,
     select: clientReportExportSelect,
     orderBy,
-    take,
+    ...(take !== undefined ? { take } : {}),
   });
 }
