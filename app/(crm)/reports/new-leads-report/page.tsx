@@ -8,6 +8,7 @@ import {
   listNewLeadsForReport,
   listUsersForNewLeadReportFilter,
 } from "@/lib/data/new-leads-report";
+import { listClientClassifications } from "@/lib/data/classifications";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +38,14 @@ export default async function NewLeadsReportPage({
   const reach = get("reach")?.trim() ?? "all";
   const category = get("category")?.trim() ?? "all";
 
-  const [users, { rows, stats }, activeSalesName] = await Promise.all([
+  const [users, classifications, activeSalesName] = await Promise.all([
     listUsersForNewLeadReportFilter(),
-    listNewLeadsForReport({
+    listClientClassifications(),
+    resolveActiveSalesName(user.role, salesUserId),
+  ]);
+
+  const { rows, stats } = await listNewLeadsForReport(
+    {
       fromYmd,
       toYmd,
       salesUserId,
@@ -47,9 +53,9 @@ export default async function NewLeadsReportPage({
       phoneQ,
       reach,
       category,
-    }),
-    resolveActiveSalesName(user.role, salesUserId),
-  ]);
+    },
+    { classifications }
+  );
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-8">
@@ -72,6 +78,7 @@ export default async function NewLeadsReportPage({
         users={users}
         activeSalesName={activeSalesName}
         resultCount={rows.length}
+        classifications={classifications}
       />
 
       <NewLeadsReportTable rows={rows} stats={stats} />

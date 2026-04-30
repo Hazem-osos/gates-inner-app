@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import type { ClassificationRow } from "@/lib/data/classifications";
+import { NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED } from "@/lib/data/new-leads-report";
 import type { UserRole } from "@prisma/client";
 
 const PATH = "/reports/new-leads-report";
@@ -117,6 +119,7 @@ export function NewLeadsReportFilters({
   users,
   activeSalesName,
   resultCount,
+  classifications,
 }: {
   userRole: UserRole;
   today: string;
@@ -130,6 +133,7 @@ export function NewLeadsReportFilters({
   users: { id: string; name: string }[];
   activeSalesName: string | null;
   resultCount: number;
+  classifications: ClassificationRow[];
 }) {
   const commonParts = commonSearchParts({
     fromYmd,
@@ -153,12 +157,19 @@ export function NewLeadsReportFilters({
   if (adQ.trim()) chips.push({ label: `إعلان: «${adQ.trim()}»` });
   if (phoneQ.trim()) chips.push({ label: `رقم الهاتف: «${phoneQ.trim()}»` });
   if (reach === "NOT_REACHED") chips.push({ label: "الحالة: لم يتم الوصول" });
+  if (reach === NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED) {
+    chips.push({
+      label: "الحالة: لم يتم الوصول (بدون معالجة Expired)",
+    });
+  }
   if (reach === "REACHED") chips.push({ label: "الحالة: تم الوصول" });
-  if (category === "__empty__") chips.push({ label: "التصنيف: فارغ" });
-  else if (category !== "all") {
-    const catLabel =
-      category.toUpperCase() === "EXPIRED" ? "Expired" : category;
-    chips.push({ label: `التصنيف: ${catLabel}` });
+  if (category === "__empty__") {
+    chips.push({ label: "التصنيف: بدون تصنيف (قائمة الإدارة) أو غير مرتبط" });
+  } else if (category !== "all") {
+    const cls = classifications.find((c) => c.id === category);
+    if (cls) {
+      chips.push({ label: `التصنيف: ${cls.label}` });
+    }
   }
 
   const filterExtrasActive = chips.length > 0;
@@ -188,7 +199,8 @@ export function NewLeadsReportFilters({
           <CardTitle>فلترة نتائج Leads جديدة</CardTitle>
           <CardDescription>
             الفترة والبحث — ثم اضغط «تطبيق». اختصار «اليوم» يضبط التاريخ على
-            اليوم مع الإبقاء على باقي الخيارات.
+            اليوم مع الإبقاء على باقي الخيارات. حقل «التصنيف» يعرض تصنيفات
+            العملاء المعرّفة من الإدارة (بطاقة مرتبطة).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
@@ -264,22 +276,30 @@ export function NewLeadsReportFilters({
                 >
                   <option value="all">الكل</option>
                   <option value="NOT_REACHED">لم يتم الوصول</option>
+                  <option value={NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED}>
+                    لم يتم الوصول (استبعاد المعرّف Expired من الإجراءات)
+                  </option>
                   <option value="REACHED">تم الوصول</option>
                 </select>
               </Label>
               <Label className="flex flex-col gap-1.5 font-normal sm:col-span-2 lg:col-span-1">
-                <span className="text-xs text-muted-foreground">التصنيف</span>
+                <span className="text-xs text-muted-foreground">
+                  التصنيف (بطاقة العميل)
+                </span>
                 <select
                   name="category"
                   defaultValue={category}
                   className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
                 >
                   <option value="all">الكل</option>
-                  <option value="__empty__">فارغ</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="Z">Z</option>
-                  <option value="EXPIRED">Expired</option>
+                  <option value="__empty__">
+                    بدون تصنيف من القائمة / غير مرتبط بعميل
+                  </option>
+                  {classifications.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </Label>
             </div>

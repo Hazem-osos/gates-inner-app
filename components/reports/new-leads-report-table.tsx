@@ -24,6 +24,7 @@ import type {
   NewLeadReportRow,
   NewLeadReportStats,
 } from "@/lib/data/new-leads-report";
+import { formatDateTimeArabic } from "@/lib/date-arabic";
 import { cn } from "@/lib/utils";
 
 function statusBadge(reach: NewLeadReachStatus) {
@@ -41,12 +42,6 @@ function statusBadge(reach: NewLeadReachStatus) {
   );
 }
 
-function catLabel(cat: string | null): string {
-  if (!cat) return "—";
-  if (cat === "EXPIRED") return "Expired";
-  return cat;
-}
-
 function addClientHref(row: NewLeadReportRow) {
   const p = new URLSearchParams();
   p.set("newLeadId", row.id);
@@ -62,11 +57,23 @@ function statPctOfTotal(count: number, total: number): number {
   return Math.round((count / total) * 100);
 }
 
-function SummaryStatPct({ count, total }: { count: number; total: number }) {
+function SummaryStatPct({
+  count,
+  total,
+  pctClassName,
+}: {
+  count: number;
+  total: number;
+  /** لون النسبة — افتراضي أحمر مثل باقي الملخص */
+  pctClassName?: string;
+}) {
   const p = statPctOfTotal(count, total);
   return (
     <span
-      className="ms-1.5 tabular-nums text-xs font-bold text-red-600 dark:text-red-400"
+      className={cn(
+        "ms-1.5 tabular-nums text-base font-bold text-red-600 dark:text-red-400",
+        pctClassName
+      )}
       dir="ltr"
     >
       ({p}%)
@@ -76,6 +83,10 @@ function SummaryStatPct({ count, total }: { count: number; total: number }) {
 const newLeadSuccessControlClass = cn(
   buttonVariants({ size: "sm", variant: "outline" }),
   "relative z-[1] inline-flex h-8 w-full items-center justify-center gap-1 border-green-600/55 bg-green-50 text-xs font-semibold text-green-800 shadow-sm dark:border-green-600/45 dark:bg-green-950/45 dark:text-green-100 pointer-events-none cursor-default"
+);
+
+const summaryLeadActionStatLiClass = cn(
+  "col-span-1 flex flex-wrap items-center gap-2 rounded-lg border border-green-600/45 bg-green-50/90 px-3 py-2.5 text-base text-green-900 shadow-sm dark:border-green-600/40 dark:bg-green-950/40 dark:text-green-100 sm:col-span-2 lg:col-span-3"
 );
 
 export function NewLeadsReportTable({
@@ -117,50 +128,110 @@ export function NewLeadsReportTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/70 bg-muted/15 p-4 text-sm leading-relaxed dark:bg-muted/10">
-        <p className="font-semibold text-foreground">ملخص Leads جديدة (حسب الفلاتر)</p>
-        <ul className="mt-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3 text-muted-foreground">
-          <li>
-            إجمالي تصنيف <span className="font-mono text-foreground">B</span>:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {stats.catB}
-            </span>
-            <SummaryStatPct count={stats.catB} total={totalFiltered} />
-          </li>
-          <li>
-            إجمالي تصنيف <span className="font-mono text-foreground">C</span>:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {stats.catC}
-            </span>
-            <SummaryStatPct count={stats.catC} total={totalFiltered} />
-          </li>
-          <li>
-            إجمالي «لم يتم الوصول»:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {stats.notReached}
-            </span>
-            <SummaryStatPct count={stats.notReached} total={totalFiltered} />
-          </li>
+      <div className="rounded-xl border border-border/70 bg-muted/15 p-5 text-base leading-relaxed dark:bg-muted/10">
+        <p className="text-xl font-bold text-foreground">
+          ملخص Leads جديدة (حسب الفلاتر)
+        </p>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-base text-muted-foreground">
           <li>
             إجمالي «تم الوصول»:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
+            <span className="text-lg font-bold tabular-nums text-foreground">
               {stats.reached}
             </span>
             <SummaryStatPct count={stats.reached} total={totalFiltered} />
           </li>
           <li>
-            إجمالي <span className="font-mono text-foreground">Z</span>:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {stats.catZ}
+            إجمالي «لم يتم الوصول»:{" "}
+            <span className="text-lg font-bold tabular-nums text-foreground">
+              {stats.notReached}
             </span>
-            <SummaryStatPct count={stats.catZ} total={totalFiltered} />
+            <SummaryStatPct count={stats.notReached} total={totalFiltered} />
+          </li>
+          <li className={summaryLeadActionStatLiClass}>
+            <Check
+              className="size-5 shrink-0 text-green-700 dark:text-green-300"
+              aria-hidden
+            />
+            <span className="font-semibold">
+              إجمالي مسجّل عميل سيء (Z)
+              <span className="text-sm font-normal text-green-800/85 dark:text-green-200/90">
+                {" "}
+                — من زر الإجراءات
+              </span>
+              :
+            </span>
+            <span className="text-lg font-bold tabular-nums text-green-900 dark:text-green-50">
+              {stats.leadMarkedBadClient}
+            </span>
+            <SummaryStatPct
+              count={stats.leadMarkedBadClient}
+              total={totalFiltered}
+              pctClassName="text-base text-green-700 dark:text-green-400"
+            />
+          </li>
+          <li className={summaryLeadActionStatLiClass}>
+            <Check
+              className="size-5 shrink-0 text-green-700 dark:text-green-300"
+              aria-hidden
+            />
+            <span className="font-semibold">
+              إجمالي مسجّل Expired
+              <span className="text-sm font-normal text-green-800/85 dark:text-green-200/90">
+                {" "}
+                — من زر الإجراءات
+              </span>
+              :
+            </span>
+            <span className="text-lg font-bold tabular-nums text-green-900 dark:text-green-50">
+              {stats.leadMarkedExpired}
+            </span>
+            <SummaryStatPct
+              count={stats.leadMarkedExpired}
+              total={totalFiltered}
+              pctClassName="text-base text-green-700 dark:text-green-400"
+            />
+          </li>
+          {stats.byClientClassification.map((c) => (
+            <li key={c.id}>
+              إجمالي{" "}
+              <span className="text-lg font-semibold text-foreground">{c.label}</span>:{" "}
+              <span className="text-lg font-bold tabular-nums text-foreground">
+                {c.count}
+              </span>
+              <SummaryStatPct count={c.count} total={totalFiltered} />
+            </li>
+          ))}
+          <li>
+            إجمالي «تم البيع»{" "}
+            <span className="text-sm text-muted-foreground">(بطاقة مرتبطة)</span>
+            :{" "}
+            <span className="text-lg font-bold tabular-nums text-foreground">
+              {stats.linkedWon}
+            </span>
+            <SummaryStatPct count={stats.linkedWon} total={totalFiltered} />
           </li>
           <li>
-            إجمالي Expired:{" "}
-            <span className="font-semibold tabular-nums text-foreground">
-              {stats.catExpired}
+            إجمالي «تم الإغلاق»{" "}
+            <span className="text-sm text-muted-foreground">(بطاقة مرتبطة)</span>
+            :{" "}
+            <span className="text-lg font-bold tabular-nums text-foreground">
+              {stats.linkedLost}
             </span>
-            <SummaryStatPct count={stats.catExpired} total={totalFiltered} />
+            <SummaryStatPct count={stats.linkedLost} total={totalFiltered} />
+          </li>
+          <li>
+            إجمالي مرتبط{" "}
+            <span className="text-sm text-muted-foreground">
+              (بدون تصنيف من قائمة الإدارة)
+            </span>
+            :{" "}
+            <span className="text-lg font-bold tabular-nums text-foreground">
+              {stats.linkedWithoutClassification}
+            </span>
+            <SummaryStatPct
+              count={stats.linkedWithoutClassification}
+              total={totalFiltered}
+            />
           </li>
         </ul>
       </div>
@@ -174,6 +245,9 @@ export function NewLeadsReportTable({
         >
           <TableHeader>
             <TableRow className="[&_th]:pointer-events-none [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
+              <TableHead className="min-w-[12rem] whitespace-nowrap">
+                تاريخ التسجيل
+              </TableHead>
               <TableHead className="min-w-[9rem]">رقم الهاتف</TableHead>
               <TableHead className="min-w-[8rem]">اسم السيلز</TableHead>
               <TableHead className="min-w-[10rem]">اسم الإعلان</TableHead>
@@ -186,7 +260,7 @@ export function NewLeadsReportTable({
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   لا توجد Leads جديدة ضمن الفترة والفلاتر.
@@ -206,6 +280,9 @@ export function NewLeadsReportTable({
 
                 return (
                   <TableRow key={r.id}>
+                    <TableCell className="text-sm tabular-nums text-muted-foreground">
+                      {formatDateTimeArabic(new Date(r.createdAt))}
+                    </TableCell>
                     <TableCell dir="ltr" className="font-mono text-sm">
                       {r.phone}
                     </TableCell>
@@ -214,15 +291,10 @@ export function NewLeadsReportTable({
                     </TableCell>
                     <TableCell className="text-sm">{r.adText}</TableCell>
                     <TableCell>{statusBadge(r.reachStatus)}</TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-sm",
-                        r.reachStatus === "REACHED" &&
-                          !r.leadCategory &&
-                          "font-medium text-blue-700 dark:text-blue-300"
-                      )}
-                    >
-                      {catLabel(r.leadCategory)}
+                    <TableCell className="text-sm text-foreground">
+                      {r.clientId
+                        ? (r.clientClassificationLabel ?? "")
+                        : ""}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1.5">
@@ -279,17 +351,11 @@ export function NewLeadsReportTable({
                                 "disabled:hover:!bg-muted disabled:hover:!text-muted-foreground",
                                 "dark:disabled:hover:!bg-muted/70"
                               )}
-                              disabled={
-                                hasClient ||
-                                rowPending ||
-                                isExpired
-                              }
+                              disabled={hasClient || rowPending}
                               title={
                                 hasClient || rowPending
                                   ? reportRowDisabledReason
-                                  : isExpired
-                                    ? "لا يمكن — التصنيف Expired."
-                                    : undefined
+                                  : undefined
                               }
                               onClick={() =>
                                 void run(

@@ -155,11 +155,8 @@ export async function markNewLeadBadClientAction(
       };
     }
     const cat = rows[0]!.leadCategory?.trim().toUpperCase() ?? "";
-    if (cat === "EXPIRED") {
-      return {
-        ok: false,
-        message: "التصنيف Expired — لا يمكن تسجيل عميل سيء.",
-      };
+    if (cat === "Z") {
+      return { ok: false, message: "مسجّل بالفعل كعميل سيء (Z)." };
     }
 
     // ‎$executeRaw‎ لا يعتمد على DMMF فيذاكرة العميل (يتجاوز عميل ‎Prisma‎ قديم بعد ‎generate‎)
@@ -168,7 +165,7 @@ export async function markNewLeadBadClientAction(
       SET reachStatus = 'REACHED', leadCategory = 'Z', updatedAt = NOW()
       WHERE id = ${leadId}
         AND clientId IS NULL
-        AND UPPER(COALESCE(leadCategory, '')) != 'EXPIRED'
+        AND UPPER(COALESCE(leadCategory, '')) != 'Z'
     `;
     if (Number(affected) < 1) {
       return {
