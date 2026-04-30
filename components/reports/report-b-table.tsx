@@ -119,6 +119,9 @@ export type ReportBRow = {
   /** عميل مغلق — للعرض في تقرير المغلقة فقط */
   closedLostAt?: string | null;
   lossReason?: string | null;
+  /** تقرير تم البيع — عرض فقط */
+  saleDate?: string | null;
+  contractValue?: string | null;
 };
 
 type Props = {
@@ -134,6 +137,8 @@ type Props = {
   workLogUserRole?: UserRole;
   /** فلتر السيلز (نص) — العدد يُحسب داخلياً من الصفوف بعد كل فلاتر الجدول */
   activeSalesName?: string | null;
+  /** أعمدة تاريخ التعاقد وقيمة البيع بعد «إجراءات» (تقرير تم البيع) */
+  wonSaleColumns?: boolean;
 };
 
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
@@ -185,6 +190,7 @@ export function ReportBTable({
   workLogUserId,
   workLogUserRole = "SALES",
   activeSalesName = null,
+  wonSaleColumns = false,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -975,6 +981,12 @@ export function ReportBTable({
                 <TableHead className="sticky right-0 top-0 z-30 min-w-[120px] bg-muted/95 shadow-[0_1px_0_0_hsl(var(--border))]">
                   إجراءات
                 </TableHead>
+                {wonSaleColumns ? (
+                  <>
+                    <TableHead className="min-w-[120px]">تاريخ التعاقد</TableHead>
+                    <TableHead className="min-w-[100px]">قيمة البيع</TableHead>
+                  </>
+                ) : null}
                 <TableHead className="min-w-[170px]">متابعة تالية</TableHead>
                 <TableHead className="min-w-[140px]">توصيات الإدارة</TableHead>
                 <TableHead className="min-w-[120px]">تاريخ التوصية</TableHead>
@@ -1063,6 +1075,7 @@ export function ReportBTable({
                     scrollReportBHorizontal={scrollReportBHorizontal}
                     scrollReportBToScrollEdge={scrollReportBToScrollEdge}
                     router={router}
+                    wonSaleColumns={wonSaleColumns}
                   />
                 );
               })}

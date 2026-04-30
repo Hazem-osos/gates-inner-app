@@ -91,6 +91,7 @@ export type ReportBTableBodyRowProps = {
   scrollReportBHorizontal: (direction: -1 | 1) => void;
   scrollReportBToScrollEdge: (edge: "min" | "max") => void;
   router: AppRouterInstance;
+  wonSaleColumns?: boolean;
 };
 
 function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
@@ -122,6 +123,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
     scrollReportBHorizontal,
     scrollReportBToScrollEdge,
     router,
+    wonSaleColumns = false,
   } = p;
 
   /** مثل «توصيات الإدارة»: المسودة هنا — الـ parent يستقبل بمرئية debounce لتخفيف إعادة رسم الجدول. */
@@ -407,6 +409,20 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         </div>
       </div>
     </TableCell>
+    {wonSaleColumns ? (
+      <>
+        <TableCell dir="ltr" className="text-xs whitespace-nowrap tabular-nums">
+          {displayRow.saleDate
+            ? formatDateArabicLong(new Date(displayRow.saleDate))
+            : "—"}
+        </TableCell>
+        <TableCell dir="ltr" className="text-xs tabular-nums">
+          {(displayRow.contractValue ?? "").trim() !== ""
+            ? displayRow.contractValue
+            : "—"}
+        </TableCell>
+      </>
+    ) : null}
     <TableCell>
       <ReportFieldTooltip
         tooltip={fullCellTooltip(
@@ -1042,7 +1058,8 @@ function rowPropsEqual(
     a.onSetGateClientId === b.onSetGateClientId &&
     a.scrollReportBHorizontal === b.scrollReportBHorizontal &&
     a.scrollReportBToScrollEdge === b.scrollReportBToScrollEdge &&
-    a.router === b.router
+    a.router === b.router &&
+    a.wonSaleColumns === b.wonSaleColumns
   );
 }
 

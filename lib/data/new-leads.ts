@@ -3,6 +3,7 @@ import { userDisplayName } from "@/lib/user-display-name";
 
 export type NewLeadListRow = {
   id: string;
+  entryYmd: string;
   phone: string;
   adText: string;
   salesName: string;
@@ -21,6 +22,7 @@ export async function listNewLeadsForEntryDay(
 
   return rows.map((r) => ({
     id: r.id,
+    entryYmd: r.entryYmd,
     phone: r.phone,
     adText: r.adText,
     salesName: userDisplayName(r.createdBy),

@@ -41,12 +41,25 @@ export function reportImportExcelUrl(kind: string): string {
   return `/api/import/report-xlsx?${u.toString()}`;
 }
 
-/** قائمة العملاء — حسب نطاق السيلز الحالي والبحث */
-export function clientsListExportHref(args: { sales?: string; q?: string }): string {
+/** قائمة العملاء — حسب نطاق السيلز والفلاتر */
+export function clientsListExportHref(args: {
+  sales?: string;
+  q?: string;
+  notClosed?: boolean;
+  closedLost?: boolean;
+  won?: boolean;
+  notWon?: boolean;
+  cls?: string;
+}): string {
   const u = new URLSearchParams();
   u.set("kind", "clients-list");
   if (args.sales && args.sales !== "all") u.set("sales", args.sales);
   if (args.q?.trim()) u.set("q", args.q.trim());
+  if (args.notClosed) u.set("f_nc", "1");
+  if (args.closedLost) u.set("f_cl", "1");
+  if (args.won) u.set("f_won", "1");
+  if (args.notWon) u.set("f_nw", "1");
+  if (args.cls && args.cls !== "all") u.set("cls", args.cls);
   return `/api/export/excel?${u.toString()}`;
 }
 

@@ -60,7 +60,7 @@ export default async function NewClientPage({
       />
       {linkedNewLeadId ? (
         <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
-          يتم ربط هذا الحفظ بتقرير الليدات؛ بعد نجاح الإنشاء تُحدَّث حالة الليد إلى «تم الوصول».
+          يتم ربط هذا الحفظ بليد جديد من «Leads جديدة»؛ بعد نجاح الإنشاء تُحدَّث حالة الليد إلى «تم الوصول».
         </p>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">

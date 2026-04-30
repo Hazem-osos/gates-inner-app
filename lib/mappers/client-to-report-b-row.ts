@@ -58,5 +58,7 @@ export function clientEntityToReportBRow(
     closedLostAt:
       c.status === "LOST" ? c.closedLostAt?.toISOString() ?? null : undefined,
     lossReason: c.status === "LOST" ? c.lossReason ?? null : undefined,
+    saleDate: c.saleDate?.toISOString() ?? null,
+    contractValue: c.contractValue != null ? c.contractValue.toString() : null,
   };
 }

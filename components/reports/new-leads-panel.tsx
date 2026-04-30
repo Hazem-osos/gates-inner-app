@@ -5,6 +5,10 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createNewLeadAction } from "@/app/actions/new-leads";
+import {
+  EditNewLeadDialog,
+  type EditNewLeadFields,
+} from "@/components/reports/edit-new-lead-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +34,8 @@ export function NewLeadsPanel({
   const [phone, setPhone] = useState("");
   const [adText, setAdText] = useState("");
   const [pending, start] = useTransition();
+  const [editLead, setEditLead] = useState<EditNewLeadFields | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   function save() {
     start(async () => {
@@ -42,7 +48,7 @@ export function NewLeadsPanel({
         toast.error(res.message);
         return;
       }
-      toast.success("تم حفظ الليد");
+      toast.success("تم حفظ الليد الجديد");
       setPhone("");
       setAdText("");
       router.refresh();
@@ -59,21 +65,22 @@ export function NewLeadsPanel({
           )}
         >
           <TableHeader>
-            <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
+            <TableRow className="[&_th]:pointer-events-none [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
               <TableHead className="w-12 text-center">#</TableHead>
-              <TableHead>الجوال</TableHead>
+              <TableHead>رقم الهاتف</TableHead>
               <TableHead>الإعلان</TableHead>
-              <TableHead className="min-w-[8rem]">أدخلها</TableHead>
+              <TableHead className="min-w-[8rem]">اسم السيلز</TableHead>
+              <TableHead className="min-w-[5rem]">تعديل</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  لا توجد ليدات لهذا اليوم. أضف الصف الأول بالأسفل.
+                  لا توجد Leads جديدة لهذا اليوم. أضف الصف الأول بالأسفل.
                 </TableCell>
               </TableRow>
             ) : (
@@ -89,6 +96,25 @@ export function NewLeadsPanel({
                   <TableCell className="text-sm text-muted-foreground">
                     {r.salesName}
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      className="relative z-[1] h-7 text-xs"
+                      onClick={() => {
+                        setEditLead({
+                          id: r.id,
+                          entryYmd: r.entryYmd,
+                          phone: r.phone,
+                          adText: r.adText,
+                        });
+                        setEditOpen(true);
+                      }}
+                    >
+                      تعديل
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -98,7 +124,7 @@ export function NewLeadsPanel({
 
       <div className="rounded-xl border border-primary/25 bg-muted/20 p-4 shadow-sm">
         <p className="mb-3 text-sm font-medium text-foreground">
-          إضافة ليد — يوم العمل:{" "}
+          إضافة ليد جديد — يوم العمل:{" "}
           <span dir="ltr" className="tabular-nums">
             {entryYmd}
           </span>
@@ -108,7 +134,7 @@ export function NewLeadsPanel({
         </p>
         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
           <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-sm">
-            <span className="font-medium">الجوال</span>
+            <span className="font-medium">رقم الهاتف</span>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -139,6 +165,15 @@ export function NewLeadsPanel({
           </Button>
         </div>
       </div>
+
+      <EditNewLeadDialog
+        lead={editLead}
+        open={editOpen}
+        onOpenChange={(v) => {
+          setEditOpen(v);
+          if (!v) setEditLead(null);
+        }}
+      />
     </div>
   );
 }

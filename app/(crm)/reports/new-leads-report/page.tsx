@@ -55,8 +55,8 @@ export default async function NewLeadsReportPage({
     <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-8">
       <PageHeader
         fullWidthBar
-        title="تقرير ليدات جديدة"
-        subtitle="عرض الليدات المسجّلة من صفحة «ليدات جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
+        title="تقرير Leads جديدة"
+        subtitle="عرض الليدات الجديدة المسجّلة من صفحة «Leads جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
       />
 
       <NewLeadsReportFilters

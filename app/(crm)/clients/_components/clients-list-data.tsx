@@ -13,6 +13,7 @@ import { aggregateClientsForScope } from "@/lib/data/client-aggregates";
 import {
   buildClientsListWhere,
   listClientsForUser,
+  type ClientsListQuery,
 } from "@/lib/data/clients-list";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
@@ -23,14 +24,14 @@ export async function ClientsListData({
   role,
   dbUserId,
   salesKey,
-  q,
-  qRaw,
+  listQuery,
+  classifications,
 }: {
   role: UserRole;
   dbUserId: string;
   salesKey: string;
-  q: string | undefined;
-  qRaw: string;
+  listQuery: ClientsListQuery;
+  classifications: { id: string; label: string }[];
 }) {
   const salesFilter =
     salesKey && salesKey !== "all" ? salesKey : undefined;
@@ -39,7 +40,7 @@ export async function ClientsListData({
     role,
     dbUserId,
     salesFilter,
-    q
+    listQuery
   );
 
   const salesUsers =
@@ -55,17 +56,11 @@ export async function ClientsListData({
     role,
     dbUserId,
     salesFilter,
-    q
+    listQuery
   );
 
-  const [{ total, byStatus, byClassification }, classifications] =
-    await Promise.all([
-      aggregateClientsForScope(scopeWhere),
-      prisma.clientClassification.findMany({
-        orderBy: { sortOrder: "asc" },
-        select: { id: true, label: true },
-      }),
-    ]);
+  const { total, byStatus, byClassification } =
+    await aggregateClientsForScope(scopeWhere);
 
   const statusCount = (s: ClientStatus) =>
     byStatus.find((x) => x.status === s)?._count._all ?? 0;
@@ -123,8 +118,8 @@ export async function ClientsListData({
                   {c.company?.trim() ? (
                     <>
                       <p
-                        className="text-base font-bold leading-snug text-foreground hover:underline"
-                        dir="auto"
+                        className="text-end text-base font-bold leading-snug text-foreground hover:underline"
+                        dir="ltr"
                       >
                         {c.company}
                       </p>

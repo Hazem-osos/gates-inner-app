@@ -71,7 +71,7 @@ function NewLeadsSalesPills({
   return (
     <div className="sticky top-14 z-20 flex max-w-full flex-col gap-2 rounded-xl border border-border/60 bg-muted/95 px-3 py-2 text-sm shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-muted/90">
       <span className="shrink-0 text-xs font-medium text-muted-foreground">
-        من سجّل الليد:
+        من سجّل الليد الجديد:
       </span>
       <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Link
@@ -151,7 +151,7 @@ export function NewLeadsReportFilters({
     });
   }
   if (adQ.trim()) chips.push({ label: `إعلان: «${adQ.trim()}»` });
-  if (phoneQ.trim()) chips.push({ label: `جوال: «${phoneQ.trim()}»` });
+  if (phoneQ.trim()) chips.push({ label: `رقم الهاتف: «${phoneQ.trim()}»` });
   if (reach === "NOT_REACHED") chips.push({ label: "الحالة: لم يتم الوصول" });
   if (reach === "REACHED") chips.push({ label: "الحالة: تم الوصول" });
   if (category === "__empty__") chips.push({ label: "التصنيف: فارغ" });
@@ -185,7 +185,7 @@ export function NewLeadsReportFilters({
 
       <Card size="sm" className="ring-border/60">
         <CardHeader className="border-b border-border/50 pb-3">
-          <CardTitle>فلترة النتائج</CardTitle>
+          <CardTitle>فلترة نتائج Leads جديدة</CardTitle>
           <CardDescription>
             الفترة والبحث — ثم اضغط «تطبيق». اختصار «اليوم» يضبط التاريخ على
             اليوم مع الإبقاء على باقي الخيارات.
@@ -245,7 +245,7 @@ export function NewLeadsReportFilters({
               </Label>
               <Label className="flex flex-col gap-1.5 font-normal">
                 <span className="text-xs text-muted-foreground">
-                  الجوال (بحث جزئي)
+                  رقم الهاتف (بحث جزئي)
                 </span>
                 <Input
                   name="phone"
@@ -313,7 +313,7 @@ export function NewLeadsReportFilters({
           <GenericFilterActiveNotice />
         ) : !filterActive ? (
           <p className="text-center text-xs text-muted-foreground">
-            لا توجد فلاتر إضافية — يعرض التقرير ليدات <strong>اليوم</strong> فقط.
+            لا توجد فلاتر إضافية — يعرض التقرير Leads جديدة <strong>اليوم</strong> فقط.
           </p>
         ) : null}
 

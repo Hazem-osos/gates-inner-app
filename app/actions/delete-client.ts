@@ -19,6 +19,8 @@ function revalidateAfterClientChange(clientId: string) {
   revalidatePath("/reports/calls");
   revalidatePath("/reports/warming");
   revalidatePath("/reports/transferred");
+  revalidatePath("/reports/new-leads");
+  revalidatePath("/reports/new-leads-report");
   revalidatePath("/warming");
 }
 
@@ -42,6 +44,16 @@ export async function deleteClientByIdAction(
   if (!exists) return { ok: false, message: "العميل غير موجود." };
 
   try {
+    // عند الحذف: إعادة أي Lead جديد كان مربوطاً بهذا العميل إلى «لم يتم الوصول» وفك الربط
+    await prisma.$executeRaw`
+      UPDATE NewLead
+      SET clientId = NULL,
+          reachStatus = 'NOT_REACHED',
+          leadCategory = NULL,
+          updatedAt = NOW()
+      WHERE clientId = ${id}
+    `;
+
     await prisma.client.delete({ where: { id } });
     revalidateAfterClientChange(id);
     return { ok: true };

@@ -25,8 +25,8 @@ export default async function NewLeadsPage({
     <div className="mx-auto max-w-[1100px] space-y-6 px-4 py-8">
       <PageHeader
         fullWidthBar
-        title="ليدات جديدة"
-        subtitle="تسجيل سريع للجوال والإعلان قبل إضافة بطاقة عميل — يُحفظ اسم السيلز لكل صف."
+        title="Leads جديدة"
+        subtitle="تسجيل سريع لرقم الهاتف والإعلان قبل إضافة بطاقة عميل — يُحفظ اسم السيلز لكل صف."
       />
 
       <form

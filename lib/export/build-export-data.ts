@@ -3,7 +3,10 @@ import { addDays, endOfDay, isWithinInterval, startOfDay } from "date-fns";
 
 import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { formatExportDateOnly, todayInputDate } from "@/lib/date-arabic";
-import { listClientsForUser } from "@/lib/data/clients-list";
+import {
+  clientsListQueryFromSearchParams,
+  listClientsForUser,
+} from "@/lib/data/clients-list";
 import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
 import type { ReportSortDir, ReportSortKey } from "@/lib/data/report-queries";
 import { listClientsForReportExport } from "@/lib/data/report-queries";
@@ -81,12 +84,12 @@ export async function buildExportPayload(
     const salesRaw = sp.get("sales")?.trim();
     const salesUserId =
       salesRaw && salesRaw !== "all" ? salesRaw : undefined;
-    const q = sp.get("q")?.trim() || undefined;
+    const listQuery = clientsListQueryFromSearchParams(sp);
     const clients = await listClientsForUser(
       user.role,
       user.id,
       salesUserId,
-      q
+      listQuery
     );
     const rows = clients.map((c) => rowBShort(c));
     return {
@@ -497,7 +500,11 @@ export async function buildExportPayload(
     q: sp.get("q")?.trim() || undefined,
     sort,
     sortDir,
-    noRowLimit: kind === "report-b" || kind === "report-not-b",
+    noRowLimit:
+      kind === "report-b" ||
+      kind === "report-not-b" ||
+      kind === "report-won" ||
+      kind === "report-closed",
   });
 
   if (kind === "report-not-b") {

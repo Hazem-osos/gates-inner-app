@@ -1,5 +1,5 @@
 /**
- * إدراج 3 ليدات تجريبية (اختبار تقرير ليدات جديدة).
+ * إدراج 3 ليدات تجريبية (اختبار تقرير Leads جديدة).
  * تشغيل: npx tsx scripts/seed-test-new-leads.ts
  */
 import "dotenv/config";
