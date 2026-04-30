@@ -56,7 +56,7 @@ export default async function NewLeadsReportPage({
       <PageHeader
         fullWidthBar
         title="تقرير Leads جديدة"
-        subtitle="عرض الليدات الجديدة المسجّلة من صفحة «Leads جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
+        subtitle="عرض Leads الجديدة المسجّلة من صفحة «Leads جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
       />
 
       <NewLeadsReportFilters

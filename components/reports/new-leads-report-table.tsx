@@ -73,6 +73,10 @@ function SummaryStatPct({ count, total }: { count: number; total: number }) {
     </span>
   );
 }
+const newLeadSuccessControlClass = cn(
+  buttonVariants({ size: "sm", variant: "outline" }),
+  "relative z-[1] inline-flex h-8 w-full items-center justify-center gap-1 border-green-600/55 bg-green-50 text-xs font-semibold text-green-800 shadow-sm dark:border-green-600/45 dark:bg-green-950/45 dark:text-green-100 pointer-events-none cursor-default"
+);
 
 export function NewLeadsReportTable({
   rows,
@@ -194,17 +198,11 @@ export function NewLeadsReportTable({
                 const rowPending = pendingLeadId === r.id;
                 const isBadClient = r.leadCategory === "Z";
                 const isExpired = r.leadCategory === "EXPIRED";
-                const actionsLocked =
-                  hasClient || rowPending || isBadClient || isExpired;
                 const reportRowDisabledReason = hasClient
                   ? "لا يمكن — يوجد بطاقة عميل مرتبطة."
                   : rowPending
                     ? "جاري التنفيذ…"
-                    : isBadClient
-                      ? "لا يمكن — مسجّل كعميل سيء (Z)."
-                      : isExpired
-                        ? "لا يمكن — التصنيف Expired."
-                        : undefined;
+                    : undefined;
 
                 return (
                   <TableRow key={r.id}>
@@ -233,7 +231,7 @@ export function NewLeadsReportTable({
                             href={`/clients/${r.clientId}`}
                             className={cn(
                               buttonVariants({ size: "sm", variant: "outline" }),
-                              "relative z-[1] inline-flex h-8 w-full items-center justify-center gap-1 border-green-600/55 bg-green-50 text-xs font-semibold text-green-800 shadow-sm hover:bg-green-100 dark:border-green-600/45 dark:bg-green-950/45 dark:text-green-100 dark:hover:bg-green-950/65"
+                              "relative z-[1] inline-flex h-8 w-full cursor-pointer items-center justify-center gap-1 border-green-600/55 bg-green-50 text-xs font-semibold text-green-800 shadow-sm hover:bg-green-100 dark:border-green-600/45 dark:bg-green-950/45 dark:text-green-100 dark:hover:bg-green-950/65"
                             )}
                           >
                             <Check
@@ -247,7 +245,7 @@ export function NewLeadsReportTable({
                             href={addClientHref(r)}
                             className={cn(
                               buttonVariants({ size: "sm" }),
-                              "relative z-[1] h-8 w-full justify-center text-xs"
+                              "relative z-[1] h-8 w-full cursor-pointer justify-center text-xs"
                             )}
                           >
                             إنشاء بطاقة عميل
@@ -256,65 +254,100 @@ export function NewLeadsReportTable({
                         <div
                           className={cn(
                             "flex w-full flex-col gap-1.5",
-                            actionsLocked && "cursor-not-allowed"
+                            (hasClient || rowPending) && "cursor-not-allowed"
                           )}
-                          title={
-                            actionsLocked
-                              ? reportRowDisabledReason ?? "الإجراء غير متاح."
-                              : undefined
-                          }
                         >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className={cn(
-                              "relative z-[1] h-8 w-full gap-1.5 text-xs font-semibold shadow-sm",
-                              "border border-destructive/35 bg-destructive/15 hover:bg-destructive/25",
-                              "dark:border-destructive/45 dark:bg-destructive/25 dark:hover:bg-destructive/35",
-                              "disabled:pointer-events-none",
-                              "disabled:opacity-100 disabled:grayscale-[0.72]",
-                              "disabled:!border-border disabled:!bg-muted disabled:!text-muted-foreground",
-                              "disabled:!shadow-none disabled:!ring-0 dark:disabled:!bg-muted/70",
-                              "disabled:hover:!bg-muted disabled:hover:!text-muted-foreground",
-                              "dark:disabled:hover:!bg-muted/70"
-                            )}
-                            disabled={actionsLocked}
-                            onClick={() =>
-                              void run(
-                                r.id,
-                                () => markNewLeadBadClientAction(r.id),
-                                "تم تسجيل عميل سيء (Z)"
-                              )
-                            }
-                          >
-                            <UserX className="size-3.5 shrink-0" aria-hidden />
-                            عميل سيء
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className={cn(
-                              "relative z-[1] h-8 w-full text-xs font-medium shadow-sm hover:bg-muted/80",
-                              "disabled:pointer-events-none",
-                              "disabled:opacity-100 disabled:grayscale-[0.72]",
-                              "disabled:!border-border disabled:!bg-muted disabled:!text-muted-foreground",
-                              "disabled:!shadow-none disabled:!ring-0 dark:disabled:!bg-muted/70",
-                              "disabled:hover:!bg-muted disabled:hover:!text-muted-foreground",
-                              "dark:disabled:hover:!bg-muted/70"
-                            )}
-                            disabled={actionsLocked}
-                            onClick={() =>
-                              void run(
-                                r.id,
-                                () => markNewLeadExpiredAction(r.id),
-                                "تم تعيين التصنيف Expired"
-                              )
-                            }
-                          >
-                            Expired
-                          </Button>
+                          {isBadClient ? (
+                            <div className={newLeadSuccessControlClass}>
+                              <Check
+                                className="size-3.5 shrink-0 text-green-700 dark:text-green-300"
+                                aria-hidden
+                              />
+                              تم تسجيل عميل سيء (Z)
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className={cn(
+                                "relative z-[1] h-8 w-full cursor-pointer gap-1.5 text-xs font-medium shadow-sm hover:bg-muted/80",
+                                "disabled:pointer-events-none disabled:cursor-not-allowed",
+                                "disabled:opacity-100 disabled:grayscale-[0.72]",
+                                "disabled:!border-border disabled:!bg-muted disabled:!text-muted-foreground",
+                                "disabled:!shadow-none disabled:!ring-0 dark:disabled:!bg-muted/70",
+                                "disabled:hover:!bg-muted disabled:hover:!text-muted-foreground",
+                                "dark:disabled:hover:!bg-muted/70"
+                              )}
+                              disabled={
+                                hasClient ||
+                                rowPending ||
+                                isExpired
+                              }
+                              title={
+                                hasClient || rowPending
+                                  ? reportRowDisabledReason
+                                  : isExpired
+                                    ? "لا يمكن — التصنيف Expired."
+                                    : undefined
+                              }
+                              onClick={() =>
+                                void run(
+                                  r.id,
+                                  () => markNewLeadBadClientAction(r.id),
+                                  "تم تسجيل عميل سيء (Z)"
+                                )
+                              }
+                            >
+                              <UserX className="size-3.5 shrink-0" aria-hidden />
+                              عميل سيء
+                            </Button>
+                          )}
+                          {isExpired ? (
+                            <div className={newLeadSuccessControlClass}>
+                              <Check
+                                className="size-3.5 shrink-0 text-green-700 dark:text-green-300"
+                                aria-hidden
+                              />
+                              تم تعيين Expired
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className={cn(
+                                "relative z-[1] h-8 w-full cursor-pointer text-xs font-medium shadow-sm hover:bg-muted/80",
+                                "disabled:pointer-events-none disabled:cursor-not-allowed",
+                                "disabled:opacity-100 disabled:grayscale-[0.72]",
+                                "disabled:!border-border disabled:!bg-muted disabled:!text-muted-foreground",
+                                "disabled:!shadow-none disabled:!ring-0 dark:disabled:!bg-muted/70",
+                                "disabled:hover:!bg-muted disabled:hover:!text-muted-foreground",
+                                "dark:disabled:hover:!bg-muted/70"
+                              )}
+                              disabled={
+                                hasClient ||
+                                rowPending ||
+                                isBadClient
+                              }
+                              title={
+                                hasClient || rowPending
+                                  ? reportRowDisabledReason
+                                  : isBadClient
+                                    ? "لا يمكن — مسجّل كعميل سيء (Z)."
+                                    : undefined
+                              }
+                              onClick={() =>
+                                void run(
+                                  r.id,
+                                  () => markNewLeadExpiredAction(r.id),
+                                  "تم تعيين التصنيف Expired"
+                                )
+                              }
+                            >
+                              Expired
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </TableCell>
