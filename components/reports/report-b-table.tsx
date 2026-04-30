@@ -139,6 +139,12 @@ type Props = {
   activeSalesName?: string | null;
   /** أعمدة تاريخ التعاقد وقيمة البيع بعد «إجراءات» (تقرير تم البيع) */
   wonSaleColumns?: boolean;
+  /** لو false يُخفى صندوق «تجاوزات التقرير» وشريط رسالته */
+  showViolationPanel?: boolean;
+  /** لو false يُخفى صندوق «ترتيب الأعمدة» و«فلتر الزيارة» */
+  showSortAndVisitToolbar?: boolean;
+  /** لو false لا يُعرض شريط «المعروض في الصفحة: N سجلًا» (وتنبيه السيلز إن وُجد) */
+  showSalesFilterRecordsStatus?: boolean;
 };
 
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
@@ -191,6 +197,9 @@ export function ReportBTable({
   workLogUserRole = "SALES",
   activeSalesName = null,
   wonSaleColumns = false,
+  showViolationPanel = true,
+  showSortAndVisitToolbar = true,
+  showSalesFilterRecordsStatus = true,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -615,7 +624,7 @@ export function ReportBTable({
         dashboardMode && "gap-2"
       )}
     >
-      {!dashboardMode ? (
+      {!dashboardMode && showSalesFilterRecordsStatus ? (
         <SalesFilterRecordsStatus
           count={visibleRows.length}
           activeSalesName={activeSalesName}
@@ -643,12 +652,12 @@ export function ReportBTable({
         />
       </div>
 
-      {!dashboardMode ? (
+      {!dashboardMode && showSortAndVisitToolbar ? (
       <div
-          data-gate-exempt
-          className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
-          dir="rtl"
-        >
+        data-gate-exempt
+        className="rounded-2xl border border-border/60 bg-muted/15 p-4 shadow-sm dark:bg-muted/10"
+        dir="rtl"
+      >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
             <div className="min-w-0 flex-1">
               <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
@@ -794,7 +803,7 @@ export function ReportBTable({
         </div>
       </SimpleDialog>
 
-      {!dashboardMode ? (
+      {!dashboardMode && showViolationPanel ? (
       <div
         className={cn(
           "sticky top-14 z-30 mb-3 rounded-2xl border bg-card/90 p-4 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 dark:border-border/50",

@@ -5,6 +5,9 @@ import {
   type ReportToolbarExportsConfig,
 } from "@/components/reports/report-page-exports-toolbar";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
+import {
+  SalesFilterActiveMessage,
+} from "@/components/reports/sales-filter-records-status";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
 import { Button } from "@/components/ui/button";
 import { GenericFilterActiveNotice } from "@/components/reports/sales-filter-records-status";
@@ -34,6 +37,13 @@ function safeEndOfDayFromYmd(ymd: string | undefined): Date | null {
   const d = new Date(ymd.trim());
   if (Number.isNaN(d.getTime())) return null;
   return endOfDay(d);
+}
+
+function formatMoneyAr(n: number): string {
+  return new Intl.NumberFormat("ar-EG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 export default async function ReportWonPage({
@@ -79,6 +89,12 @@ export default async function ReportWonPage({
   });
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
+
+  const totalSalesValue = clients.reduce((acc, c) => {
+    if (c.contractValue == null) return acc;
+    const n = Number(c.contractValue);
+    return acc + (Number.isFinite(n) ? n : 0);
+  }, 0);
 
   const filterActive =
     salesKey !== "all" || Boolean(sp.from || sp.to || sp.q?.trim());
@@ -184,6 +200,29 @@ export default async function ReportWonPage({
 
       {!activeSalesName && filterActive ? <GenericFilterActiveNotice /> : null}
 
+      <div
+        className="space-y-2 rounded-xl border border-border/60 bg-muted/15 p-4 dark:bg-muted/10"
+        dir="rtl"
+      >
+        {activeSalesName ? (
+          <SalesFilterActiveMessage activeSalesName={activeSalesName} />
+        ) : null}
+        <p
+          className="text-center text-base font-semibold tabular-nums text-foreground sm:text-lg"
+          role="status"
+        >
+          عدد العملاء المباع لهم:{" "}
+          <span dir="ltr" className="inline-block">
+            {clients.length}
+          </span>
+          <span className="mx-2 text-muted-foreground">—</span>
+          إجمالي قيمة المبيعات:{" "}
+          <span dir="ltr" className="inline-block font-bold">
+            {formatMoneyAr(totalSalesValue)}
+          </span>
+        </p>
+      </div>
+
       <ReportBTable
         rows={rows}
         classifications={classifications}
@@ -193,6 +232,9 @@ export default async function ReportWonPage({
         workLogUserRole={user.role}
         activeSalesName={activeSalesName}
         wonSaleColumns
+        showViolationPanel={false}
+        showSortAndVisitToolbar={false}
+        showSalesFilterRecordsStatus={false}
       />
     </div>
   );
