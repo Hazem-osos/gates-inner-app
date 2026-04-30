@@ -20,14 +20,20 @@ export async function createMysqlClientDefaultsFile(
   const dir = join(tmpdir(), "crm-mysql-backup");
   await mkdir(dir, { recursive: true });
   const path = join(dir, `client-${randomUUID()}.cnf`);
-  const content = [
+  const lines = [
     "[client]",
     `user=${cfg.user}`,
     `password="${escapeIniPassword(cfg.password)}"`,
     `host=${cfg.host}`,
     `port=${cfg.port}`,
-    "",
-  ].join("\n");
+  ];
+  if (cfg.sslModeForClient === "REQUIRED") {
+    lines.push("ssl-mode=REQUIRED");
+  } else if (cfg.sslModeForClient === "DISABLED") {
+    lines.push("ssl-mode=DISABLED");
+  }
+  lines.push("");
+  const content = lines.join("\n");
   await writeFile(path, content, { encoding: "utf8", mode: 0o600 });
   return path;
 }

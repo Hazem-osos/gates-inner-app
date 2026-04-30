@@ -64,6 +64,7 @@ export default async function CallsReportPage({
       },
       include: {
         assignedUser: { select: { name: true } },
+        classification: { select: { label: true } },
       },
       orderBy: { createdAt: "desc" },
       take: MAX_CLIENT_ROWS_FOR_UI,
@@ -189,6 +190,8 @@ export default async function CallsReportPage({
             <TableRow className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
               <TableHead>السيلز</TableHead>
               <TableHead>العميل</TableHead>
+              <TableHead>التليفون</TableHead>
+              <TableHead>تصنيف العميل</TableHead>
               <TableHead>الشركة</TableHead>
               <TableHead>تاريخ الإدخال</TableHead>
               <TableHead>النشاط</TableHead>
@@ -205,6 +208,12 @@ export default async function CallsReportPage({
                   <Link href={`/clients/${c.id}`} className="text-primary underline">
                     {c.name}
                   </Link>
+                </TableCell>
+                <TableCell dir="ltr" className="text-xs whitespace-nowrap">
+                  {c.phone?.trim() ? c.phone : "—"}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {c.classification?.label ?? "—"}
                 </TableCell>
                 <TableCell className="max-w-[160px] truncate text-xs">
                   {c.company?.trim() ? c.company : "—"}

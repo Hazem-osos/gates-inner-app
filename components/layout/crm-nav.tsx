@@ -21,16 +21,19 @@ type NavLink = {
 const primaryLinks: NavLink[] = [
   { href: "/dashboard", label: "لوحة إرشادية" },
   { href: "/clients", label: "العملاء" },
+  { href: "/reports/new-leads", label: "ليدات جديدة" },
   { href: "/clients/new", label: "إضافة عميل" },
 ];
 
 const reportLinks: NavLink[] = [
+  { href: "/reports/new-leads", label: "ليدات جديدة" },
   { href: "/reports/b", label: "تقرير عملاء B" },
   { href: "/reports/not-b", label: "تقرير Not B" },
   { href: "/reports/closed", label: "عملاء مغلقة" },
   { href: "/reports/won", label: "تم البيع" },
   { href: "/reports/recommendations", label: "توصيات الإدارة" },
   { href: "/reports/calls", label: "عملاء جدد / المواعيد" },
+  { href: "/reports/new-leads-report", label: "تقرير ليدات جديدة" },
   { href: "/reports/warming", label: "أدوات Warming" },
   { href: "/reports/transferred", label: "عملاء منقولة" },
 ];

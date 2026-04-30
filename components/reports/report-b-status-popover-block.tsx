@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ClientStatus } from "@prisma/client";
 
 import {
   closeClientFromReport,
   markClientSoldFromReport,
+  moveClientToBFromReport,
   moveClientToNotBFromReport,
 } from "@/app/actions/report-b-transitions";
 import { Button } from "@/components/ui/button";
@@ -27,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 export function ReportBStatusPopoverBlock({
   clientId,
+  clientStatus,
   classifications,
   open,
   setOpen,
@@ -36,6 +40,7 @@ export function ReportBStatusPopoverBlock({
   auditReportKey,
 }: {
   clientId: string;
+  clientStatus?: ClientStatus;
   classifications: ClassificationRow[];
   open: "menu" | "close" | "notb" | "won" | null;
   setOpen: (v: "menu" | "close" | "notb" | "won" | null) => void;
@@ -44,6 +49,7 @@ export function ReportBStatusPopoverBlock({
   onBlocked: () => void;
   auditReportKey: string;
 }) {
+  const router = useRouter();
   const [reason, setReason] = useState("");
   const [clsId, setClsId] = useState("");
   const [saleVal, setSaleVal] = useState("");
@@ -136,6 +142,30 @@ export function ReportBStatusPopoverBlock({
       >
         {open === "menu" ? (
           <div className="flex flex-col gap-1.5">
+            {clientStatus === ClientStatus.NOT_B ? (
+              <button
+                type="button"
+                className="w-full rounded-md bg-green-100 px-2 py-2 text-center text-sm font-medium text-green-950 hover:bg-green-200 disabled:opacity-50"
+                disabled={busy}
+                onClick={() =>
+                  start(async () => {
+                    const res = await moveClientToBFromReport(clientId, {
+                      reportKey: auditReportKey,
+                    });
+                    if (res.ok) {
+                      toast.success("تم النقل إلى تقرير B");
+                      setOpen(null);
+                      onDone(clientId);
+                      router.push("/reports/b");
+                    } else {
+                      toast.error(res.message);
+                    }
+                  })
+                }
+              >
+                {busy ? "جاري…" : "نقل إلى B"}
+              </button>
+            ) : null}
             <button
               type="button"
               className="w-full rounded-md bg-red-100 px-2 py-2 text-center text-sm font-medium text-red-950 hover:bg-red-200"

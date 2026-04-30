@@ -161,6 +161,8 @@ type Props = {
   clientId?: string;
   initialValues?: Record<string, unknown>;
   coreLabels?: Record<string, string>;
+  /** ربط مع ليد من تقرير الليدات — يُمرَّر لإجراء الإنشاء ويُحدَّث الليد بعد الحفظ */
+  linkedNewLeadId?: string;
 };
 
 export function AddClientForm({
@@ -169,6 +171,7 @@ export function AddClientForm({
   clientId,
   initialValues,
   coreLabels,
+  linkedNewLeadId,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -258,7 +261,10 @@ export function AddClientForm({
         }
         return;
       }
-      const res = await createClientAction(values);
+      const payload = linkedNewLeadId
+        ? { ...values, newLeadId: linkedNewLeadId }
+        : values;
+      const res = await createClientAction(payload);
       if (res.ok) {
         setSavedId(res.id);
         toast.success("تم إنشاء العميل");
@@ -455,7 +461,7 @@ export function AddClientForm({
               label={coreLabel(coreLabels, "quotePrice", "عرض السعر")}
               htmlFor="quotePrice"
               trackId="quotePrice"
-              required={req}
+              hint="اختياري — غير مرتبط بتصنيف العميل (يمكن تركه فارغاً أو صفراً مع أي تصنيف)"
               error={form.formState.errors.quotePrice?.message as string | undefined}
             >
               <Input
@@ -470,7 +476,7 @@ export function AddClientForm({
               label="بيان تفصيلي بالموديولات"
               htmlFor="quoteDetail"
               trackId="quoteDetail"
-              required={req}
+              hint="اختياري — مستقل عن تصنيف العميل"
               className="md:col-span-2"
               error={form.formState.errors.quoteDetail?.message as string | undefined}
             >

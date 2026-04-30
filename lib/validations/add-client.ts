@@ -1,5 +1,5 @@
 import type { CustomFieldDefinition } from "@prisma/client";
-import { ClientStatus, CustomFieldValueType } from "@prisma/client";
+import { CustomFieldValueType } from "@prisma/client";
 import { z } from "zod";
 
 import type { ClassificationRow } from "@/lib/data/classifications";
@@ -14,11 +14,6 @@ const optionalDecimalString = z.preprocess(
     .regex(/^\d+(\.\d+)?$/, "أدخل رقماً صحيحاً")
     .optional()
 );
-
-const requiredDecimalString = z
-  .string()
-  .min(1, "عرض السعر مطلوب")
-  .regex(/^\d+(\.\d+)?$/, "أدخل رقماً صحيحاً في عرض السعر");
 
 function selectOptionsFromDef(def: CustomFieldDefinition): string[] {
   const raw = def.options;
@@ -135,8 +130,8 @@ export function buildAddClientFormSchema(
 
       initialCallDate: z.string().min(1, "تاريخ الاتصال مطلوب"),
 
-      quotePrice: requiredDecimalString,
-      quoteDetail: z.string().min(1, "بيان تفصيلي بالموديولات مطلوب"),
+      quotePrice: optionalDecimalString,
+      quoteDetail: z.preprocess(emptyToUndefined, z.string().optional()),
       allowedDiscount: optionalDecimalString,
 
       adPlatform: z.string().min(1, "المنصة الإعلانية مطلوبة"),

@@ -132,6 +132,12 @@ export async function ClientsListData({
                         <span className="font-normal">{c.name}</span>
                         {" · "}
                         <span dir="ltr">{c.phone}</span>
+                        {c.phone2 ? (
+                          <>
+                            {" · "}
+                            <span dir="ltr">{c.phone2}</span>
+                          </>
+                        ) : null}
                       </p>
                     </>
                   ) : (
@@ -144,12 +150,16 @@ export async function ClientsListData({
                       </p>
                       <p className="mt-0.5 text-sm text-muted-foreground" dir="ltr">
                         {c.phone}
+                        {c.phone2 ? ` · ${c.phone2}` : null}
                       </p>
                     </>
                   )}
                 </Link>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{statusLabelAr(c.status)}</Badge>
+                  {c.classification ? (
+                    <Badge variant="secondary">{c.classification.label}</Badge>
+                  ) : null}
                   {c.nextFollowUpAt ? (
                     <span className="text-xs text-muted-foreground" dir="ltr">
                       متابعة:{" "}

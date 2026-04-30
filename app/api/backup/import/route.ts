@@ -72,7 +72,12 @@ export async function POST(req: Request) {
     await writeFile(sqlPath, buf, { mode: 0o600 });
 
     const mysqlBin = resolveMysqlClientBin();
-    const args = [`--defaults-file=${cnfPath}`, cfg.database];
+    const args = [
+      `--defaults-file=${cnfPath}`,
+      "--batch",
+      "--default-character-set=utf8mb4",
+      cfg.database,
+    ];
     const proc = spawn(mysqlBin, args, {
       stdio: ["pipe", "pipe", "pipe"],
       env: process.env,

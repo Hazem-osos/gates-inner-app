@@ -1,9 +1,9 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { ClientStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { getSessionUser } from "@/lib/auth-helpers";
+import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
 import { prisma } from "@/lib/prisma";
@@ -59,8 +59,20 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
     isBRow: r.isBRow,
   }));
 
+  const rawRecord =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  const newLeadIdRaw = rawRecord.newLeadId;
+  const newLeadId =
+    typeof newLeadIdRaw === "string" && newLeadIdRaw.trim()
+      ? newLeadIdRaw.trim()
+      : undefined;
+  const forParse = { ...rawRecord };
+  delete forParse.newLeadId;
+
   const schema = buildAddClientFormSchema(definitions, classifications);
-  const parsed = schema.safeParse(raw);
+  const parsed = schema.safeParse(forParse);
   if (!parsed.success) {
     const first = parsed.error.flatten().fieldErrors;
     const msg =
@@ -92,6 +104,15 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
     );
   } catch {
     return { ok: false, message: "تصنيف العميل غير صالح." };
+  }
+
+  const dbUserId = await resolveSessionDbUserId(session);
+  if (!dbUserId) {
+    return {
+      ok: false,
+      message:
+        "لم يُعثر على حسابك في النظام. سجّل الخروج ثم الدخول مرة أخرى.",
+    };
   }
 
   try {
@@ -139,7 +160,7 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
           ),
           nextFollowUpAt: nextAt,
           customFields: customJson as Prisma.InputJsonValue,
-          assignedUserId: session.id,
+          assignedUserId: dbUserId,
         },
       });
 
@@ -152,13 +173,13 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
             "أول تسجيل من نموذج إضافة عميل",
           followUpStatus: (data.salesNotes as string | undefined)?.slice(0, 180) ?? null,
           nextFollowUpAt: nextAt,
-          createdById: session.id,
+          createdById: dbUserId,
         },
       });
 
       await tx.auditLog.create({
         data: {
-          userId: session.id,
+          userId: dbUserId,
           clientId: c.id,
           entity: "Client",
           entityId: c.id,
@@ -168,11 +189,40 @@ export async function createClientAction(raw: unknown): Promise<CreateClientResu
         },
       });
 
+      if (newLeadId) {
+        const leadCat =
+          pipeline.status === ClientStatus.B
+            ? "B"
+            : pipeline.status === ClientStatus.NOT_B
+              ? "C"
+              : null;
+        if (leadCat === null) {
+          await tx.$executeRaw`
+            UPDATE NewLead
+            SET clientId = ${c.id},
+                reachStatus = 'REACHED',
+                leadCategory = NULL,
+                updatedAt = NOW()
+            WHERE id = ${newLeadId} AND clientId IS NULL
+          `;
+        } else {
+          await tx.$executeRaw`
+            UPDATE NewLead
+            SET clientId = ${c.id},
+                reachStatus = 'REACHED',
+                leadCategory = ${leadCat},
+                updatedAt = NOW()
+            WHERE id = ${newLeadId} AND clientId IS NULL
+          `;
+        }
+      }
+
       return c;
     });
 
     revalidatePath("/clients");
     revalidatePath("/clients/new");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true, id: client.id };
   } catch (e) {
     console.error(e);

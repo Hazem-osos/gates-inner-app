@@ -23,9 +23,17 @@ export function BackupManager() {
   async function downloadBackup() {
     setDownloading(true);
     try {
-      const r = await fetch("/api/backup/export", { method: "GET" });
+      const r = await fetch("/api/backup/export", {
+        method: "GET",
+        credentials: "same-origin",
+      });
       if (!r.ok) {
         const j = (await r.json().catch(() => ({}))) as { message?: string };
+        throw new Error(j.message ?? "فشل إنشاء النسخة الاحتياطية.");
+      }
+      const ct = r.headers.get("content-type") ?? "";
+      if (ct.includes("application/json")) {
+        const j = (await r.json()) as { message?: string };
         throw new Error(j.message ?? "فشل إنشاء النسخة الاحتياطية.");
       }
       const blob = await r.blob();
@@ -71,6 +79,7 @@ export function BackupManager() {
       fd.set("file", pendingFile);
       const r = await fetch("/api/backup/import", {
         method: "POST",
+        credentials: "same-origin",
         body: fd,
       });
       const j = (await r.json().catch(() => ({}))) as {
@@ -118,6 +127,10 @@ export function BackupManager() {
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
             تصدير قاعدة البيانات الحالية إلى ملف SQL يمكن حفظه خارج الخادم.
+            للاتصال بـ MySQL على الإنترنت (مثل Aiven) يُضاف{" "}
+            <code className="rounded bg-muted px-1">ssl-mode=REQUIRED</code> تلقائياً
+            عبر ملف الإعدادات. محلياً على{" "}
+            <code className="rounded bg-muted px-1">localhost</code> لا يُفرض TLS.
             يُمرَّر{" "}
             <code className="rounded bg-muted px-1">--set-gtid-purged=OFF</code>{" "}
             لتفادي تحذيرات GTID عند الاستيراد لاحقاً خارج نفس طوبولوجيا النسخ

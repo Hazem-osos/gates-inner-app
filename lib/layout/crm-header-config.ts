@@ -3,9 +3,11 @@ import {
   ArrowRightLeft,
   ClipboardList,
   Database,
+  FileSpreadsheet,
   Flame,
   KeyRound,
   LayoutDashboard,
+  NotebookPen,
   PhoneCall,
   SlidersHorizontal,
   Tags,
@@ -33,6 +35,7 @@ export type CrmRibbonShortcut = {
 export const CRM_RIBBON_SHORTCUTS: CrmRibbonShortcut[] = [
   { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
   { href: "/clients", label: "العملاء", Icon: Users },
+  { href: "/reports/new-leads", label: "ليدات جديدة", Icon: NotebookPen },
   { href: "/clients/new", label: "إضافة عميل", Icon: UserPlus },
   { href: "/reports/b", label: "تقرير عملاء B", ribbonMark: "B" },
   { href: "/reports/not-b", label: "تقرير Not B", ribbonMark: "NB" },
@@ -44,6 +47,11 @@ export const CRM_RIBBON_SHORTCUTS: CrmRibbonShortcut[] = [
     Icon: ClipboardList,
   },
   { href: "/reports/calls", label: "عملاء جدد / المواعيد", Icon: PhoneCall },
+  {
+    href: "/reports/new-leads-report",
+    label: "تقرير ليدات جديدة",
+    Icon: FileSpreadsheet,
+  },
   { href: "/reports/warming", label: "أدوات Warming", Icon: Flame },
   { href: "/reports/transferred", label: "عملاء منقولة", Icon: ArrowRightLeft },
   {

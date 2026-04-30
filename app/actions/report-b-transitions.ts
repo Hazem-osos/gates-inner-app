@@ -335,6 +335,90 @@ export async function moveClientToNotBFromReport(
   }
 }
 
+/** نقل إلى B من تقرير B / Not B أو لوحة المتابعات */
+export async function moveClientToBFromReport(
+  clientId: string,
+  opts?: { reportKey?: string }
+): Promise<TransitionResult> {
+  const session = await getSessionUser();
+  if (!session) return { ok: false, message: "غير مصرح." };
+  const resolved = await resolveDbUserOrError(session);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+  const { dbUserId } = resolved;
+  if (!(await ensureCanEditClient(session, dbUserId, clientId)))
+    return { ok: false, message: "لا يمكنك تنفيذ هذا الإجراء." };
+
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        classification: { select: { id: true, isBRow: true, slug: true } },
+      },
+    });
+    if (!client) return { ok: false, message: "العميل غير موجود." };
+    if (client.status === ClientStatus.B) {
+      return { ok: false, message: "العميل بالفعل في مسار B." };
+    }
+    if (client.status !== ClientStatus.NOT_B) {
+      return {
+        ok: false,
+        message: "يُسمح بالنقل إلى B من عملاء Not B فقط.",
+      };
+    }
+
+    const bRowCandidates = await prisma.clientClassification.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, slug: true, isBRow: true },
+    });
+    const bRowCls =
+      bRowCandidates.find((c) => classificationResolvesToBPath(c)) ?? null;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.client.update({
+        where: { id: clientId },
+        data: {
+          status: ClientStatus.B,
+          notBClassification: null,
+          classificationId: bRowCls?.id ?? null,
+        },
+      });
+      await tx.clientStatusChange.create({
+        data: {
+          clientId,
+          fromStatus: client.status,
+          toStatus: ClientStatus.B,
+          note: "نقل إلى B من التقرير أو اللوحة",
+          changedById: dbUserId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: dbUserId,
+          clientId,
+          entity: "Client",
+          entityId: clientId,
+          action: "MOVE_B_FROM_REPORT",
+          kind: "STATUS_CHANGE",
+          summary: "نقل إلى B",
+          meta: {
+            reportKey: opts?.reportKey ?? "report-not-b",
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    });
+
+    revalidatePath("/reports/b");
+    revalidatePath("/reports/not-b");
+    revalidatePath("/dashboard");
+    revalidatePath("/clients");
+    revalidatePath("/reports/recommendations");
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, message: "فشل النقل إلى B." };
+  }
+}
+
 /** تم البيع من التقرير */
 export async function markClientSoldFromReport(
   clientId: string,

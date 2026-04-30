@@ -296,6 +296,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         {toolbar !== "closed" ? (
         <ReportBStatusPopoverBlock
           clientId={r.id}
+          clientStatus={r.status}
           classifications={notBClassifications}
           auditReportKey={resolvedAuditReportKey}
           gateInvalid={

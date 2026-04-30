@@ -42,10 +42,12 @@ export async function listClientsForUser(
       name: true,
       company: true,
       phone: true,
+      phone2: true,
       status: true,
       nextFollowUpAt: true,
       initialCallDate: true,
       assignedUser: { select: { name: true, deletedAt: true } },
+      classification: { select: { label: true } },
     },
     take: MAX_CLIENT_ROWS_FOR_UI,
   });

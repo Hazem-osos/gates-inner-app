@@ -37,6 +37,7 @@ model User {
   transfersFrom       ClientTransfer[]       @relation("TransferFromUser")
   transfersTo         ClientTransfer[]       @relation("TransferToUser")
   reportRowStyles     ReportRowStyle[]
+  newLeadsEntered     NewLead[]        @relation("NewLeadCreatedBy")
 
   /// قوائم السيلز للفلتر، إعدادات المستخدم: role + isActive + deletedAt
   @@index([role, isActive, deletedAt])
@@ -150,6 +151,7 @@ model Client {
   auditLogs       AuditLog[]
   transfers       ClientTransfer[]
   reportStyles    ReportRowStyle[]
+  newLeadSource   NewLead[]        @relation("ClientFromNewLead")
 
   /// ترتيب/فلترة: لوحات B/Not B، تقارير، قائمة العملاء (مع assignedUser)
   @@index([status, nextFollowUpAt])
@@ -391,4 +393,37 @@ model CoreFieldLabel {
   updatedAt DateTime @updatedAt
 
   @@index([visible, sortOrder])
+}
+
+enum NewLeadReachStatus {
+  NOT_REACHED
+  REACHED
+}
+
+/// ليدات يومية — قبل إنشاء بطاقة عميل (هاتف + إعلان، مع تسجيل السيلز)
+model NewLead {
+  id          String   @id @default(cuid())
+  /// YYYY-MM-DD — يوم العمل في اللوحة
+  entryYmd    String
+  phone       String
+  /// نص الإعلان (اسم أو وصف مختصر)
+  adText      String   @db.VarChar(512)
+
+  reachStatus  NewLeadReachStatus @default(NOT_REACHED)
+  /// تصنيف التقرير: B | C | Z | EXPIRED — فارغ افتراضياً
+  leadCategory String?            @db.VarChar(32)
+
+  clientId String?
+  client   Client? @relation("ClientFromNewLead", fields: [clientId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User     @relation("NewLeadCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryYmd, createdAt])
+  @@index([createdById, entryYmd])
+  @@index([clientId])
+  @@index([reachStatus, entryYmd])
 }
