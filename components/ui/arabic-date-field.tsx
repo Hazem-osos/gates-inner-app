@@ -12,6 +12,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { CalendarDays, ChevronDown } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   ARABIC_CALENDAR_MONTHS,
@@ -108,9 +110,10 @@ export function ArabicDateField({
       setM(String(parsed.getMonth() + 1));
       setD(String(parsed.getDate()));
     } else {
-      setY("");
-      setM("");
-      setD("");
+      const t = new Date();
+      setY(String(t.getFullYear()));
+      setM(String(t.getMonth() + 1));
+      setD(String(t.getDate()));
     }
   }, [open, valueYmd]);
 
@@ -301,9 +304,11 @@ export function ArabicDateField({
         type="button"
         variant="outline"
         disabled={disabled}
+        title="اضغط لفتح التقويم واختيار التاريخ"
         className={cn(
-          "h-8 min-h-8 w-full justify-center px-2 text-center text-sm font-semibold leading-snug whitespace-normal",
-          !valueYmd?.trim() && "font-normal text-muted-foreground",
+          "h-8 min-h-8 w-full cursor-pointer justify-center gap-2 px-2 text-center text-sm font-semibold leading-snug whitespace-normal shadow-sm",
+          !valueYmd?.trim() &&
+            "border-dashed border-muted-foreground/45 font-normal text-muted-foreground hover:border-primary/55 hover:bg-muted/40",
           buttonClassName
         )}
         aria-expanded={open}
@@ -315,7 +320,18 @@ export function ArabicDateField({
           if (!disabled) setOpen((v) => !v);
         }}
       >
-        {displayLabel}
+        <CalendarDays
+          className="size-4 shrink-0 text-primary/80"
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1">{displayLabel}</span>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            open && "rotate-180"
+          )}
+          aria-hidden
+        />
       </Button>
       {panel}
     </div>
