@@ -49,7 +49,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ReportBTableBodyRow } from "@/components/reports/report-b-table-body-row";
 import type { ClassificationRow } from "@/lib/data/classifications";
-import { reportStyleApiTypeFromTableType } from "@/lib/report-row-style-ui";
+import {
+  normalizeReportRowStyleColor,
+  reportStyleApiTypeFromTableType,
+  REPORT_ROW_STYLE_COLORS,
+  type ReportRowStyleColorKey,
+} from "@/lib/report-row-style-ui";
 import {
   matchesSearch,
   passesActuallyVisited,
@@ -315,6 +320,12 @@ export function ReportBTable({
     return "report-b";
   }, [auditReportKey, toolbar, rowStyleReportType]);
 
+  /** تقرير تم البيع يستخدم نفس نوع صف Not B لكن دون تلوين منفصل — لا نعرض فلتر اللون */
+  const showRowTintFilter =
+    toolbar === "full" &&
+    (rowStyleReportType === "b" || rowStyleReportType === "not-b") &&
+    resolvedAuditReportKey !== "report-won";
+
   const rowStyleApiType = useMemo(
     () => reportStyleApiTypeFromTableType(rowStyleReportType),
     [rowStyleReportType]
@@ -325,6 +336,9 @@ export function ReportBTable({
   const [searchQ, setSearchQ] = useState("");
   /** يؤخر إعادة فلترة/فرز الجدول الكبير حتى يبقى حقل البحث سريع الاستجابة */
   const deferredSearchQ = useDeferredValue(searchQ);
+  /** فلتر لون صف التقرير (أحمر / أصفر / أزرق) — تقارير B و Not B فقط */
+  const [rowTintFilter, setRowTintFilter] =
+    useState<ReportRowStyleColorKey | null>(null);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
   const [followInput, setFollowInput] = useState("");
@@ -531,8 +545,16 @@ export function ReportBTable({
     return filteredVisit.filter((r) => matchesSearch(r, q));
   }, [filteredVisit, deferredSearchQ]);
 
+  const searchedAfterTint = useMemo(() => {
+    if (!showRowTintFilter || rowTintFilter === null) return searched;
+    return searched.filter((r) => {
+      const c = normalizeReportRowStyleColor(rowStyles[r.id]?.color);
+      return c === rowTintFilter;
+    });
+  }, [searched, showRowTintFilter, rowTintFilter, rowStyles]);
+
   const visibleRows = useMemo(() => {
-    const base = searched.filter((r) => !hiddenIds.has(r.id));
+    const base = searchedAfterTint.filter((r) => !hiddenIds.has(r.id));
     let out = base;
     const tri: [
       SortTriState,
@@ -550,7 +572,14 @@ export function ReportBTable({
       }
     }
     return out;
-  }, [searched, hiddenIds, sortDays, sortPrice, sortCall, sortFollowUp]);
+  }, [
+    searchedAfterTint,
+    hiddenIds,
+    sortDays,
+    sortPrice,
+    sortCall,
+    sortFollowUp,
+  ]);
 
   const maxFollowCols = useMemo(() => {
     let m = 0;
@@ -641,20 +670,85 @@ export function ReportBTable({
       ) : null}
       <div
         data-gate-exempt
-        className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
+        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
         dir="rtl"
       >
-        {workLogUserId ? (
-          <ReportWorkLogDialog
-            key={resolvedAuditReportKey}
-            reportKey={resolvedAuditReportKey}
-            userId={workLogUserId}
-            userRole={workLogUserRole}
-          />
-        ) : null}
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {workLogUserId ? (
+            <ReportWorkLogDialog
+              key={resolvedAuditReportKey}
+              reportKey={resolvedAuditReportKey}
+              userId={workLogUserId}
+              userRole={workLogUserRole}
+            />
+          ) : null}
+          {showRowTintFilter ? (
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-1.5 ps-2",
+                workLogUserId &&
+                  "ms-1 border-s border-border/50"
+              )}
+              role="group"
+              aria-label="تصفية حسب لون صف التقرير"
+            >
+              <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
+                لون الصف
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant={rowTintFilter === null ? "secondary" : "ghost"}
+                className={cn(
+                  "h-8 rounded-lg px-2.5 text-xs",
+                  rowTintFilter === null &&
+                    "border border-border/80 bg-secondary font-semibold"
+                )}
+                onClick={() => setRowTintFilter(null)}
+              >
+                الكل
+              </Button>
+              {REPORT_ROW_STYLE_COLORS.map((key) => {
+                const active = rowTintFilter === key;
+                const swatch =
+                  key === "red"
+                    ? "bg-red-500"
+                    : key === "yellow"
+                      ? "bg-yellow-400"
+                      : "bg-blue-600";
+                const ringActive =
+                  "ring-2 ring-offset-2 ring-offset-card ring-foreground/70 dark:ring-offset-card";
+                return (
+                  <Button
+                    key={key}
+                    type="button"
+                    size="icon-sm"
+                    variant="outline"
+                    title={
+                      key === "red"
+                        ? "أحمر"
+                        : key === "yellow"
+                          ? "أصفر"
+                          : "أزرق"
+                    }
+                    aria-pressed={active}
+                    className={cn(
+                      "size-8 shrink-0 rounded-full border-2 border-background p-0 shadow-sm",
+                      swatch,
+                      active ? ringActive : "opacity-90 hover:opacity-100"
+                    )}
+                    onClick={() =>
+                      setRowTintFilter((prev) => (prev === key ? null : key))
+                    }
+                  />
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <Input
           placeholder="بحث باسم الشركة أو الهاتف أو اسم العميل"
-          className="h-10 min-w-[12rem] flex-1 max-w-xl rounded-xl border-border/70 bg-background/90 text-sm shadow-inner"
+          className="h-10 min-w-48 flex-1 rounded-xl border-border/70 bg-background/90 text-sm shadow-inner sm:max-w-xl"
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
           dir="rtl"
