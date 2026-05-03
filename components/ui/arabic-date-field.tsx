@@ -86,7 +86,7 @@ export function ArabicDateField({
     const el = triggerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const w = Math.max(r.width, 272);
+    const w = Math.max(r.width, 288);
     let left = r.left;
     const pad = 8;
     if (left + w + pad > window.innerWidth) {
@@ -300,7 +300,12 @@ export function ArabicDateField({
       : null;
 
   return (
-    <div className={cn("relative inline-flex w-full min-w-0", className)}>
+    <div
+      className={cn(
+        "relative inline-flex w-full min-w-[17.5rem] max-w-none",
+        className
+      )}
+    >
       <Button
         ref={triggerRef}
         type="button"
@@ -308,7 +313,7 @@ export function ArabicDateField({
         disabled={disabled}
         title="اضغط لفتح التقويم واختيار التاريخ"
         className={cn(
-          "h-auto min-h-10 w-full cursor-pointer justify-center gap-2.5 px-3 py-2 text-center text-sm font-semibold leading-[1.45] whitespace-normal shadow-sm",
+          "h-auto min-h-10 w-full min-w-0 cursor-pointer justify-center gap-2.5 px-3 py-2 text-center text-sm font-semibold leading-[1.45] whitespace-nowrap shadow-sm",
           !valueYmd?.trim() &&
             "border-dashed border-muted-foreground/45 font-normal text-muted-foreground hover:border-primary/55 hover:bg-muted/40",
           buttonClassName
@@ -326,9 +331,7 @@ export function ArabicDateField({
           className="size-4.5 shrink-0 self-center text-primary/80"
           aria-hidden
         />
-        <span className="min-w-0 flex-1 wrap-break-word text-pretty">
-          {displayLabel}
-        </span>
+        <span className="shrink-0 whitespace-nowrap">{displayLabel}</span>
         <ChevronDown
           className={cn(
             "size-4.5 shrink-0 self-center text-muted-foreground transition-transform duration-200",
