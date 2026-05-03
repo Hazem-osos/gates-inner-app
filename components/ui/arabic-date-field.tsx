@@ -86,7 +86,7 @@ export function ArabicDateField({
     const el = triggerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const w = Math.max(r.width, 220);
+    const w = Math.max(r.width, 272);
     let left = r.left;
     const pad = 8;
     if (left + w + pad > window.innerWidth) {
@@ -200,13 +200,13 @@ export function ArabicDateField({
               <p className="mb-2 text-xs font-semibold text-muted-foreground">
                 اختر بالتتابع: السنة، ثم الشهر، ثم اليوم
               </p>
-              <div className="flex flex-col gap-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-foreground">
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-foreground">
                     ١ — السنة
                   </span>
                   <select
-                    className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm"
+                    className="min-h-11 h-11 w-full rounded-lg border border-input bg-background px-3 text-base leading-normal"
                     value={y}
                     onChange={(e) => {
                       setY(e.target.value);
@@ -222,12 +222,12 @@ export function ArabicDateField({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-foreground">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-foreground">
                     ٢ — الشهر
                   </span>
                   <select
-                    className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm disabled:opacity-50"
+                    className="min-h-11 h-11 w-full rounded-lg border border-input bg-background px-3 text-base leading-normal disabled:opacity-50"
                     disabled={monthDisabled}
                     value={m}
                     onChange={(e) => {
@@ -243,12 +243,12 @@ export function ArabicDateField({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-foreground">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-foreground">
                     ٣ — اليوم
                   </span>
                   <select
-                    className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm disabled:opacity-50"
+                    className="min-h-11 h-11 w-full rounded-lg border border-input bg-background px-3 text-base leading-normal disabled:opacity-50"
                     disabled={dayDisabled}
                     value={d}
                     onChange={(e) => setD(e.target.value)}
@@ -262,11 +262,11 @@ export function ArabicDateField({
                   </select>
                 </label>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2.5">
                 <Button
                   type="button"
-                  size="sm"
-                  className="flex-1"
+                  size="default"
+                  className="min-h-10 flex-1 text-base"
                   disabled={!y || !m || !d}
                   onClick={apply}
                 >
@@ -275,8 +275,9 @@ export function ArabicDateField({
                 {allowEmpty ? (
                   <Button
                     type="button"
-                    size="sm"
+                    size="default"
                     variant="secondary"
+                    className="min-h-10 min-w-20 text-base"
                     onClick={clear}
                   >
                     مسح
@@ -284,8 +285,9 @@ export function ArabicDateField({
                 ) : null}
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant="ghost"
+                  className="min-h-10 text-base"
                   onClick={() => setOpen(false)}
                 >
                   إلغاء
@@ -306,7 +308,7 @@ export function ArabicDateField({
         disabled={disabled}
         title="اضغط لفتح التقويم واختيار التاريخ"
         className={cn(
-          "h-8 min-h-8 w-full cursor-pointer justify-center gap-2 px-2 text-center text-sm font-semibold leading-snug whitespace-normal shadow-sm",
+          "h-auto min-h-10 w-full cursor-pointer justify-center gap-2.5 px-3 py-2 text-center text-sm font-semibold leading-[1.45] whitespace-normal shadow-sm",
           !valueYmd?.trim() &&
             "border-dashed border-muted-foreground/45 font-normal text-muted-foreground hover:border-primary/55 hover:bg-muted/40",
           buttonClassName
@@ -321,13 +323,15 @@ export function ArabicDateField({
         }}
       >
         <CalendarDays
-          className="size-4 shrink-0 text-primary/80"
+          className="size-4.5 shrink-0 self-center text-primary/80"
           aria-hidden
         />
-        <span className="min-w-0 flex-1">{displayLabel}</span>
+        <span className="min-w-0 flex-1 wrap-break-word text-pretty">
+          {displayLabel}
+        </span>
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            "size-4.5 shrink-0 self-center text-muted-foreground transition-transform duration-200",
             open && "rotate-180"
           )}
           aria-hidden
