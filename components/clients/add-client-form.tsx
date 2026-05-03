@@ -19,6 +19,7 @@ import { Controller, useForm, useFormState } from "react-hook-form";
 import { createClientAction } from "@/app/actions/clients";
 import { updateClientAction } from "@/app/actions/client-update";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import {
   Card,
   CardContent,
@@ -319,12 +320,17 @@ export function AddClientForm({
                   : "قيمة افتراضية: اليوم — يُعرض بالتقويم العربي للمراجعة"
               }
             >
-              <Input
-                id="documentDate"
-                type="date"
-                {...form.register("documentDate")}
-                dir="ltr"
-                className="text-left"
+              <Controller
+                control={form.control}
+                name="documentDate"
+                render={({ field }) => (
+                  <ArabicDateField
+                    valueYmd={String(field.value ?? "")}
+                    onValueChange={field.onChange}
+                    allowEmpty={false}
+                    buttonClassName="h-9 w-full justify-center font-semibold"
+                  />
+                )}
               />
             </Field>
             <div className="flex flex-col gap-3 md:col-span-2">
@@ -356,12 +362,17 @@ export function AddClientForm({
                       | undefined
                   }
                 >
-                  <Input
-                    id="visitAppointmentDate"
-                    type="date"
-                    {...form.register("visitAppointmentDate")}
-                    dir="ltr"
-                    className="text-left"
+                  <Controller
+                    control={form.control}
+                    name="visitAppointmentDate"
+                    render={({ field }) => (
+                      <ArabicDateField
+                        valueYmd={String(field.value ?? "")}
+                        onValueChange={field.onChange}
+                        allowEmpty={false}
+                        buttonClassName="h-9 w-full justify-center font-semibold"
+                      />
+                    )}
                   />
                 </Field>
               ) : null}
@@ -449,12 +460,17 @@ export function AddClientForm({
                   | undefined
               }
             >
-              <Input
-                id="initialCallDate"
-                type="date"
-                {...form.register("initialCallDate")}
-                dir="ltr"
-                className="text-left"
+              <Controller
+                control={form.control}
+                name="initialCallDate"
+                render={({ field }) => (
+                  <ArabicDateField
+                    valueYmd={String(field.value ?? "")}
+                    onValueChange={field.onChange}
+                    allowEmpty={false}
+                    buttonClassName="h-9 w-full justify-center font-semibold"
+                  />
+                )}
               />
             </Field>
             <Field
@@ -725,12 +741,17 @@ export function AddClientForm({
                 form.formState.errors.nextFollowUpAt?.message as string | undefined
               }
             >
-              <Input
-                id="nextFollowUpAt"
-                type="date"
-                {...form.register("nextFollowUpAt")}
-                dir="ltr"
-                className="max-w-md text-left"
+              <Controller
+                control={form.control}
+                name="nextFollowUpAt"
+                render={({ field }) => (
+                  <ArabicDateField
+                    valueYmd={String(field.value ?? "")}
+                    onValueChange={field.onChange}
+                    allowEmpty={false}
+                    buttonClassName="h-9 w-full max-w-md justify-center font-semibold"
+                  />
+                )}
               />
             </Field>
 
@@ -786,12 +807,17 @@ export function AddClientForm({
                   form.formState.errors.saleDate?.message as string | undefined
                 }
               >
-                <Input
-                  id="saleDate"
-                  type="date"
-                  {...form.register("saleDate")}
-                  dir="ltr"
-                  className="text-left"
+                <Controller
+                  control={form.control}
+                  name="saleDate"
+                  render={({ field }) => (
+                    <ArabicDateField
+                      valueYmd={String(field.value ?? "")}
+                      onValueChange={field.onChange}
+                      allowEmpty={false}
+                      buttonClassName="h-9 w-full justify-center font-semibold"
+                    />
+                  )}
                 />
               </Field>
             </section>
@@ -828,12 +854,17 @@ export function AddClientForm({
                     | undefined
                 }
               >
-                <Input
-                  id="closedLostAt"
-                  type="date"
-                  {...form.register("closedLostAt")}
-                  dir="ltr"
-                  className="text-left"
+                <Controller
+                  control={form.control}
+                  name="closedLostAt"
+                  render={({ field }) => (
+                    <ArabicDateField
+                      valueYmd={String(field.value ?? "")}
+                      onValueChange={field.onChange}
+                      allowEmpty={false}
+                      buttonClassName="h-9 w-full justify-center font-semibold"
+                    />
+                  )}
                 />
               </Field>
             </section>
@@ -1053,12 +1084,17 @@ function DynamicField({
         required={def.isRequired}
         error={error}
       >
-        <Input
-          id={name}
-          type="date"
-          {...register(name as never)}
-          dir="ltr"
-          className="text-left"
+        <Controller
+          control={control}
+          name={name as never}
+          render={({ field }) => (
+            <ArabicDateField
+              valueYmd={((field.value as string) ?? "").trim()}
+              onValueChange={(v) => field.onChange(v)}
+              allowEmpty={!def.isRequired}
+              buttonClassName="h-9 w-full justify-center font-semibold"
+            />
+          )}
         />
       </Field>
     );

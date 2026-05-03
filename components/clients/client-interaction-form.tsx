@@ -1,11 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { logInteractionAction } from "@/app/actions/interactions";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,22 +60,34 @@ export function ClientInteractionForm({ clientId }: { clientId: string }) {
       <h3 className="text-base font-semibold md:col-span-2">تسجيل متابعة جديدة</h3>
       <div className="space-y-2">
         <Label htmlFor="interactionAt">تاريخ الاتصال</Label>
-        <Input
-          id="interactionAt"
-          type="date"
-          dir="ltr"
-          className="text-left"
-          {...form.register("interactionAt", { required: true })}
+        <Controller
+          name="interactionAt"
+          control={form.control}
+          rules={{ required: true }}
+          render={({ field }) => (
+            <ArabicDateField
+              valueYmd={field.value}
+              onValueChange={field.onChange}
+              allowEmpty={false}
+              buttonClassName="h-9 w-full justify-center font-semibold"
+            />
+          )}
         />
       </div>
       <div className="space-y-2">
         <Label htmlFor="nextFollowUpAt">تاريخ المتابعة التالي (إجباري)</Label>
-        <Input
-          id="nextFollowUpAt"
-          type="date"
-          dir="ltr"
-          className="text-left"
-          {...form.register("nextFollowUpAt", { required: true })}
+        <Controller
+          name="nextFollowUpAt"
+          control={form.control}
+          rules={{ required: true }}
+          render={({ field }) => (
+            <ArabicDateField
+              valueYmd={field.value}
+              onValueChange={field.onChange}
+              allowEmpty={false}
+              buttonClassName="h-9 w-full justify-center font-semibold"
+            />
+          )}
         />
       </div>
       <div className="space-y-2">

@@ -343,7 +343,7 @@ export function ReportBTable({
     useState<ReportRowStyleColorKey | null>(null);
   /** عرض من لديهم متابعة تالية أو أي خانة متابعة بتاريخ اليوم (تقويم محلي) */
   const [followUpTodayOnly, setFollowUpTodayOnly] = useState(false);
-  /** سجل المتابعات (الخانات) بتاريخ اليوم فقط — بدون عمود «متابعة تالية» */
+  /** سجل المتابعات الحديثة (الخانات) بتاريخ اليوم — دون اعتبار عمود «متابعة تالية» عند المطابقة */
   const [followUpSlotsTodayOnly, setFollowUpSlotsTodayOnly] = useState(false);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
@@ -699,9 +699,10 @@ export function ReportBTable({
       ) : null}
       <div
         data-gate-exempt
-        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
+        className="flex w-full flex-col gap-2 rounded-2xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm dark:bg-card/50"
         dir="rtl"
       >
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {workLogUserId ? (
             <ReportWorkLogDialog
@@ -778,7 +779,7 @@ export function ReportBTable({
             <div
               className="ms-1 flex flex-wrap items-center gap-1.5 border-s border-border/50 ps-2"
               role="group"
-              aria-label="فلترة حسب متابعة اليوم (التالية أو سجل الخانات، أو سجل الخانات فقط)"
+              aria-label="فلترة: متابعة بتاريخ اليوم، أو سجل متابعات حدثت اليوم (خانات فقط)"
             >
               <Button
                 type="button"
@@ -805,10 +806,10 @@ export function ReportBTable({
                     "border-sky-700 bg-sky-600 text-white shadow-sm hover:bg-sky-700"
                 )}
                 aria-pressed={followUpSlotsTodayOnly}
-                title="خانات سجل المتابعات فقط: يوجد تاريخ اليوم في إحداها. عمود «متابعة تالية» لا يُحتسب."
+                title="سجل متابعات حدثت اليوم: خانات المتابعة فقط بتاريخ اليوم. لا يُحتسب عمود «متابعة التالية» إن كان نفس اليوم."
                 onClick={() => setFollowUpSlotsTodayOnly((v) => !v)}
               >
-                سجل متابعات — اليوم
+                سجل متابعات حدثت اليوم
               </Button>
             </div>
           ) : null}
@@ -820,6 +821,26 @@ export function ReportBTable({
           onChange={(e) => setSearchQ(e.target.value)}
           dir="rtl"
         />
+        </div>
+        {showRowTintFilter &&
+        (followUpTodayOnly || followUpSlotsTodayOnly) ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-3 py-2.5 text-sm font-bold leading-snug text-destructive shadow-md dark:border-destructive dark:bg-destructive/18 dark:text-red-100"
+          >
+            <AlertTriangle
+              className="size-5 shrink-0 text-destructive dark:text-red-200"
+              aria-hidden
+            />
+            <span className="min-w-0 text-center">
+              {followUpTodayOnly && followUpSlotsTodayOnly
+                ? "تنبيه فلتر نشط: «متابعة بتاريخ اليوم» و«سجل متابعات حدثت اليوم» معاً — النتائج بعد تقاطع الشرطين فقط."
+                : followUpTodayOnly
+                  ? "تنبيه فلتر نشط: يُعرض فقط من لديهم متابعة بتاريخ اليوم (العمود أو السجل)."
+                  : "تنبيه فلتر نشط: يُعرض فقط من لديهم في سجل المتابعات تاريخ اليوم (دون الاعتماد على عمود المتابعة التالية بنفس اليوم)."}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {!dashboardMode && showSortAndVisitToolbar ? (

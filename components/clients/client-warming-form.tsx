@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 
 import { createWarmingSentAction } from "@/app/actions/warming-actions";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,7 +56,17 @@ export function ClientWarmingForm({ clientId }: { clientId: string }) {
       <h4 className="font-medium md:col-span-2">إضافة سجل Warming</h4>
       <div className="space-y-1">
         <Label>تاريخ التواصل</Label>
-        <Input type="date" dir="ltr" className="text-left" {...form.register("communicatedAt")} />
+        <Controller
+          name="communicatedAt"
+          control={form.control}
+          render={({ field }) => (
+            <ArabicDateField
+              valueYmd={field.value ?? ""}
+              onValueChange={field.onChange}
+              buttonClassName="h-9 w-full justify-center font-semibold"
+            />
+          )}
+        />
       </div>
       <div className="space-y-1">
         <Label>النشاط (لقطة)</Label>

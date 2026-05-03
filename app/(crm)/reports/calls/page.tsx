@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+import { CallsReportDateRangeFields } from "@/components/reports/calls-report-date-range-fields";
 import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
@@ -115,26 +115,7 @@ export default async function CallsReportPage({
       />
 
       <form className="flex flex-wrap gap-3 rounded-xl border border-border/60 p-4 text-sm" method="get">
-        <label className="flex flex-col gap-1">
-          من تاريخ
-          <Input
-            type="date"
-            name="from"
-            defaultValue={fromStr}
-            className="h-9 rounded border px-2 py-1"
-            dir="ltr"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          إلى تاريخ
-          <Input
-            type="date"
-            name="to"
-            defaultValue={toStr}
-            className="h-9 rounded border px-2 py-1"
-            dir="ltr"
-          />
-        </label>
+        <CallsReportDateRangeFields defaultFrom={fromStr} defaultTo={toStr} />
         <label className="flex flex-col gap-1">
           الفلتر
           <select

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { changeClientStatusAction } from "@/app/actions/client-update";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,12 +100,10 @@ export function ClientPipelinePanel({
               </div>
               <div className="space-y-1">
                 <Label>تاريخ البيع</Label>
-                <Input
-                  type="date"
-                  dir="ltr"
-                  className="text-left"
-                  value={saleDate}
-                  onChange={(e) => setSaleDate(e.target.value)}
+                <ArabicDateField
+                  valueYmd={saleDate}
+                  onValueChange={setSaleDate}
+                  buttonClassName="h-9 w-full justify-start font-semibold"
                 />
               </div>
             </div>
@@ -130,12 +129,10 @@ export function ClientPipelinePanel({
             </div>
             <div className="space-y-1">
               <Label>تاريخ الإغلاق</Label>
-              <Input
-                type="date"
-                dir="ltr"
-                className="text-left"
-                value={closedLostAt}
-                onChange={(e) => setClosedLostAt(e.target.value)}
+              <ArabicDateField
+                valueYmd={closedLostAt}
+                onValueChange={setClosedLostAt}
+                buttonClassName="h-9 w-full justify-start font-semibold"
               />
             </div>
             <Button

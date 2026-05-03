@@ -11,7 +11,9 @@ const MONTHS_AR = [
   "أكتوبر",
   "نوفمبر",
   "ديسمبر",
-];
+] as const;
+
+export const ARABIC_CALENDAR_MONTHS: readonly string[] = MONTHS_AR;
 
 /** عرض تاريخ بالعربية، مثل: ١٥ أبريل ٢٠٢٦ */
 export function formatDateArabicLong(d: Date): string {

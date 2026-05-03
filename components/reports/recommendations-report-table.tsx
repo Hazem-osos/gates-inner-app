@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -180,24 +181,21 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
       </TableCell>
       <TableCell>
         <ReportFieldTooltip tooltip={fullCellTooltip(recDate)}>
-          <Input
-            type="date"
-            dir="ltr"
-            className={recDateInputClass}
-            value={recDate}
-            onChange={(e) => setRecDate(e.target.value)}
+          <ArabicDateField
+            valueYmd={recDate}
+            allowEmpty={false}
+            onValueChange={setRecDate}
+            buttonClassName={cn("h-8 min-w-[9rem] justify-center", recDateInputClass)}
           />
         </ReportFieldTooltip>
       </TableCell>
       <TableCell className="text-muted-foreground">{r.authorName}</TableCell>
       <TableCell>
         <ReportFieldTooltip tooltip={fullCellTooltip(workDate)}>
-          <Input
-            type="date"
-            dir="ltr"
-            className={recDateInputClass}
-            value={workDate}
-            onChange={(e) => setWorkDate(e.target.value)}
+          <ArabicDateField
+            valueYmd={workDate}
+            onValueChange={setWorkDate}
+            buttonClassName={cn("h-8 min-w-[9rem] justify-center", recDateInputClass)}
           />
         </ReportFieldTooltip>
       </TableCell>

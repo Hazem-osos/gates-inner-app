@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { updateNewLeadAction } from "@/app/actions/new-leads";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 
@@ -90,12 +91,11 @@ export function EditNewLeadDialog({
           <span className="text-xs font-medium text-muted-foreground">
             يوم العمل (التاريخ)
           </span>
-          <Input
-            type="date"
-            value={entryYmd}
-            onChange={(e) => setEntryYmd(e.target.value)}
-            dir="ltr"
-            className="font-mono text-[0.8rem]"
+          <ArabicDateField
+            valueYmd={entryYmd}
+            allowEmpty={false}
+            onValueChange={setEntryYmd}
+            buttonClassName="h-9 w-full justify-center font-semibold"
           />
         </label>
         <label className="flex flex-col gap-1">

@@ -25,6 +25,7 @@ import {
 import { reopenClosedClientFromReport } from "@/app/actions/report-b-transitions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -60,8 +61,16 @@ import {
   reportBTextarea,
   splitCallAndSituation,
 } from "@/lib/report-b-table-helpers";
+import { parseIsoDate } from "@/lib/report-b-utils";
 import { cn } from "@/lib/utils";
 import type { ReportBRow } from "./report-b-table";
+
+function dateCellTooltip(iso: string | null | undefined): string {
+  const p = parseIsoDate(iso ?? null);
+  if (p) return formatDateArabicLong(p);
+  const ymd = (isoToDateInput(iso ?? null) ?? "").trim();
+  return ymd || "— فارغ —";
+}
 
 type AppRouterInstance = {
   push: (href: string) => void;
@@ -617,31 +626,23 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
     ) : null}
     <TableCell>
       <ReportFieldTooltip
-        tooltip={fullCellTooltip(
-          isoToDateInput(displayRow.nextFollowUpAt)
-        )}
+        tooltip={dateCellTooltip(displayRow.nextFollowUpAt)}
       >
-        <Input
-          type="date"
-          className={cn(
-            reportBInput,
-            "min-w-[11rem] text-left tabular-nums"
-          )}
-          dir="ltr"
+        <ArabicDateField
+          valueYmd={isoToDateInput(displayRow.nextFollowUpAt)}
           disabled={isSaving}
-          value={isoToDateInput(displayRow.nextFollowUpAt)}
-          onChange={(e) => {
-            const nextFollowUpAt = dateInputToIso(
-              e.target.value
-            );
-            const nextFollowUpAtStr =
-              nextFollowUpAt ?? "";
+          className="min-w-[11rem]"
+          buttonClassName={cn(reportBInput, "min-w-[11rem]")}
+          onValueChange={(ymd) => {
+            const nextFollowUpAt = ymd
+              ? dateInputToIso(ymd) ?? ""
+              : "";
             patchFieldImmediate({
-              nextFollowUpAt: nextFollowUpAtStr,
+              nextFollowUpAt,
             });
             if (
               isGateClientRow &&
-              nextFollowUpMeetsGate(nextFollowUpAtStr)
+              nextFollowUpMeetsGate(nextFollowUpAt)
             ) {
               onSetGateClientId(null);
             }
@@ -669,20 +670,17 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip
-        tooltip={fullCellTooltip(mgmtDateStr)}
-      >
-        <Input
-          type="date"
-          dir="ltr"
-          className={cn(reportBInput, "text-left")}
+      <ReportFieldTooltip tooltip={dateCellTooltip(displayRow.managementRecommendationDate)}>
+        <ArabicDateField
+          valueYmd={mgmtDateStr}
           disabled={isSaving}
-          value={mgmtDateStr}
-          onChange={(e) =>
+          buttonClassName={cn(reportBInput, "text-center")}
+          allowEmpty={false}
+          onValueChange={(ymd) =>
             patchFieldDebounced({
-              managementRecommendationDate: dateInputToIso(
-                e.target.value
-              ),
+              managementRecommendationDate: ymd
+                ? dateInputToIso(ymd)
+                : undefined,
             })
           }
         />
@@ -1035,22 +1033,16 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       </ReportFieldTooltip>
     </TableCell>
     <TableCell>
-      <ReportFieldTooltip
-        tooltip={fullCellTooltip(
-          isoToDateInput(displayRow.visitAppointmentDate)
-        )}
-      >
-        <Input
-          type="date"
-          dir="ltr"
-          className={cn(reportBInput, "text-left")}
+      <ReportFieldTooltip tooltip={dateCellTooltip(displayRow.visitAppointmentDate)}>
+        <ArabicDateField
+          valueYmd={isoToDateInput(displayRow.visitAppointmentDate)}
           disabled={isSaving}
-          value={isoToDateInput(displayRow.visitAppointmentDate)}
-          onChange={(e) =>
+          buttonClassName={cn(reportBInput, "text-center")}
+          onValueChange={(ymd) =>
             patchFieldDebounced({
-              visitAppointmentDate: dateInputToIso(
-                e.target.value
-              ),
+              visitAppointmentDate: ymd
+                ? dateInputToIso(ymd)
+                : null,
             })
           }
         />
@@ -1178,23 +1170,17 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           </TableCell>
           <TableCell>
             <ReportFieldTooltip
-              tooltip={fullCellTooltip(
-                slot?.date
-                  ? isoToDateInput(slot.date)
-                  : ""
-              )}
+              tooltip={dateCellTooltip(slot?.date)}
             >
-              <Input
-                type="date"
-                dir="ltr"
-                className={cn(reportBInput, "text-left")}
-                disabled={isSaving}
-                value={
+              <ArabicDateField
+                valueYmd={
                   slot?.date
                     ? isoToDateInput(slot.date)
                     : ""
                 }
-                onChange={(e) => {
+                disabled={isSaving}
+                buttonClassName={cn(reportBInput, "text-center")}
+                onValueChange={(ymd) => {
                   const next = [...slots];
                   while (next.length <= i) {
                     next.push({
@@ -1206,8 +1192,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                   next[i] = {
                     ...next[i],
                     order: i + 1,
-                    date:
-                      dateInputToIso(e.target.value) ?? "",
+                    date: ymd ? dateInputToIso(ymd) ?? "" : "",
                   };
                   patchFieldDebounced({
                     followUpSlots: followSlotsToJson(next),

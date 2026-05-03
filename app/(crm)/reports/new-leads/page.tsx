@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { NewLeadsPanel } from "@/components/reports/new-leads-panel";
+import { NewLeadsEntryDayField } from "@/components/reports/new-leads-entry-day-field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { todayInputDate } from "@/lib/date-arabic";
 import { listNewLeadsForEntryDay } from "@/lib/data/new-leads";
@@ -33,16 +33,7 @@ export default async function NewLeadsPage({
         className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 p-4 text-sm"
         method="get"
       >
-        <label className="flex flex-col gap-1">
-          يوم العمل
-          <Input
-            type="date"
-            name="date"
-            defaultValue={dateYmd}
-            className="h-9 w-auto min-w-[11rem] rounded border px-2 py-1"
-            dir="ltr"
-          />
-        </label>
+        <NewLeadsEntryDayField defaultYmd={dateYmd} />
         <Button type="submit" size="sm" variant="secondary">
           عرض
         </Button>

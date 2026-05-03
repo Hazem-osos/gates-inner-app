@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
   GenericFilterActiveNotice,
@@ -13,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -128,6 +132,15 @@ export function NewLeadsReportFilters({
   resultCount: number;
   classifications: ClassificationRow[];
 }) {
+  const [fromField, setFromField] = useState(fromYmd);
+  const [toField, setToField] = useState(toYmd);
+  useEffect(() => {
+    setFromField(fromYmd);
+  }, [fromYmd]);
+  useEffect(() => {
+    setToField(toYmd);
+  }, [toYmd]);
+
   const commonParts = commonSearchParts({
     fromYmd,
     toYmd,
@@ -205,22 +218,22 @@ export function NewLeadsReportFilters({
               <div className="flex flex-wrap items-end gap-2">
                 <Label className="flex min-w-[10rem] flex-col gap-1.5 font-normal">
                   <span className="text-xs text-muted-foreground">من تاريخ</span>
-                  <Input
-                    type="date"
-                    name="from"
-                    defaultValue={fromYmd}
-                    dir="ltr"
-                    className="relative z-[1] h-9 font-mono text-[0.8rem] sm:w-40"
+                  <input type="hidden" name="from" value={fromField} />
+                  <ArabicDateField
+                    valueYmd={fromField}
+                    allowEmpty={false}
+                    onValueChange={setFromField}
+                    buttonClassName="relative z-[1] h-9 w-full sm:w-40"
                   />
                 </Label>
                 <Label className="flex min-w-[10rem] flex-col gap-1.5 font-normal">
                   <span className="text-xs text-muted-foreground">إلى تاريخ</span>
-                  <Input
-                    type="date"
-                    name="to"
-                    defaultValue={toYmd}
-                    dir="ltr"
-                    className="relative z-[1] h-9 font-mono text-[0.8rem] sm:w-40"
+                  <input type="hidden" name="to" value={toField} />
+                  <ArabicDateField
+                    valueYmd={toField}
+                    allowEmpty={false}
+                    onValueChange={setToField}
+                    buttonClassName="relative z-[1] h-9 w-full sm:w-40"
                   />
                 </Label>
               </div>

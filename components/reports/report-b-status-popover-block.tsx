@@ -13,6 +13,7 @@ import {
   moveClientToNotBFromReport,
 } from "@/app/actions/report-b-transitions";
 import { Button } from "@/components/ui/button";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -334,11 +335,12 @@ export function ReportBStatusPopoverBlock({
               value={saleVal}
               onChange={(e) => setSaleVal(e.target.value)}
             />
-            <Input
-              type="date"
-              dir="ltr"
-              value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
+            <ArabicDateField
+              valueYmd={saleDate}
+              allowEmpty={false}
+              className="w-full"
+              buttonClassName="h-9 w-full text-sm font-semibold"
+              onValueChange={(ymd) => setSaleDate(ymd || todayInputDate())}
             />
             <div className="flex gap-1">
               <Button

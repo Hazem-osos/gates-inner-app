@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Label } from "@/components/ui/label";
 import { buildRecommendationsReportHref } from "@/lib/recommendations-report-search";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,11 @@ export function RecommendationsDateFilter(props: {
   const router = useRouter();
   const [from, setFrom] = useState(props.fromYmd);
   const [to, setTo] = useState(props.toYmd);
+
+  useEffect(() => {
+    setFrom(props.fromYmd);
+    setTo(props.toYmd);
+  }, [props.fromYmd, props.toYmd]);
 
   function apply(e: React.FormEvent) {
     e.preventDefault();
@@ -47,28 +52,24 @@ export function RecommendationsDateFilter(props: {
           <Label htmlFor="rec-from" className="text-xs text-muted-foreground">
             من تاريخ
           </Label>
-          <Input
-            id="rec-from"
-            type="date"
-            dir="ltr"
-            className="w-full min-w-[140px] sm:w-[150px]"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
+          <ArabicDateField
+            valueYmd={from}
+            allowEmpty={false}
+            onValueChange={setFrom}
             disabled={props.fullDb}
+            buttonClassName="h-10 w-full min-w-[140px] justify-center font-semibold sm:w-[150px]"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="rec-to" className="text-xs text-muted-foreground">
             إلى تاريخ
           </Label>
-          <Input
-            id="rec-to"
-            type="date"
-            dir="ltr"
-            className="w-full min-w-[140px] sm:w-[150px]"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
+          <ArabicDateField
+            valueYmd={to}
+            allowEmpty={false}
+            onValueChange={setTo}
             disabled={props.fullDb}
+            buttonClassName="h-10 w-full min-w-[140px] justify-center font-semibold sm:w-[150px]"
           />
         </div>
         <div className="flex flex-wrap gap-2">

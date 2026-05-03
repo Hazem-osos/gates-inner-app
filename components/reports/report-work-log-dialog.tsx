@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import type { AuditWorkClientGroup } from "@/lib/audit/work-log-types";
 import { formatDateTimeArabic, todayInputDate } from "@/lib/date-arabic";
@@ -180,22 +180,20 @@ export function ReportWorkLogDialog({
           ) : null}
           <label className="grid gap-2 text-xs font-medium text-foreground">
             من تاريخ
-            <Input
-              type="date"
-              dir="ltr"
-              className="h-10 border-border/80 bg-background"
-              value={auditFrom}
-              onChange={(e) => setAuditFrom(e.target.value)}
+            <ArabicDateField
+              valueYmd={auditFrom}
+              allowEmpty={false}
+              onValueChange={setAuditFrom}
+              buttonClassName="h-10 w-full justify-center border-border/80 bg-background font-semibold"
             />
           </label>
           <label className="grid gap-2 text-xs font-medium text-foreground">
             إلى تاريخ
-            <Input
-              type="date"
-              dir="ltr"
-              className="h-10 border-border/80 bg-background"
-              value={auditTo}
-              onChange={(e) => setAuditTo(e.target.value)}
+            <ArabicDateField
+              valueYmd={auditTo}
+              allowEmpty={false}
+              onValueChange={setAuditTo}
+              buttonClassName="h-10 w-full justify-center border-border/80 bg-background font-semibold"
             />
           </label>
         </div>

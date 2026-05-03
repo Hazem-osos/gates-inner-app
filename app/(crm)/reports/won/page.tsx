@@ -9,6 +9,7 @@ import {
   SalesFilterActiveMessage,
 } from "@/components/reports/sales-filter-records-status";
 import { ReportBTable, type ReportBRow } from "@/components/reports/report-b-table";
+import { WonReportContractDateFields } from "@/components/reports/won-report-contract-date-fields";
 import { Button } from "@/components/ui/button";
 import { GenericFilterActiveNotice } from "@/components/reports/sales-filter-records-status";
 import { listClientClassifications } from "@/lib/data/classifications";
@@ -157,26 +158,10 @@ export default async function ReportWonPage({
         {dir && dir !== "desc" ? (
           <input type="hidden" name="dir" value={dir} />
         ) : null}
-        <div>
-          <label className="text-xs text-muted-foreground">من (تاريخ التعاقد)</label>
-          <input
-            type="date"
-            name="from"
-            defaultValue={sp.from ?? ""}
-            className="mt-0.5 block h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm"
-            dir="ltr"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">إلى</label>
-          <input
-            type="date"
-            name="to"
-            defaultValue={sp.to ?? ""}
-            className="mt-0.5 block h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm"
-            dir="ltr"
-          />
-        </div>
+        <WonReportContractDateFields
+          defaultFrom={sp.from ?? ""}
+          defaultTo={sp.to ?? ""}
+        />
         <div className="min-w-[12rem] flex-1 space-y-1">
           <label className="text-xs text-muted-foreground">بحث</label>
           <input
