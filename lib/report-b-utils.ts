@@ -63,6 +63,27 @@ export function isNextFollowUpLocalCalendarToday(
 }
 
 /**
+ * يظهر الصف إن كان عمود «متابعة تالية» أو أي خانة في سجل المتابعات (JSON)
+ * يحمل تاريخاً مساوياً ليوم التقويم المحلي الحالي.
+ */
+export function rowHasFollowUpScheduledLocalToday(
+  row: ReportBFilterRow
+): boolean {
+  if (isNextFollowUpLocalCalendarToday(row.nextFollowUpAt)) return true;
+  const t0 = startOfToday().getTime();
+  for (const s of normalizeSlotsSimple(row.followUpSlots)) {
+    const d = parseIsoDate(s.date);
+    if (
+      d != null &&
+      startOfLocalCalendarDay(d).getTime() === t0
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * يحلّل تاريخ المتابعة (كامل ISO أو تاريخ بصيغة yyyy-MM-dd فقط) كيوم تقويم محلي
  * — يتفادى حقول <input type="date"> الفارغة بسبب صيغة غير مفهومة لـ new Date.
  */

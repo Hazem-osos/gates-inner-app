@@ -64,6 +64,7 @@ import {
   passesNoAnswerFilter,
   passesVisitOverdue,
   passesVisitScheduledOnly,
+  rowHasFollowUpScheduledLocalToday,
   sortRows,
   validateNextFollowUpAtForRowSave,
   type SortTriState,
@@ -339,6 +340,8 @@ export function ReportBTable({
   /** فلتر لون صف التقرير (أحمر / أصفر / أزرق) — تقارير B و Not B فقط */
   const [rowTintFilter, setRowTintFilter] =
     useState<ReportRowStyleColorKey | null>(null);
+  /** عرض من لديهم متابعة تالية أو أي خانة متابعة بتاريخ اليوم (تقويم محلي) */
+  const [followUpTodayOnly, setFollowUpTodayOnly] = useState(false);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
   const [followInput, setFollowInput] = useState("");
@@ -545,13 +548,24 @@ export function ReportBTable({
     return filteredVisit.filter((r) => matchesSearch(r, q));
   }, [filteredVisit, deferredSearchQ]);
 
+  const searchedAfterFollowUpToday = useMemo(() => {
+    if (!showRowTintFilter || !followUpTodayOnly) return searched;
+    return searched.filter((r) => rowHasFollowUpScheduledLocalToday(r));
+  }, [searched, showRowTintFilter, followUpTodayOnly]);
+
   const searchedAfterTint = useMemo(() => {
-    if (!showRowTintFilter || rowTintFilter === null) return searched;
-    return searched.filter((r) => {
+    if (!showRowTintFilter || rowTintFilter === null)
+      return searchedAfterFollowUpToday;
+    return searchedAfterFollowUpToday.filter((r) => {
       const c = normalizeReportRowStyleColor(rowStyles[r.id]?.color);
       return c === rowTintFilter;
     });
-  }, [searched, showRowTintFilter, rowTintFilter, rowStyles]);
+  }, [
+    searchedAfterFollowUpToday,
+    showRowTintFilter,
+    rowTintFilter,
+    rowStyles,
+  ]);
 
   const visibleRows = useMemo(() => {
     const base = searchedAfterTint.filter((r) => !hiddenIds.has(r.id));
@@ -743,6 +757,29 @@ export function ReportBTable({
                   />
                 );
               })}
+            </div>
+          ) : null}
+          {showRowTintFilter ? (
+            <div
+              className="ms-1 flex flex-wrap items-center gap-1.5 border-s border-border/50 ps-2"
+              role="group"
+              aria-label="عرض عملاء بمتابعة مجدولة اليوم"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={followUpTodayOnly ? "default" : "outline"}
+                className={cn(
+                  "h-8 max-w-[11rem] rounded-lg px-2.5 text-xs leading-snug font-medium whitespace-normal sm:max-w-none sm:whitespace-nowrap",
+                  followUpTodayOnly &&
+                    "border-emerald-700 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+                )}
+                aria-pressed={followUpTodayOnly}
+                title="أي صف عنده «متابعة تالية» أو أي خانة في سجل المتابعات بتاريخ يساوي اليوم (حسب التقويم المحلي)"
+                onClick={() => setFollowUpTodayOnly((v) => !v)}
+              >
+                متابعة بتاريخ اليوم
+              </Button>
             </div>
           ) : null}
         </div>
