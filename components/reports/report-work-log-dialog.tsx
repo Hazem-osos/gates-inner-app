@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,8 @@ export function ReportWorkLogDialog({
   const [auditError, setAuditError] = useState<string | null>(null);
   const [salesKey, setSalesKey] = useState("all");
   const [salesOptions, setSalesOptions] = useState<{ id: string; name: string }[]>([]);
+
+  const wasOpenRef = useRef(false);
 
   const showSalesFilter =
     userRole === "ADMIN" || userRole === "MANAGER";
@@ -101,6 +103,17 @@ export function ReportWorkLogDialog({
     }
   }, [auditFrom, auditTo, userId, reportKeyParam, salesKey, showSalesFilter]);
 
+  useEffect(() => {
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
+    if (!userId) return;
+    if (wasOpenRef.current) return;
+    wasOpenRef.current = true;
+    void loadAudit();
+  }, [open, userId, loadAudit]);
+
   return (
     <>
       <Button
@@ -131,7 +144,7 @@ export function ReportWorkLogDialog({
               إغلاق
             </Button>
             <Button type="button" onClick={() => void loadAudit()} disabled={auditLoading}>
-              {auditLoading ? "جاري…" : "موافق"}
+              {auditLoading ? "جاري…" : "تحديث العرض"}
             </Button>
           </>
         }
@@ -265,7 +278,7 @@ export function ReportWorkLogDialog({
           </table>
           {auditGroups.length === 0 && !auditLoading && !auditError ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
-              لا توجد سجلات لهذا التقرير في الفترة — اضغط موافق بعد اختيار التواريخ{showSalesFilter ? " والفلتر" : ""}.
+              لا توجد سجلات لهذا التقرير في الفترة المحددة{showSalesFilter ? " وبفلتر السيلز الحالي" : ""}. جرّب توسيع نطاق التواريخ أو اضغط «تحديث العرض».
             </p>
           ) : null}
         </div>

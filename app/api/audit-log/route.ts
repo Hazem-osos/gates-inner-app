@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSessionUser } from "@/lib/auth-helpers";
+import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import type {
   AuditWorkClientGroup,
 } from "@/lib/audit/work-log-types";
@@ -52,10 +52,29 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "غير مصرح." }, { status: 401 });
   }
 
+  const dbUserId = await resolveSessionDbUserId(session);
+  if (!dbUserId) {
+    return NextResponse.json(
+      {
+        message:
+          "تعذر ربط حسابك بقاعدة البيانات. أعد تسجيل الدخول ثم افتح سجل العمل مجدداً.",
+      },
+      { status: 401 }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
-  const userIdParam = searchParams.get("userId") ?? session.id;
-  if (userIdParam !== session.id && session.role !== "ADMIN" && session.role !== "MANAGER") {
-    return NextResponse.json({ message: "غير مصرح بعرض سجل مستخدم آخر." }, { status: 403 });
+  const rawRequested = searchParams.get("userId")?.trim();
+  const userIdParam =
+    rawRequested && rawRequested.length > 0 ? rawRequested : dbUserId;
+
+  if (session.role !== "ADMIN" && session.role !== "MANAGER") {
+    if (userIdParam !== dbUserId) {
+      return NextResponse.json(
+        { message: "غير مصرح بعرض سجل مستخدم آخر." },
+        { status: 403 }
+      );
+    }
   }
 
   const reportKey = searchParams.get("reportKey")?.trim() ?? "";

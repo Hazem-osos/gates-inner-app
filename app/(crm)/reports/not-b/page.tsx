@@ -14,6 +14,8 @@ import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
+import { reportStyleDbKeyFromTableType } from "@/lib/report-row-style-ui";
+import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
 import { ClientStatus } from "@prisma/client";
@@ -63,6 +65,12 @@ export default async function ReportNotBPage({
       : clients;
 
   const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
+
+  const rowStyles = await listReportRowStylesForClients({
+    userId: workLogUserId,
+    reportKey: reportStyleDbKeyFromTableType("not-b"),
+    clientIds: filtered.map((c) => c.id),
+  });
 
   const classFilter =
     classKey && classKey !== "all"
@@ -160,6 +168,7 @@ export default async function ReportNotBPage({
         workLogUserId={workLogUserId}
         workLogUserRole={user.role}
         activeSalesName={activeSalesName}
+        rowStyles={rowStyles}
       />
     </div>
   );

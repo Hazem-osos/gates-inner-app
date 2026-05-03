@@ -47,8 +47,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ReportBRowColorLegendPanel } from "@/components/reports/report-b-row-color-legend-panel";
 import { ReportBTableBodyRow } from "@/components/reports/report-b-table-body-row";
 import type { ClassificationRow } from "@/lib/data/classifications";
+import { reportStyleApiTypeFromTableType } from "@/lib/report-row-style-ui";
 import {
   matchesSearch,
   passesActuallyVisited,
@@ -145,6 +147,8 @@ type Props = {
   showSortAndVisitToolbar?: boolean;
   /** لو false لا يُعرض شريط «المعروض في الصفحة: N سجلًا» (وتنبيه السيلز إن وُجد) */
   showSalesFilterRecordsStatus?: boolean;
+  /** تلوين صفوف التقرير المحفوظ للمستخدم الحالي (من ‎ReportRowStyle‎) */
+  rowStyles?: Record<string, { color: string; legendNote: string }>;
 };
 
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
@@ -200,6 +204,7 @@ export function ReportBTable({
   showViolationPanel = true,
   showSortAndVisitToolbar = true,
   showSalesFilterRecordsStatus = true,
+  rowStyles = {},
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -310,6 +315,11 @@ export function ReportBTable({
     if (rowStyleReportType === "not-b") return "report-not-b";
     return "report-b";
   }, [auditReportKey, toolbar, rowStyleReportType]);
+
+  const rowStyleApiType = useMemo(
+    () => reportStyleApiTypeFromTableType(rowStyleReportType),
+    [rowStyleReportType]
+  );
 
   const dashboardMode = toolbar === "dashboard";
 
@@ -928,6 +938,9 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
+            <ReportBRowColorLegendPanel
+              reportKey={resolvedAuditReportKey}
+            />
         </div>
         {(violationMessage() ||
           visitOverdueFilterMessage() ||
@@ -1085,6 +1098,9 @@ export function ReportBTable({
                     scrollReportBToScrollEdge={scrollReportBToScrollEdge}
                     router={router}
                     wonSaleColumns={wonSaleColumns}
+                    rowStyle={rowStyles[r.id]}
+                    rowStyleApiType={rowStyleApiType}
+                    reportKeyForLegend={resolvedAuditReportKey}
                   />
                 );
               })}

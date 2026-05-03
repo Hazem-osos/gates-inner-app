@@ -1,7 +1,7 @@
 import { NewLeadsReportFilters } from "@/components/reports/new-leads-report-filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewLeadsReportTable } from "@/components/reports/new-leads-report-table";
-import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
+import { resolveSalesFilterDisplayName } from "@/lib/resolve-active-sales-name";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { todayInputDate } from "@/lib/date-arabic";
 import {
@@ -19,7 +19,7 @@ export default async function NewLeadsReportPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await requireSessionUser();
+  await requireSessionUser();
   const sp = await searchParams;
   const get = (k: string) => {
     const v = sp[k];
@@ -41,7 +41,7 @@ export default async function NewLeadsReportPage({
   const [users, classifications, activeSalesName] = await Promise.all([
     listUsersForNewLeadReportFilter(),
     listClientClassifications(),
-    resolveActiveSalesName(user.role, salesUserId),
+    resolveSalesFilterDisplayName(salesUserId),
   ]);
 
   const { rows, stats } = await listNewLeadsForReport(
@@ -66,7 +66,6 @@ export default async function NewLeadsReportPage({
       />
 
       <NewLeadsReportFilters
-        userRole={user.role}
         today={today}
         fromYmd={fromYmd}
         toYmd={toYmd}

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, UserX } from "lucide-react";
+import { Check, UserX, RotateCcw } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import type { NewLeadReachStatus } from "@prisma/client";
 
 import {
+  clearNewLeadBadOrExpiredAction,
   markNewLeadBadClientAction,
   markNewLeadExpiredAction,
 } from "@/app/actions/new-leads";
@@ -254,13 +255,16 @@ export function NewLeadsReportTable({
               <TableHead className="min-w-[8rem]">الحالة</TableHead>
               <TableHead className="min-w-[6rem]">التصنيف</TableHead>
               <TableHead className="min-w-[14rem]">إجراءات</TableHead>
+              <TableHead className="min-w-[10rem] whitespace-normal ps-2 text-center">
+                إلغاء حالة العميل
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   لا توجد Leads جديدة ضمن الفترة والفلاتر.
@@ -272,6 +276,8 @@ export function NewLeadsReportTable({
                 const rowPending = pendingLeadId === r.id;
                 const isBadClient = r.leadCategory === "Z";
                 const isExpired = r.leadCategory === "EXPIRED";
+                const canCancelBadOrExpired =
+                  (isBadClient || isExpired) && !hasClient;
                 const reportRowDisabledReason = hasClient
                   ? "لا يمكن — يوجد بطاقة عميل مرتبطة."
                   : rowPending
@@ -416,6 +422,37 @@ export function NewLeadsReportTable({
                           )}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="align-top ps-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="relative z-[1] h-auto min-h-8 w-full max-w-[11rem] whitespace-normal px-2 py-1.5 text-center text-[11px] font-medium leading-snug"
+                        disabled={!canCancelBadOrExpired || rowPending}
+                        title={
+                          rowPending
+                            ? "جاري التنفيذ…"
+                            : hasClient
+                              ? "لا يمكن — يوجد بطاقة عميل مرتبطة."
+                              : !isBadClient && !isExpired
+                                ? "يُفعّل فقط عند تسجيل «عميل سيء» أو «Expired»."
+                                : "إزالة تصنيف عميل سيء / Expired وإرجاع الليد للوضع الافتراضي"
+                        }
+                        onClick={() =>
+                          void run(
+                            r.id,
+                            () => clearNewLeadBadOrExpiredAction(r.id),
+                            "تم إلغاء التصنيف وإرجاع الليد للوضع الافتراضي"
+                          )
+                        }
+                      >
+                        <RotateCcw
+                          className="mx-auto mb-0.5 size-3.5 opacity-80"
+                          aria-hidden
+                        />
+                        إلغاء حالة العميل
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );

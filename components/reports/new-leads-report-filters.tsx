@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED } from "@/lib/data/new-leads-report";
-import type { UserRole } from "@prisma/client";
 
 const PATH = "/reports/new-leads-report";
 
@@ -56,18 +55,14 @@ function hrefWithSales(
 }
 
 function NewLeadsSalesPills({
-  userRole,
   users,
   commonParts,
   salesUserId,
 }: {
-  userRole: UserRole;
   users: { id: string; name: string }[];
   commonParts: Record<string, string>;
   salesUserId: string;
 }) {
-  if (userRole === "SALES") return null;
-
   const active = salesUserId !== "all" ? salesUserId : "all";
 
   return (
@@ -107,7 +102,6 @@ function NewLeadsSalesPills({
 }
 
 export function NewLeadsReportFilters({
-  userRole,
   today,
   fromYmd,
   toYmd,
@@ -121,7 +115,6 @@ export function NewLeadsReportFilters({
   resultCount,
   classifications,
 }: {
-  userRole: UserRole;
   today: string;
   fromYmd: string;
   toYmd: string;
@@ -173,7 +166,7 @@ export function NewLeadsReportFilters({
   }
 
   const filterExtrasActive = chips.length > 0;
-  const salesFilterActive = salesUserId !== "all" && userRole !== "SALES";
+  const salesFilterActive = salesUserId !== "all";
   const filterActive = filterExtrasActive || salesFilterActive;
 
   const todayParts = commonSearchParts({
@@ -188,7 +181,6 @@ export function NewLeadsReportFilters({
   return (
     <div className="space-y-4">
       <NewLeadsSalesPills
-        userRole={userRole}
         users={users}
         commonParts={commonParts}
         salesUserId={salesUserId}

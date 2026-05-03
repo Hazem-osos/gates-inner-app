@@ -103,9 +103,18 @@ export function recommendationsExportExcelHref(args: {
   return `/api/export/excel?${u.toString()}`;
 }
 
-/** عملاء منقولون (غير المُقرّ باطلاعهم) */
-export function transferredExportExcelHref(): string {
-  return `/api/export/excel?kind=report-transferred`;
+/** عملاء منقولون — للأدمن/المدير يمكن تمرير فلاتر مطابقة للصفحة */
+export function transferredExportExcelHref(args?: {
+  fromSales?: string;
+  toSales?: string;
+}): string {
+  const u = new URLSearchParams();
+  u.set("kind", "report-transferred");
+  const from = args?.fromSales?.trim();
+  const to = args?.toSales?.trim();
+  if (from && from !== "all") u.set("fromSales", from);
+  if (to && to !== "all") u.set("toSales", to);
+  return `/api/export/excel?${u.toString()}`;
 }
 
 /** قالب فارغ لاستيراد Excel */

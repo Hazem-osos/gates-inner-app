@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   type CSSProperties,
 } from "react";
 import { toast } from "sonner";
@@ -37,6 +38,13 @@ import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
+import { readLegendLabelsFromStorage } from "@/lib/report-row-color-legend-storage";
+import {
+  normalizeReportRowStyleColor,
+  reportRowTintStyle,
+  REPORT_ROW_STYLE_COLORS,
+  type ReportRowStyleColorKey,
+} from "@/lib/report-row-style-ui";
 import { daysElapsedSinceContact } from "@/lib/days-elapsed";
 import {
   dateInputToIso,
@@ -56,6 +64,7 @@ import type { ReportBRow } from "./report-b-table";
 
 type AppRouterInstance = {
   push: (href: string) => void;
+  refresh: () => void;
 };
 
 export type ReportBTableBodyRowProps = {
@@ -92,6 +101,10 @@ export type ReportBTableBodyRowProps = {
   scrollReportBToScrollEdge: (edge: "min" | "max") => void;
   router: AppRouterInstance;
   wonSaleColumns?: boolean;
+  /** تلوين الصف المحفوظ للمستخدم في هذا التقرير */
+  rowStyle?: { color: string; legendNote: string };
+  rowStyleApiType: string;
+  reportKeyForLegend: string;
 };
 
 function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
@@ -124,6 +137,9 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
     scrollReportBToScrollEdge,
     router,
     wonSaleColumns = false,
+    rowStyle,
+    rowStyleApiType,
+    reportKeyForLegend,
   } = p;
 
   /** مثل «توصيات الإدارة»: المسودة هنا — الـ parent يستقبل بمرئية debounce لتخفيف إعادة رسم الجدول. */
@@ -196,16 +212,68 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       (displayRow.classificationId ? displayRow.classificationId : "")
   );
 
+  const hasRowTint = Boolean(normalizeReportRowStyleColor(rowStyle?.color));
+
+  const [colorBusy, startColor] = useTransition();
+
+  const applyRowColor = useCallback(
+    (color: ReportRowStyleColorKey) => {
+      startColor(async () => {
+        const labels = readLegendLabelsFromStorage(reportKeyForLegend);
+        const labelRaw =
+          color === "red"
+            ? labels.red
+            : color === "yellow"
+              ? labels.yellow
+              : labels.green;
+        const label = labelRaw.trim() || undefined;
+        const res = await fetch(`/api/clients/${r.id}/row-style`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            color,
+            reportType: rowStyleApiType,
+            ...(label ? { label } : {}),
+          }),
+        });
+        if (res.ok) {
+          router.refresh();
+        } else {
+          const j = (await res.json().catch(() => ({}))) as {
+            message?: string;
+          };
+          toast.error(j.message ?? "تعذر حفظ اللون.");
+        }
+      });
+    },
+    [r.id, rowStyleApiType, reportKeyForLegend, router, startColor]
+  );
+
+  const clearRowColor = useCallback(() => {
+    startColor(async () => {
+      const q = new URLSearchParams({ reportType: rowStyleApiType });
+      const res = await fetch(`/api/clients/${r.id}/row-style?${q}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const j = (await res.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        toast.error(j.message ?? "تعذر إزالة اللون.");
+      }
+    });
+  }, [r.id, rowStyleApiType, router, startColor]);
+
   const hasUnsavedInRow =
     Object.keys(rowOverlay).length > 0 ||
     Object.keys(localEntry ?? {}).length > 0;
-  const rowHighlightStyle: CSSProperties | undefined = isFocused
-    ? {
-        boxShadow: dashboardMode
-          ? "inset 0 0 0 9999px rgba(16, 185, 129, 0.06)"
-          : "inset 0 0 0 9999px rgba(16, 185, 129, 0.13)",
-      }
-    : undefined;
+  const rowHighlightStyle: CSSProperties | undefined = dashboardMode
+    ? isFocused
+      ? { boxShadow: "inset 0 0 0 9999px rgba(16, 185, 129, 0.06)" }
+      : reportRowTintStyle(rowStyle?.color, { focused: false })
+    : reportRowTintStyle(rowStyle?.color, { focused: isFocused });
 
   return (
   <TableRow
@@ -244,7 +312,12 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         </TableCell>
       </>
     ) : null}
-    <TableCell className="sticky right-0 z-10 border-s border-border/55 bg-background dark:border-border/40">
+    <TableCell
+      className={cn(
+        "sticky right-0 z-10 border-s border-border/55 dark:border-border/40",
+        hasRowTint ? "bg-inherit" : "bg-background"
+      )}
+    >
       <div className="flex flex-col gap-1">
         <Link
           href={`/clients/${r.id}`}
@@ -315,6 +388,66 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
             onSetPanel(v ? { clientId: r.id, view: v } : null)
           }
         />
+        ) : null}
+        {!dashboardMode ? (
+          <div className="flex flex-wrap items-center justify-center gap-1 border-t border-border/50 pt-1.5 dark:border-border/40">
+            {REPORT_ROW_STYLE_COLORS.map((c) => {
+              const active =
+                normalizeReportRowStyleColor(rowStyle?.color) === c;
+              const sw =
+                c === "red"
+                  ? "bg-red-500"
+                  : c === "yellow"
+                    ? "bg-amber-400"
+                    : "bg-emerald-500";
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  disabled={colorBusy}
+                  className={cn(
+                    "size-7 shrink-0 rounded-full shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    sw,
+                    active
+                      ? "ring-2 ring-offset-2 ring-primary ring-offset-background"
+                      : "ring-0 ring-offset-0 hover:brightness-110"
+                  )}
+                  title={
+                    c === "red"
+                      ? "تلوين أحمر"
+                      : c === "yellow"
+                        ? "تلوين أصفر"
+                        : "تلوين أخضر"
+                  }
+                  aria-label={
+                    c === "red"
+                      ? "تلوين الصف بالأحمر"
+                      : c === "yellow"
+                        ? "تلوين الصف بالأصفر"
+                        : "تلوين الصف بالأخضر"
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    applyRowColor(c);
+                  }}
+                />
+              );
+            })}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-1.5 text-[10px] font-medium"
+              disabled={colorBusy || !hasRowTint}
+              title="إزالة تلوين الصف"
+              onClick={(e) => {
+                e.stopPropagation();
+                clearRowColor();
+              }}
+            >
+              بلا لون
+            </Button>
+          </div>
         ) : null}
         <Button
           type="button"
@@ -1021,7 +1154,10 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         </Fragment>
       );
     })}
-    <TableCell className="w-12 bg-muted/20" aria-hidden />
+    <TableCell
+      className={cn("w-12", hasRowTint ? "bg-inherit" : "bg-muted/20")}
+      aria-hidden
+    />
   </TableRow>
 );
 
@@ -1059,7 +1195,11 @@ function rowPropsEqual(
     a.scrollReportBHorizontal === b.scrollReportBHorizontal &&
     a.scrollReportBToScrollEdge === b.scrollReportBToScrollEdge &&
     a.router === b.router &&
-    a.wonSaleColumns === b.wonSaleColumns
+    a.wonSaleColumns === b.wonSaleColumns &&
+    a.rowStyle?.color === b.rowStyle?.color &&
+    a.rowStyle?.legendNote === b.rowStyle?.legendNote &&
+    a.rowStyleApiType === b.rowStyleApiType &&
+    a.reportKeyForLegend === b.reportKeyForLegend
   );
 }
 

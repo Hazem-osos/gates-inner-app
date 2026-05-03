@@ -13,6 +13,8 @@ import { listClientClassifications } from "@/lib/data/classifications";
 import { listClientsForReport } from "@/lib/data/report-queries";
 import { requireSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { reportExportExcelHref } from "@/lib/export-excel-href";
+import { listReportRowStylesForClients } from "@/lib/data/report-row-styles";
+import { reportStyleDbKeyFromTableType } from "@/lib/report-row-style-ui";
 import { reportPageDescriptionClass } from "@/lib/report-ui";
 import { cn } from "@/lib/utils";
 import { parseReportSortParams } from "@/lib/report-sort-params";
@@ -63,6 +65,12 @@ export default async function ReportClosedPage({
       : clients;
 
   const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
+
+  const rowStyles = await listReportRowStylesForClients({
+    userId: workLogUserId,
+    reportKey: reportStyleDbKeyFromTableType("closed"),
+    clientIds: filtered.map((c) => c.id),
+  });
 
   const classFilter =
     classKey && classKey !== "all"
@@ -170,6 +178,7 @@ export default async function ReportClosedPage({
         workLogUserId={workLogUserId}
         workLogUserRole={user.role}
         activeSalesName={activeSalesName}
+        rowStyles={rowStyles}
       />
     </div>
   );

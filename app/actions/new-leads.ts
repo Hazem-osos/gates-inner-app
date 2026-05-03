@@ -236,3 +236,62 @@ export async function markNewLeadExpiredAction(
     return { ok: false, message: "تعذر التحديث." };
   }
 }
+
+/** إلغاء تصنيف عميل سيء (Z) أو Expired وإرجاع الليد للوضع الافتراضي. */
+export async function clearNewLeadBadOrExpiredAction(
+  leadId: string
+): Promise<NewLeadActionResult> {
+  const session = await getSessionUser();
+  if (!session) return { ok: false, message: "غير مصرح." };
+  const dbUserId = await resolveSessionDbUserId(session);
+  if (!dbUserId) {
+    return { ok: false, message: "لم يُعثر على حسابك في النظام." };
+  }
+
+  try {
+    const rows = await prisma.$queryRaw<
+      Array<{ clientId: string | null; leadCategory: string | null }>
+    >`
+      SELECT clientId, leadCategory FROM NewLead WHERE id = ${leadId} LIMIT 1
+    `;
+    if (rows.length === 0) return { ok: false, message: "الليد غير موجود." };
+    if (rows[0]!.clientId != null) {
+      return {
+        ok: false,
+        message: "يوجد بطاقة عميل مرتبطة — لا يمكن إلغاء التصنيف من هنا.",
+      };
+    }
+    const cat = rows[0]!.leadCategory?.trim().toUpperCase() ?? "";
+    if (cat !== "Z" && cat !== "EXPIRED") {
+      return {
+        ok: false,
+        message: "لا يوجد تصنيف عميل سيء أو Expired لإلغائه.",
+      };
+    }
+
+    const affected = await prisma.$executeRaw`
+      UPDATE NewLead
+      SET leadCategory = NULL,
+          reachStatus = 'NOT_REACHED',
+          updatedAt = NOW()
+      WHERE id = ${leadId}
+        AND clientId IS NULL
+        AND (
+          UPPER(COALESCE(leadCategory, '')) = 'Z'
+          OR UPPER(COALESCE(leadCategory, '')) = 'EXPIRED'
+        )
+    `;
+    if (Number(affected) < 1) {
+      return {
+        ok: false,
+        message: "تعذر التحديث — ربما تغيّر الليد للتو.",
+      };
+    }
+    revalidatePath("/reports/new-leads-report");
+    revalidatePath("/reports/new-leads");
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, message: "تعذر التحديث." };
+  }
+}

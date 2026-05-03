@@ -23,6 +23,7 @@ import {
   resolveRecommendationsDateSearchParams,
   ymdRangeToBounds,
 } from "@/lib/recommendations-report-search";
+import { transferredReportWhere } from "@/lib/data/client-transfers-report";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { buildClientsImportTemplateEmptyRow } from "@/lib/import/clients-flat-import-fields";
@@ -100,17 +101,24 @@ export async function buildExportPayload(
   }
 
   if (kind === "report-transferred") {
+    const fromSales = sp.get("fromSales")?.trim() ?? "all";
+    const toSales = sp.get("toSales")?.trim() ?? "all";
+    const where = transferredReportWhere(
+      user.role,
+      user.id,
+      fromSales,
+      toSales
+    );
     const transfers = await prisma.clientTransfer.findMany({
-      where: {
-        toUserId: user.id,
-        acknowledgedAt: null,
-      },
+      where,
       orderBy: { createdAt: "desc" },
+      take: 5000,
       include: {
         client: {
           select: { name: true, phone: true, company: true },
         },
-        fromUser: true,
+        fromUser: { select: { name: true, deletedAt: true } },
+        toUser: { select: { name: true, deletedAt: true } },
       },
     });
     const rows = transfers.map((t) => ({
@@ -118,7 +126,11 @@ export async function buildExportPayload(
       الهاتف: t.client.phone,
       الشركة: t.client.company ?? "",
       من_السيلز: t.fromUser ? userDisplayName(t.fromUser) : "",
+      إلى_السيلز: t.toUser ? userDisplayName(t.toUser) : "",
       تاريخ_النقل: formatExportDateOnly(t.createdAt),
+      تم_الاطلاع: t.acknowledgedAt
+        ? formatExportDateOnly(t.acknowledgedAt)
+        : "لا",
     }));
     return {
       filename: "عملاء_منقولون.xlsx",

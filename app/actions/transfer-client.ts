@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getSessionUser } from "@/lib/auth-helpers";
+import { getSessionUser, resolveSessionDbUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
 export type TransferResult = { ok: true } | { ok: false; message: string };
@@ -15,6 +15,15 @@ export async function transferClientToSalesAction(
   if (!session) return { ok: false, message: "غير مصرح." };
   if (session.role !== "ADMIN" && session.role !== "MANAGER") {
     return { ok: false, message: "غير مصرح بنقل العملاء." };
+  }
+
+  const actorUserId = await resolveSessionDbUserId(session);
+  if (!actorUserId) {
+    return {
+      ok: false,
+      message:
+        "تعذر ربط حسابك بقاعدة البيانات. أعد تسجيل الدخول ثم أعد المحاولة.",
+    };
   }
 
   const target = await prisma.user.findFirst({
@@ -45,7 +54,7 @@ export async function transferClientToSalesAction(
       });
       await tx.auditLog.create({
         data: {
-          userId: session.id,
+          userId: actorUserId,
           clientId,
           entity: "Client",
           entityId: clientId,
@@ -75,10 +84,19 @@ export async function acknowledgeTransferredClientAction(
   const session = await getSessionUser();
   if (!session) return { ok: false, message: "غير مصرح." };
 
+  const dbUserId = await resolveSessionDbUserId(session);
+  if (!dbUserId) {
+    return {
+      ok: false,
+      message:
+        "تعذر ربط حسابك بقاعدة البيانات. أعد تسجيل الدخول ثم أعد المحاولة.",
+    };
+  }
+
   const t = await prisma.clientTransfer.findUnique({
     where: { id: transferId },
   });
-  if (!t || t.toUserId !== session.id) {
+  if (!t || t.toUserId !== dbUserId) {
     return { ok: false, message: "غير مصرح." };
   }
 
