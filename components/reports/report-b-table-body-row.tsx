@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  startTransition,
   useTransition,
   type CSSProperties,
 } from "react";
@@ -38,7 +39,6 @@ import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
-import { readLegendLabelsFromStorage } from "@/lib/report-row-color-legend-storage";
 import {
   normalizeReportRowStyleColor,
   reportRowTintStyle,
@@ -104,7 +104,6 @@ export type ReportBTableBodyRowProps = {
   /** تلوين الصف المحفوظ للمستخدم في هذا التقرير */
   rowStyle?: { color: string; legendNote: string };
   rowStyleApiType: string;
-  reportKeyForLegend: string;
 };
 
 function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
@@ -139,7 +138,6 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
     wonSaleColumns = false,
     rowStyle,
     rowStyleApiType,
-    reportKeyForLegend,
   } = p;
 
   /** مثل «توصيات الإدارة»: المسودة هنا — الـ parent يستقبل بمرئية debounce لتخفيف إعادة رسم الجدول. */
@@ -219,25 +217,18 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
   const applyRowColor = useCallback(
     (color: ReportRowStyleColorKey) => {
       startColor(async () => {
-        const labels = readLegendLabelsFromStorage(reportKeyForLegend);
-        const labelRaw =
-          color === "red"
-            ? labels.red
-            : color === "yellow"
-              ? labels.yellow
-              : labels.green;
-        const label = labelRaw.trim() || undefined;
         const res = await fetch(`/api/clients/${r.id}/row-style`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             color,
             reportType: rowStyleApiType,
-            ...(label ? { label } : {}),
           }),
         });
         if (res.ok) {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         } else {
           const j = (await res.json().catch(() => ({}))) as {
             message?: string;
@@ -246,7 +237,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         }
       });
     },
-    [r.id, rowStyleApiType, reportKeyForLegend, router, startColor]
+    [r.id, rowStyleApiType, router, startColor]
   );
 
   const clearRowColor = useCallback(() => {
@@ -256,7 +247,9 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         method: "DELETE",
       });
       if (res.ok) {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       } else {
         const j = (await res.json().catch(() => ({}))) as {
           message?: string;
@@ -399,32 +392,38 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                   ? "bg-red-500"
                   : c === "yellow"
                     ? "bg-amber-400"
-                    : "bg-emerald-500";
+                    : "bg-blue-600";
               return (
                 <button
                   key={c}
                   type="button"
                   disabled={colorBusy}
                   className={cn(
-                    "size-7 shrink-0 rounded-full shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "size-7 shrink-0 cursor-pointer rounded-full shadow-md",
+                    "motion-safe:transition-all motion-safe:duration-150",
+                    "focus-visible:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "enabled:hover:z-20 enabled:hover:scale-[1.14] enabled:hover:shadow-lg",
+                    "enabled:hover:ring-2 enabled:hover:ring-primary enabled:hover:ring-offset-2 enabled:hover:ring-offset-background",
+                    "enabled:hover:brightness-[1.05]",
+                    "disabled:cursor-not-allowed disabled:opacity-50",
                     sw,
                     active
-                      ? "ring-2 ring-offset-2 ring-primary ring-offset-background"
-                      : "ring-0 ring-offset-0 hover:brightness-110"
+                      ? "z-10 scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg"
+                      : "ring-0 ring-offset-0"
                   )}
                   title={
                     c === "red"
                       ? "تلوين أحمر"
                       : c === "yellow"
                         ? "تلوين أصفر"
-                        : "تلوين أخضر"
+                        : "تلوين أزرق"
                   }
                   aria-label={
                     c === "red"
                       ? "تلوين الصف بالأحمر"
                       : c === "yellow"
                         ? "تلوين الصف بالأصفر"
-                        : "تلوين الصف بالأخضر"
+                        : "تلوين الصف بالأزرق"
                   }
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1198,8 +1197,7 @@ function rowPropsEqual(
     a.wonSaleColumns === b.wonSaleColumns &&
     a.rowStyle?.color === b.rowStyle?.color &&
     a.rowStyle?.legendNote === b.rowStyle?.legendNote &&
-    a.rowStyleApiType === b.rowStyleApiType &&
-    a.reportKeyForLegend === b.reportKeyForLegend
+    a.rowStyleApiType === b.rowStyleApiType
   );
 }
 

@@ -278,6 +278,7 @@ export function NewLeadsReportTable({
                 const isExpired = r.leadCategory === "EXPIRED";
                 const canCancelBadOrExpired =
                   (isBadClient || isExpired) && !hasClient;
+                const isCancelEnabled = canCancelBadOrExpired && !rowPending;
                 const reportRowDisabledReason = hasClient
                   ? "لا يمكن — يوجد بطاقة عميل مرتبطة."
                   : rowPending
@@ -427,9 +428,14 @@ export function NewLeadsReportTable({
                       <Button
                         type="button"
                         size="sm"
-                        variant="secondary"
-                        className="relative z-[1] h-auto min-h-8 w-full max-w-[11rem] whitespace-normal px-2 py-1.5 text-center text-[11px] font-medium leading-snug"
-                        disabled={!canCancelBadOrExpired || rowPending}
+                        variant={isCancelEnabled ? "default" : "secondary"}
+                        className={cn(
+                          "relative z-[1] h-auto min-h-8 w-full max-w-[11rem] whitespace-normal px-2 py-1.5 text-center text-[11px] font-medium leading-snug transition-colors",
+                          isCancelEnabled
+                            ? "border-0 bg-amber-600 font-semibold text-white shadow-md hover:bg-amber-700 hover:text-white focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:bg-amber-600 dark:hover:bg-amber-500"
+                            : "cursor-not-allowed border border-dashed border-muted-foreground/40 bg-muted/50 font-normal text-muted-foreground opacity-80 shadow-none hover:bg-muted/50 hover:text-muted-foreground dark:bg-muted/30"
+                        )}
+                        disabled={!isCancelEnabled}
                         title={
                           rowPending
                             ? "جاري التنفيذ…"
@@ -448,7 +454,12 @@ export function NewLeadsReportTable({
                         }
                       >
                         <RotateCcw
-                          className="mx-auto mb-0.5 size-3.5 opacity-80"
+                          className={cn(
+                            "mx-auto mb-0.5 size-3.5",
+                            isCancelEnabled
+                              ? "text-white opacity-95"
+                              : "text-muted-foreground opacity-60"
+                          )}
                           aria-hidden
                         />
                         إلغاء حالة العميل

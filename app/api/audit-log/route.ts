@@ -115,12 +115,18 @@ export async function GET(req: Request) {
     };
 
     /** MySQL: مسار ‎`$.reportKey`‎ + إلزام ‎`reportKey`‎ من الطلب حتى لا يُرجع سجل «كل التقارير» بخطأ. */
+    const omitRowColorInWorkLog =
+      reportKey === "report-b" || reportKey === "report-not-b";
+
     const withReport: Prisma.AuditLogWhereInput = {
       ...baseWhere,
       meta: {
         path: "$.reportKey",
         equals: reportKey,
       },
+      ...(omitRowColorInWorkLog
+        ? { kind: { not: "REPORT_ROW_STYLE" } }
+        : {}),
     };
 
     const where: Prisma.AuditLogWhereInput = salesFilterActive

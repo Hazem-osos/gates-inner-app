@@ -17,9 +17,8 @@ export type ReportBFilterRow = {
 /** ألوان تشبّع أعلى لتظهر بوضوح على الصف + شريط اختيار اللون */
 export const REPORT_B_PALETTE = [
   { hex: "#C62828", key: "red" },
-  { hex: "#1565C0", key: "blue" },
-  { hex: "#2E7D32", key: "green" },
   { hex: "#F9A825", key: "yellow" },
+  { hex: "#1565C0", key: "blue" },
 ] as const;
 
 /** أنماط «لا يُرد» في نصوص المتابعات — مقارنة بدون حساسية لحالة الأحرف */

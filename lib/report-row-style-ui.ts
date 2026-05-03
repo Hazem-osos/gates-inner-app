@@ -20,14 +20,16 @@ export function reportStyleApiTypeFromTableType(
   return "closed";
 }
 
-export const REPORT_ROW_STYLE_COLORS = ["red", "yellow", "green"] as const;
+export const REPORT_ROW_STYLE_COLORS = ["red", "yellow", "blue"] as const;
 export type ReportRowStyleColorKey = (typeof REPORT_ROW_STYLE_COLORS)[number];
 
 export function normalizeReportRowStyleColor(
   raw: string | null | undefined
 ): ReportRowStyleColorKey | null {
   const k = (raw ?? "").trim().toLowerCase();
-  if (k === "red" || k === "yellow" || k === "green") return k;
+  if (k === "red" || k === "yellow" || k === "blue") return k;
+  /** قيم قديمة في DB */
+  if (k === "green") return "blue";
   return null;
 }
 
@@ -38,9 +40,9 @@ export function reportRowTintStyle(
 ): CSSProperties | undefined {
   const color = normalizeReportRowStyleColor(colorRaw);
   const rgba: Record<ReportRowStyleColorKey, string> = {
-    red: "rgba(239, 68, 68, 0.085)",
-    yellow: "rgba(234, 179, 8, 0.11)",
-    green: "rgba(34, 197, 94, 0.085)",
+    red: "rgba(239, 68, 68, 0.16)",
+    yellow: "rgba(234, 179, 8, 0.19)",
+    blue: "rgba(37, 99, 235, 0.15)",
   };
   const focusRgba = "rgba(16, 185, 129, 0.11)";
   const base: CSSProperties = color

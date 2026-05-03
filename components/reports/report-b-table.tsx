@@ -47,7 +47,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ReportBRowColorLegendPanel } from "@/components/reports/report-b-row-color-legend-panel";
 import { ReportBTableBodyRow } from "@/components/reports/report-b-table-body-row";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import { reportStyleApiTypeFromTableType } from "@/lib/report-row-style-ui";
@@ -938,9 +937,6 @@ export function ReportBTable({
                 </Button>
               </div>
             </div>
-            <ReportBRowColorLegendPanel
-              reportKey={resolvedAuditReportKey}
-            />
         </div>
         {(violationMessage() ||
           visitOverdueFilterMessage() ||
@@ -1100,7 +1096,6 @@ export function ReportBTable({
                     wonSaleColumns={wonSaleColumns}
                     rowStyle={rowStyles[r.id]}
                     rowStyleApiType={rowStyleApiType}
-                    reportKeyForLegend={resolvedAuditReportKey}
                   />
                 );
               })}
