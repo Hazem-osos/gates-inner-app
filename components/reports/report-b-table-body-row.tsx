@@ -12,6 +12,7 @@ import {
   startTransition,
   useTransition,
   type CSSProperties,
+  type MouseEvent,
 } from "react";
 import { toast } from "sonner";
 import {
@@ -196,6 +197,40 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       : null
   );
   const slots = normalizeFollowSlots(displayRow.followUpSlots);
+  /** آخر خانة متابعة في السجل فيها نص وتاريخ؛ وإلا آخر خانة فيها أي منهما */
+  const lastFollowSlotNavIndex = useMemo(() => {
+    for (let i = maxFollowCols - 1; i >= 0; i--) {
+      const s = slots[i];
+      const note = (s?.note ?? "").trim();
+      const date = (s?.date ?? "").trim();
+      if (note.length > 0 && date.length > 0) return i;
+    }
+    for (let i = maxFollowCols - 1; i >= 0; i--) {
+      const s = slots[i];
+      const note = (s?.note ?? "").trim();
+      const date = (s?.date ?? "").trim();
+      if (note.length > 0 || date.length > 0) return i;
+    }
+    return -1;
+  }, [slots, maxFollowCols]);
+  const scrollToLastFollowSlot = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      if (lastFollowSlotNavIndex < 0) return;
+      const el = document.getElementById(`report-b-follow-slot-${r.id}`);
+      if (!el) return;
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+      requestAnimationFrame(() => {
+        const ta = el.querySelector("textarea");
+        if (ta instanceof HTMLTextAreaElement) ta.focus();
+      });
+    },
+    [lastFollowSlotNavIndex, r.id]
+  );
   const mgmtDateStr = displayRow.managementRecommendationDate
     ? isoToDateInput(displayRow.managementRecommendationDate)
     : todayInputDate();
@@ -446,8 +481,33 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
             >
               بلا لون
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 max-w-[5.5rem] px-1 text-[10px] font-medium leading-tight"
+              disabled={lastFollowSlotNavIndex < 0}
+              title="الانتقال لآخر خانة متابعة في السجل (نص وتاريخ) في هذا الصف"
+              onClick={scrollToLastFollowSlot}
+            >
+              آخر متابعة
+            </Button>
           </div>
-        ) : null}
+        ) : (
+          <div className="border-t border-border/50 pt-1.5 dark:border-border/40">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 w-full px-1 text-[10px] font-medium leading-tight"
+              disabled={lastFollowSlotNavIndex < 0}
+              title="الانتقال لآخر خانة متابعة في السجل"
+              onClick={scrollToLastFollowSlot}
+            >
+              آخر متابعة
+            </Button>
+          </div>
+        )}
         <Button
           type="button"
           variant={hasUnsavedInRow ? "default" : "outline"}
@@ -1080,7 +1140,13 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       const slot = slots[i];
       return (
         <Fragment key={`${r.id}-slot-${i}`}>
-          <TableCell>
+          <TableCell
+            id={
+              i === lastFollowSlotNavIndex && lastFollowSlotNavIndex >= 0
+                ? `report-b-follow-slot-${r.id}`
+                : undefined
+            }
+          >
             <ReportFieldTooltip
               tooltip={fullCellTooltip(slot?.note)}
             >

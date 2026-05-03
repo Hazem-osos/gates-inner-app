@@ -65,6 +65,7 @@ import {
   passesVisitOverdue,
   passesVisitScheduledOnly,
   rowHasFollowUpScheduledLocalToday,
+  rowHasFollowUpSlotLocalTodayExcludingNextColumn,
   sortRows,
   validateNextFollowUpAtForRowSave,
   type SortTriState,
@@ -342,6 +343,8 @@ export function ReportBTable({
     useState<ReportRowStyleColorKey | null>(null);
   /** عرض من لديهم متابعة تالية أو أي خانة متابعة بتاريخ اليوم (تقويم محلي) */
   const [followUpTodayOnly, setFollowUpTodayOnly] = useState(false);
+  /** سجل المتابعات (الخانات) بتاريخ اليوم فقط — بدون عمود «متابعة تالية» */
+  const [followUpSlotsTodayOnly, setFollowUpSlotsTodayOnly] = useState(false);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
   const [followInput, setFollowInput] = useState("");
@@ -553,15 +556,27 @@ export function ReportBTable({
     return searched.filter((r) => rowHasFollowUpScheduledLocalToday(r));
   }, [searched, showRowTintFilter, followUpTodayOnly]);
 
+  const searchedAfterFollowUpSlotsToday = useMemo(() => {
+    if (!showRowTintFilter || !followUpSlotsTodayOnly)
+      return searchedAfterFollowUpToday;
+    return searchedAfterFollowUpToday.filter((r) =>
+      rowHasFollowUpSlotLocalTodayExcludingNextColumn(r)
+    );
+  }, [
+    searchedAfterFollowUpToday,
+    showRowTintFilter,
+    followUpSlotsTodayOnly,
+  ]);
+
   const searchedAfterTint = useMemo(() => {
     if (!showRowTintFilter || rowTintFilter === null)
-      return searchedAfterFollowUpToday;
-    return searchedAfterFollowUpToday.filter((r) => {
+      return searchedAfterFollowUpSlotsToday;
+    return searchedAfterFollowUpSlotsToday.filter((r) => {
       const c = normalizeReportRowStyleColor(rowStyles[r.id]?.color);
       return c === rowTintFilter;
     });
   }, [
-    searchedAfterFollowUpToday,
+    searchedAfterFollowUpSlotsToday,
     showRowTintFilter,
     rowTintFilter,
     rowStyles,
@@ -763,7 +778,7 @@ export function ReportBTable({
             <div
               className="ms-1 flex flex-wrap items-center gap-1.5 border-s border-border/50 ps-2"
               role="group"
-              aria-label="عرض عملاء بمتابعة مجدولة اليوم"
+              aria-label="فلترة حسب متابعة اليوم (التالية أو سجل الخانات، أو سجل الخانات فقط)"
             >
               <Button
                 type="button"
@@ -779,6 +794,21 @@ export function ReportBTable({
                 onClick={() => setFollowUpTodayOnly((v) => !v)}
               >
                 متابعة بتاريخ اليوم
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={followUpSlotsTodayOnly ? "default" : "outline"}
+                className={cn(
+                  "h-8 max-w-[11rem] rounded-lg px-2.5 text-xs leading-snug font-medium whitespace-normal sm:max-w-none sm:whitespace-nowrap",
+                  followUpSlotsTodayOnly &&
+                    "border-sky-700 bg-sky-600 text-white shadow-sm hover:bg-sky-700"
+                )}
+                aria-pressed={followUpSlotsTodayOnly}
+                title="خانات سجل المتابعات فقط: يوجد تاريخ اليوم في إحداها. عمود «متابعة تالية» لا يُحتسب."
+                onClick={() => setFollowUpSlotsTodayOnly((v) => !v)}
+              >
+                سجل متابعات — اليوم
               </Button>
             </div>
           ) : null}
