@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import { parseIsoDate } from "@/lib/report-b-utils";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ export type ArabicDateFieldProps = {
   compact?: boolean;
   /** عند ‎true‎ يُسمح بزر المسح */
   allowEmpty?: boolean;
-  /** نص العرض عند عدم وجود تاريخ */
+  /** نص مساعد للوصولية عند عدم وجود تاريخ */
   emptyLabel?: string;
 };
 
@@ -39,17 +40,12 @@ export function ArabicDateField({
 }: ArabicDateFieldProps) {
   const inputValue = isValidYmd(valueYmd) ? valueYmd.trim() : "";
 
-  const displayLabel = useMemo(() => {
-    if (!inputValue) return emptyLabel;
+  const arabicSummary = useMemo(() => {
+    if (!inputValue) return null;
     const parsed = parseIsoDate(inputValue);
-    if (!parsed) return emptyLabel;
+    if (!parsed) return null;
     return formatDateArabicLong(parsed);
-  }, [inputValue, emptyLabel]);
-
-  const triggerTitle =
-    inputValue && displayLabel !== emptyLabel
-      ? `${displayLabel} — اضغط لتغيير التاريخ`
-      : "اضغط لاختيار التاريخ — لا يُحفظ شيء حتى تختار من المنتقي (قد يظهر اليوم مقترَحاً فقط)";
+  }, [inputValue]);
 
   const onNativeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,42 +67,32 @@ export function ArabicDateField({
   const showClear = allowEmpty && Boolean(inputValue);
 
   return (
-    <div
-      className={cn("flex w-full min-w-0 items-stretch gap-0.5", className)}
-    >
-      <div
-        className={cn(
-          "relative flex min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-input bg-background shadow-sm",
-          compact
-            ? "min-h-7"
-            : "min-h-8",
-          !inputValue &&
-            "border-dashed border-muted-foreground/45 bg-muted/20 dark:bg-muted/10",
-          buttonClassName
-        )}
-      >
-        <input
+    <div className={cn("flex w-full min-w-0 items-start gap-1", className)}>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <Input
           type="date"
           disabled={disabled}
           value={inputValue}
           onChange={onNativeChange}
-          title={triggerTitle}
-          aria-label={triggerTitle}
+          title={arabicSummary ?? undefined}
+          aria-label={inputValue ? arabicSummary ?? emptyLabel : emptyLabel}
           className={cn(
-            "absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0",
-            disabled && "cursor-not-allowed"
+            "scheme-light dark:scheme-dark",
+            compact && "h-7 py-0 text-xs",
+            buttonClassName
           )}
         />
-        <span
-          className={cn(
-            "pointer-events-none relative z-0 mx-auto min-w-0 flex-1 select-none px-2 py-1 text-center font-semibold leading-snug wrap-break-word text-pretty",
-            compact ? "text-[11px] leading-tight" : "text-xs sm:text-sm",
-            !inputValue && "font-normal text-muted-foreground"
-          )}
-          aria-hidden
-        >
-          {displayLabel}
-        </span>
+        {arabicSummary ? (
+          <p
+            className={cn(
+              "px-0.5 text-center leading-tight text-muted-foreground",
+              compact ? "text-[10px]" : "text-[11px] md:text-xs"
+            )}
+            dir="rtl"
+          >
+            {arabicSummary}
+          </p>
+        ) : null}
       </div>
       {showClear ? (
         <Button
@@ -114,7 +100,7 @@ export function ArabicDateField({
           variant="outline"
           size="icon-xs"
           disabled={disabled}
-          className="shrink-0 border-dashed text-muted-foreground"
+          className="shrink-0 text-muted-foreground"
           title="مسح التاريخ"
           aria-label="مسح التاريخ"
           onClick={onClearClick}
