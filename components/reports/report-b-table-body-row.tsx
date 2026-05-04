@@ -631,8 +631,8 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         <ArabicDateField
           valueYmd={isoToDateInput(displayRow.nextFollowUpAt)}
           disabled={isSaving}
-          className="min-w-[17.5rem]"
-          buttonClassName={cn(reportBInput, "min-w-[17.5rem]")}
+          className="min-w-[11rem]"
+          buttonClassName={cn(reportBInput, "min-w-[11rem]")}
           onValueChange={(ymd) => {
             const nextFollowUpAt = ymd
               ? dateInputToIso(ymd) ?? ""
@@ -674,8 +674,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         <ArabicDateField
           valueYmd={mgmtDateStr}
           disabled={isSaving}
-          className="min-w-[17.5rem]"
-          buttonClassName={cn(reportBInput, "min-w-[17.5rem] text-center")}
+          buttonClassName={cn(reportBInput, "text-center")}
           allowEmpty={false}
           onValueChange={(ymd) =>
             patchFieldDebounced({
@@ -1038,8 +1037,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         <ArabicDateField
           valueYmd={isoToDateInput(displayRow.visitAppointmentDate)}
           disabled={isSaving}
-          className="min-w-[17.5rem]"
-          buttonClassName={cn(reportBInput, "min-w-[17.5rem] text-center")}
+          buttonClassName={cn(reportBInput, "text-center")}
           onValueChange={(ymd) =>
             patchFieldDebounced({
               visitAppointmentDate: ymd
@@ -1181,11 +1179,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                     : ""
                 }
                 disabled={isSaving}
-                className="min-w-[17.5rem]"
-                buttonClassName={cn(
-                  reportBInput,
-                  "min-w-[17.5rem] text-center"
-                )}
+                buttonClassName={cn(reportBInput, "text-center")}
                 onValueChange={(ymd) => {
                   const next = [...slots];
                   while (next.length <= i) {
