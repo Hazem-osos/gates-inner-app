@@ -328,7 +328,9 @@ export function AddClientForm({
                     valueYmd={String(field.value ?? "")}
                     onValueChange={field.onChange}
                     allowEmpty={false}
-                    buttonClassName="h-9 w-full justify-center font-semibold"
+                    compact
+                    className="w-full max-w-[13.5rem]"
+                    buttonClassName="h-8 w-full justify-center font-semibold"
                   />
                 )}
               />
@@ -370,7 +372,9 @@ export function AddClientForm({
                         valueYmd={String(field.value ?? "")}
                         onValueChange={field.onChange}
                         allowEmpty={false}
-                        buttonClassName="h-9 w-full justify-center font-semibold"
+                        compact
+                        className="w-full max-w-[13.5rem]"
+                        buttonClassName="h-8 w-full justify-center font-semibold"
                       />
                     )}
                   />
@@ -468,7 +472,9 @@ export function AddClientForm({
                     valueYmd={String(field.value ?? "")}
                     onValueChange={field.onChange}
                     allowEmpty={false}
-                    buttonClassName="h-9 w-full justify-center font-semibold"
+                    compact
+                    className="w-full max-w-[13.5rem]"
+                    buttonClassName="h-8 w-full justify-center font-semibold"
                   />
                 )}
               />
@@ -749,7 +755,9 @@ export function AddClientForm({
                     valueYmd={String(field.value ?? "")}
                     onValueChange={field.onChange}
                     allowEmpty={false}
-                    buttonClassName="h-9 w-full max-w-md justify-center font-semibold"
+                    compact
+                    className="w-full max-w-[13.5rem]"
+                    buttonClassName="h-8 w-full justify-center font-semibold"
                   />
                 )}
               />
@@ -815,7 +823,9 @@ export function AddClientForm({
                       valueYmd={String(field.value ?? "")}
                       onValueChange={field.onChange}
                       allowEmpty={false}
-                      buttonClassName="h-9 w-full justify-center font-semibold"
+                      compact
+                      className="w-full max-w-[13.5rem]"
+                      buttonClassName="h-8 w-full justify-center font-semibold"
                     />
                   )}
                 />
@@ -862,7 +872,9 @@ export function AddClientForm({
                       valueYmd={String(field.value ?? "")}
                       onValueChange={field.onChange}
                       allowEmpty={false}
-                      buttonClassName="h-9 w-full justify-center font-semibold"
+                      compact
+                      className="w-full max-w-[13.5rem]"
+                      buttonClassName="h-8 w-full justify-center font-semibold"
                     />
                   )}
                 />
@@ -1092,7 +1104,9 @@ function DynamicField({
               valueYmd={((field.value as string) ?? "").trim()}
               onValueChange={(v) => field.onChange(v)}
               allowEmpty={!def.isRequired}
-              buttonClassName="h-9 w-full justify-center font-semibold"
+              compact
+              className="w-full max-w-[13.5rem]"
+              buttonClassName="h-8 w-full justify-center font-semibold"
             />
           )}
         />
