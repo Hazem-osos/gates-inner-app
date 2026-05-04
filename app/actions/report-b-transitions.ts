@@ -121,6 +121,7 @@ export async function closeClientFromReport(
     revalidatePath("/reports/closed");
     revalidatePath("/dashboard");
     revalidatePath("/clients");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -250,6 +251,7 @@ export async function reopenClosedClientFromReport(
     revalidatePath("/dashboard");
     revalidatePath("/clients");
     revalidatePath(`/clients/${clientId}`);
+    revalidatePath("/reports/new-leads-report");
 
     const redirectReport =
       targetStatus === ClientStatus.B ? ("b" as const) : ("not-b" as const);
@@ -328,6 +330,7 @@ export async function moveClientToNotBFromReport(
     revalidatePath("/reports/not-b");
     revalidatePath("/dashboard");
     revalidatePath("/clients");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -412,6 +415,7 @@ export async function moveClientToBFromReport(
     revalidatePath("/dashboard");
     revalidatePath("/clients");
     revalidatePath("/reports/recommendations");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -486,6 +490,7 @@ export async function markClientSoldFromReport(
     revalidatePath("/reports/won");
     revalidatePath("/dashboard");
     revalidatePath("/clients");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);

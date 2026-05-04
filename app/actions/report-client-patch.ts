@@ -348,6 +348,7 @@ export async function patchClientReportFields(
     revalidatePath("/reports/not-b");
     revalidatePath("/reports/closed");
     revalidatePath("/reports/recommendations");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);

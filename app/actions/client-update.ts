@@ -146,6 +146,7 @@ export async function updateClientAction(
     });
     revalidatePath(`/clients/${clientId}`);
     revalidatePath("/reports");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);
@@ -251,6 +252,7 @@ export async function changeClientStatusAction(
     revalidatePath(`/clients/${clientId}`);
     revalidatePath("/dashboard");
     revalidatePath("/reports");
+    revalidatePath("/reports/new-leads-report");
     return { ok: true };
   } catch (e) {
     console.error(e);
