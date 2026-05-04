@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
+import { formatDateArabicLong } from "@/lib/date-arabic";
 import { parseIsoDate } from "@/lib/report-b-utils";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +21,6 @@ export type ArabicDateFieldProps = {
   allowEmpty?: boolean;
   /** نص العرض عند عدم وجود تاريخ */
   emptyLabel?: string;
-  /**
-   * عند الفتح من حقل فارغ، ضبط القيمة على اليوم قبل منتقي النظام (افتراضي: true).
-   */
-  seedTodayOnOpen?: boolean;
 };
 
 function isValidYmd(v: string): boolean {
@@ -40,7 +36,6 @@ export function ArabicDateField({
   compact = false,
   allowEmpty = true,
   emptyLabel = "اختر التاريخ",
-  seedTodayOnOpen = true,
 }: ArabicDateFieldProps) {
   const inputValue = isValidYmd(valueYmd) ? valueYmd.trim() : "";
 
@@ -54,22 +49,7 @@ export function ArabicDateField({
   const triggerTitle =
     inputValue && displayLabel !== emptyLabel
       ? `${displayLabel} — اضغط لتغيير التاريخ`
-      : "اضغط لفتح منتقي التاريخ (يُعرض بالعربية: اليوم واسم الشهر والسنة)";
-
-  const seedIfEmpty = useCallback(() => {
-    if (disabled || !seedTodayOnOpen) return;
-    if (!valueYmd?.trim() || !isValidYmd(valueYmd)) {
-      onValueChange(todayInputDate());
-    }
-  }, [disabled, seedTodayOnOpen, valueYmd, onValueChange]);
-
-  const onInputFocus = useCallback(() => {
-    seedIfEmpty();
-  }, [seedIfEmpty]);
-
-  const onInputClick = useCallback(() => {
-    seedIfEmpty();
-  }, [seedIfEmpty]);
+      : "اضغط لاختيار التاريخ — لا يُحفظ شيء حتى تختار من المنتقي (قد يظهر اليوم مقترَحاً فقط)";
 
   const onNativeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,8 +90,6 @@ export function ArabicDateField({
           disabled={disabled}
           value={inputValue}
           onChange={onNativeChange}
-          onFocus={onInputFocus}
-          onClick={onInputClick}
           title={triggerTitle}
           aria-label={triggerTitle}
           className={cn(
