@@ -46,7 +46,6 @@ export default async function ReportBPage({
   ]);
 
   const rowStyles = await listReportRowStylesForClients({
-    userId: workLogUserId,
     reportKey: reportStyleDbKeyFromTableType("b"),
     clientIds: clients.map((c) => c.id),
   });

@@ -67,7 +67,6 @@ export default async function ReportNotBPage({
   const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
 
   const rowStyles = await listReportRowStylesForClients({
-    userId: workLogUserId,
     reportKey: reportStyleDbKeyFromTableType("not-b"),
     clientIds: filtered.map((c) => c.id),
   });

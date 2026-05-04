@@ -319,12 +319,13 @@ model ClientTransfer {
   @@index([clientId, createdAt])
 }
 
-/// تلوين صفوف التقارير (لكل مستخدم)
+/// تلوين صف التقرير — مشترك لجميع المستخدمين (نفس العميل + نفس التقرير).
+/// userId = من طبّق أو عدّل اللون آخر مرة (تدقيق فقط).
 model ReportRowStyle {
   id String @id @default(cuid())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   reportKey String // e.g. report-b
   clientId  String
@@ -333,8 +334,9 @@ model ReportRowStyle {
   colorKey   String // e.g. red | yellow | blue (قديم: green يُعرض كأزرق)
   legendNote String?
 
-  @@unique([userId, reportKey, clientId])
-  @@index([userId, reportKey])
+  @@unique([reportKey, clientId])
+  @@index([reportKey])
+  @@index([userId])
 }
 
 model ClientStatusChange {

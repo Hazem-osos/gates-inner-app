@@ -2,9 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 const STYLE_QUERY_CHUNK = 400;
 
-/** أنماط صفوف تقرير لمجموعة عملاء والمستخدم الحالي */
+/** أنماط تلوين صف التقرير لمجموعة عملاء — مشتركة لكل المستخدمين */
 export async function listReportRowStylesForClients(args: {
-  userId: string;
   reportKey: string;
   clientIds: string[];
 }) {
@@ -19,7 +18,6 @@ export async function listReportRowStylesForClients(args: {
       chunks.map((ids) =>
         prisma.reportRowStyle.findMany({
           where: {
-            userId: args.userId,
             reportKey: args.reportKey,
             clientId: { in: ids },
           },

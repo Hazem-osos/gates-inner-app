@@ -66,8 +66,7 @@ export async function PATCH(
   try {
     await prisma.reportRowStyle.upsert({
       where: {
-        userId_reportKey_clientId: {
-          userId: dbUserId,
+        reportKey_clientId: {
           reportKey,
           clientId,
         },
@@ -82,6 +81,7 @@ export async function PATCH(
       update: {
         colorKey: color,
         legendNote,
+        userId: dbUserId,
       },
     });
 
@@ -154,7 +154,6 @@ export async function DELETE(
   try {
     await prisma.reportRowStyle.deleteMany({
       where: {
-        userId: dbUserId,
         reportKey,
         clientId,
       },

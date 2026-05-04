@@ -153,7 +153,7 @@ type Props = {
   showSortAndVisitToolbar?: boolean;
   /** لو false لا يُعرض شريط «المعروض في الصفحة: N سجلًا» (وتنبيه السيلز إن وُجد) */
   showSalesFilterRecordsStatus?: boolean;
-  /** تلوين صفوف التقرير المحفوظ للمستخدم الحالي (من ‎ReportRowStyle‎) */
+  /** تلوين صفوف التقرير (مشترك للجميع — ‎ReportRowStyle‎ لكل عميل وتقرير) */
   rowStyles?: Record<string, { color: string; legendNote: string }>;
 };
 
