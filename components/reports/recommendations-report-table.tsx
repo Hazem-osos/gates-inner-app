@@ -36,7 +36,7 @@ const recTextareaClass = cn(
 );
 
 const recDateInputClass = cn(
-  "w-[140px] text-left text-xs md:text-xs",
+  "min-w-[11rem] max-w-[14rem] w-full text-center text-xs md:text-xs",
   "transition-[font-size] duration-150",
   "focus:z-20 focus:text-lg focus:md:text-lg focus:font-medium"
 );
@@ -74,9 +74,9 @@ export function RecommendationsReportTable({
             </TableHead>
             <TableHead>موظف السيلز</TableHead>
             <TableHead className="min-w-[200px]">التوصية</TableHead>
-            <TableHead>تاريخ التوصية</TableHead>
+            <TableHead className="min-w-[11rem]">تاريخ التوصية</TableHead>
             <TableHead>اسم المستخدم</TableHead>
-            <TableHead>تاريخ العمل بالتوصية</TableHead>
+            <TableHead className="min-w-[11rem]">تاريخ العمل بالتوصية</TableHead>
             <TableHead className="min-w-[180px]">الإجراء المتخذ</TableHead>
             <TableHead className="w-[90px]">حفظ</TableHead>
           </TableRow>

@@ -1183,13 +1183,13 @@ export function ReportBTable({
                 </TableHead>
                 {wonSaleColumns ? (
                   <>
-                    <TableHead className="min-w-[120px]">تاريخ التعاقد</TableHead>
+                    <TableHead className="min-w-[140px]">تاريخ التعاقد</TableHead>
                     <TableHead className="min-w-[100px]">قيمة البيع</TableHead>
                   </>
                 ) : null}
-                <TableHead className="min-w-[170px]">متابعة تالية</TableHead>
+                <TableHead className="min-w-[200px]">متابعة تالية</TableHead>
                 <TableHead className="min-w-[140px]">توصيات الإدارة</TableHead>
-                <TableHead className="min-w-[120px]">تاريخ التوصية</TableHead>
+                <TableHead className="min-w-[140px]">تاريخ التوصية</TableHead>
                 <TableHead className="min-w-[90px]">سيلز</TableHead>
                 <TableHead className="min-w-[10rem] whitespace-normal text-start leading-tight">
                   شركة
@@ -1213,14 +1213,14 @@ export function ReportBTable({
                 <TableHead className="min-w-[8rem]">منصة</TableHead>
                 <TableHead className="min-w-[9rem]">إعلان</TableHead>
                 <TableHead className="w-14">زيارة؟</TableHead>
-                <TableHead className="min-w-[110px]">تاريخ زيارة</TableHead>
+                <TableHead className="min-w-[130px]">تاريخ زيارة</TableHead>
                 <TableHead className="min-w-[9rem]">موظف عرض</TableHead>
                 <TableHead className="w-14">QQ</TableHead>
                 <TableHead className="min-w-[120px]">موقف نهائي</TableHead>
                 {Array.from({ length: maxFollowCols }, (_, i) => (
                   <Fragment key={`fh-${i}`}>
                     <TableHead className="min-w-[11rem]">متابعة {i + 1}</TableHead>
-                    <TableHead className="min-w-[9rem]">تاريخ {i + 1}</TableHead>
+                    <TableHead className="min-w-[10rem]">تاريخ {i + 1}</TableHead>
                   </Fragment>
                 ))}
                 <TableHead className="min-w-[8.5rem] px-1 text-center align-middle">

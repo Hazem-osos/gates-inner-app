@@ -631,8 +631,8 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         <ArabicDateField
           valueYmd={isoToDateInput(displayRow.nextFollowUpAt)}
           disabled={isSaving}
-          className="min-w-[11rem]"
-          buttonClassName={cn(reportBInput, "min-w-[11rem]")}
+          className="min-w-[12rem]"
+          buttonClassName={cn(reportBInput, "min-w-[12rem]")}
           onValueChange={(ymd) => {
             const nextFollowUpAt = ymd
               ? dateInputToIso(ymd) ?? ""

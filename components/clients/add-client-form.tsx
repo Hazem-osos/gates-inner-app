@@ -1104,6 +1104,7 @@ function DynamicField({
               valueYmd={((field.value as string) ?? "").trim()}
               onValueChange={(v) => field.onChange(v)}
               allowEmpty={!def.isRequired}
+              seedTodayOnOpen={def.isRequired}
               compact
               className="w-full max-w-[13.5rem]"
               buttonClassName="h-8 w-full justify-center font-semibold"
