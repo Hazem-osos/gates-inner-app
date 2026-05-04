@@ -186,6 +186,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
             allowEmpty={false}
             onValueChange={setRecDate}
             buttonClassName={cn("h-8 min-w-[9rem] justify-center", recDateInputClass)}
+            showClearButton={false}
           />
         </ReportFieldTooltip>
       </TableCell>
@@ -196,6 +197,7 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
             valueYmd={workDate}
             onValueChange={setWorkDate}
             buttonClassName={cn("h-8 min-w-[9rem] justify-center", recDateInputClass)}
+            showClearButton={false}
           />
         </ReportFieldTooltip>
       </TableCell>

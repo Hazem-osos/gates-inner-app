@@ -18,8 +18,10 @@ export type ArabicDateFieldProps = {
   buttonClassName?: string;
   /** نسخة مدمجة للنماذج */
   compact?: boolean;
-  /** عند ‎true‎ يُسمح بزر المسح */
+  /** عند ‎true‎ يُسمح بإفراغ الحقل (ومنها زر المسح إن وُجد) */
   allowEmpty?: boolean;
+  /** إظهار زر × لمسح التاريخ — عطّله في خلايا الجداول */
+  showClearButton?: boolean;
   /** نص مساعد للوصولية عند عدم وجود تاريخ */
   emptyLabel?: string;
 };
@@ -36,6 +38,7 @@ export function ArabicDateField({
   buttonClassName,
   compact = false,
   allowEmpty = true,
+  showClearButton = true,
   emptyLabel = "اختر التاريخ",
 }: ArabicDateFieldProps) {
   const inputValue = isValidYmd(valueYmd) ? valueYmd.trim() : "";
@@ -64,7 +67,7 @@ export function ArabicDateField({
     [allowEmpty, disabled, onValueChange]
   );
 
-  const showClear = allowEmpty && Boolean(inputValue);
+  const showClear = allowEmpty && showClearButton && Boolean(inputValue);
 
   return (
     <div className={cn("flex w-full min-w-0 items-start gap-1", className)}>

@@ -633,6 +633,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           disabled={isSaving}
           className="min-w-[12rem]"
           buttonClassName={cn(reportBInput, "min-w-[12rem]")}
+          showClearButton={false}
           onValueChange={(ymd) => {
             const nextFollowUpAt = ymd
               ? dateInputToIso(ymd) ?? ""
@@ -676,6 +677,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           disabled={isSaving}
           buttonClassName={cn(reportBInput, "text-center")}
           allowEmpty={false}
+          showClearButton={false}
           onValueChange={(ymd) =>
             patchFieldDebounced({
               managementRecommendationDate: ymd
@@ -1038,6 +1040,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           valueYmd={isoToDateInput(displayRow.visitAppointmentDate)}
           disabled={isSaving}
           buttonClassName={cn(reportBInput, "text-center")}
+          showClearButton={false}
           onValueChange={(ymd) =>
             patchFieldDebounced({
               visitAppointmentDate: ymd
@@ -1180,6 +1183,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                 }
                 disabled={isSaving}
                 buttonClassName={cn(reportBInput, "text-center")}
+                showClearButton={false}
                 onValueChange={(ymd) => {
                   const next = [...slots];
                   while (next.length <= i) {
