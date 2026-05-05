@@ -47,36 +47,44 @@ export function NewLeadsReportClassificationFilter({
   return (
     <>
       <input type="hidden" name="cls" value={clsValue} />
-      <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
-        <span className="text-xs text-muted-foreground">
-          التصنيف (بطاقة العميل) — يمكن اختيار أكثر من تصنيف
-        </span>
-        <div className="max-h-40 overflow-y-auto rounded-lg border border-input bg-background px-3 py-2">
-          <label className="flex cursor-pointer items-center gap-2 border-b border-border/50 py-2 text-sm">
+      <div
+        className="flex min-w-0 basis-full flex-col gap-1.5 sm:col-span-2 lg:col-span-3"
+        dir="rtl"
+      >
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-0">
+          <span className="text-xs font-medium text-foreground">
+            التصنيف (بطاقة العميل)
+          </span>
+          <span className="text-[0.65rem] leading-tight text-muted-foreground">
+            (عدة خيارات — OR)
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md border border-border/70 bg-background px-2 py-1.5">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 border-border/60 text-xs sm:border-e sm:pe-3">
             <input
               type="checkbox"
-              className="size-4 shrink-0 rounded border-input"
+              className="size-3.5 shrink-0 rounded border-input accent-primary"
               checked={includeEmpty}
               onChange={(e) => setIncludeEmpty(e.target.checked)}
             />
-            <span>بدون تصنيف من القائمة / غير مرتبط بعميل</span>
+            <span className="max-w-44">بدون تصنيف / غير مرتبط</span>
           </label>
-          <div className="flex flex-col gap-2 pt-2">
-            {classifications.map((c) => (
-              <label
-                key={c.id}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 shrink-0 rounded border-input"
-                  checked={selected.has(c.id)}
-                  onChange={() => toggleId(c.id)}
-                />
-                <span className="min-w-0">{c.label}</span>
-              </label>
-            ))}
-          </div>
+          {classifications.map((c) => (
+            <label
+              key={c.id}
+              className="inline-flex cursor-pointer items-center gap-1.5 text-xs"
+            >
+              <input
+                type="checkbox"
+                className="size-3.5 shrink-0 rounded border-input accent-primary"
+                checked={selected.has(c.id)}
+                onChange={() => toggleId(c.id)}
+              />
+              <span className="max-w-36 truncate" title={c.label}>
+                {c.label}
+              </span>
+            </label>
+          ))}
         </div>
       </div>
     </>

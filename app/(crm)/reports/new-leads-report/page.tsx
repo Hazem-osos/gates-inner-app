@@ -1,13 +1,14 @@
 import { NewLeadsReportFilters } from "@/components/reports/new-leads-report-filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewLeadsReportTable } from "@/components/reports/new-leads-report-table";
+import { ReportActiveFiltersNotice } from "@/components/reports/report-active-filters-notice";
 import { resolveSalesFilterDisplayName } from "@/lib/resolve-active-sales-name";
 import { requireSessionUser } from "@/lib/auth-helpers";
-import { todayInputDate } from "@/lib/date-arabic";
-import { NewLeadsReportScopeNotice } from "@/components/reports/new-leads-report-scope-notice";
+import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import {
   listNewLeadsForReport,
   listUsersForNewLeadReportFilter,
+  NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED,
   parseNewLeadReportClsTokens,
 } from "@/lib/data/new-leads-report";
 import { listClientClassifications } from "@/lib/data/classifications";
@@ -68,29 +69,57 @@ export default async function NewLeadsReportPage({
     { classifications }
   );
 
-  const salesScopeLine = activeSalesName
-    ? `من سجّل الليد: المستخدم «${activeSalesName}» فقط.`
-    : "من سجّل الليد: كل المستخدمين النشطين في النظام (ضمن صلاحية عرض التقرير).";
+  const dateFilterActive = fromYmd !== today || toYmd !== today;
 
-  const classificationLines: string[] = [];
-  if (clsIncludeEmpty || clsSelectedIds.length > 0) {
-    if (clsIncludeEmpty && clsSelectedIds.length === 0) {
-      classificationLines.push(
-        "التصنيف: ليدات بدون بطاقة عميل، أو ببطاقة «قيد العمل» بلا تصنيف من قائمة الإدارة."
+  const activeFilterLines: string[] = [];
+  if (dateFilterActive) {
+    const dFrom = formatDateArabicLong(new Date(`${fromYmd}T12:00:00`));
+    const dTo = formatDateArabicLong(new Date(`${toYmd}T12:00:00`));
+    activeFilterLines.push(
+      fromYmd === toYmd
+        ? `تاريخ يوم الليد على اللوحة: ${dFrom}.`
+        : `تاريخ يوم الليد: من ${dFrom} إلى ${dTo}.`
+    );
+  }
+  if (salesUserId !== "all" && activeSalesName) {
+    activeFilterLines.push(`من سجّل الليد: «${activeSalesName}» فقط.`);
+  }
+  if (adQ.trim()) {
+    activeFilterLines.push(`الإعلان يحتوي: «${adQ.trim()}».`);
+  }
+  if (phoneQ.trim()) {
+    activeFilterLines.push(`الهاتف يحتوي: «${phoneQ.trim()}».`);
+  }
+  if (reach === "NOT_REACHED") {
+    activeFilterLines.push("الحالة: لم يتم الوصول.");
+  } else if (reach === NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED) {
+    activeFilterLines.push(
+      "الحالة: لم يتم الوصول (مع استبعاد من عُيّن له Expired)."
+    );
+  } else if (reach === "REACHED") {
+    activeFilterLines.push("الحالة: تم الوصول.");
+  }
+
+  if (clsIncludeEmpty && clsSelectedIds.length === 0) {
+    activeFilterLines.push(
+      "التصنيف: بدون بطاقة أو بطاقة «قيد العمل» بلا تصنيف من قائمة الإدارة."
+    );
+  } else if (!clsIncludeEmpty && clsSelectedIds.length > 0) {
+    const labels = clsSelectedIds
+      .map((id) => classifications.find((c) => c.id === id)?.label)
+      .filter((x): x is string => Boolean(x));
+    if (labels.length > 0) {
+      activeFilterLines.push(
+        `التصنيف (بطاقة قيد العمل): ${labels.join("، ")}.`
       );
-    } else if (!clsIncludeEmpty && clsSelectedIds.length > 0) {
-      const labels = clsSelectedIds
-        .map((id) => classifications.find((c) => c.id === id)?.label)
-        .filter((x): x is string => Boolean(x));
-      classificationLines.push(
-        `التصنيف: ليدات مرتبطة ببطاقة «قيد العمل» ضمن أحد التصنيفات: ${labels.join("، ")}.`
-      );
-    } else {
-      const labels = clsSelectedIds
-        .map((id) => classifications.find((c) => c.id === id)?.label)
-        .filter((x): x is string => Boolean(x));
-      classificationLines.push(
-        `التصنيف (دمج OR): ليد بلا بطاقة/بلا تصنيف إداري، أو بطاقته «قيد العمل» ضمن: ${labels.join("، ")}.`
+    }
+  } else if (clsIncludeEmpty && clsSelectedIds.length > 0) {
+    const labels = clsSelectedIds
+      .map((id) => classifications.find((c) => c.id === id)?.label)
+      .filter((x): x is string => Boolean(x));
+    if (labels.length > 0) {
+      activeFilterLines.push(
+        `التصنيف: OR بين «بدون تصنيف» وبطاقات ضمن: ${labels.join("، ")}.`
       );
     }
   }
@@ -103,15 +132,7 @@ export default async function NewLeadsReportPage({
         subtitle="عرض Leads الجديدة المسجّلة من صفحة «Leads جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
       />
 
-      <NewLeadsReportScopeNotice
-        fromYmd={fromYmd}
-        toYmd={toYmd}
-        salesLine={salesScopeLine}
-        adQ={adQ}
-        phoneQ={phoneQ}
-        reach={reach}
-        classificationLines={classificationLines}
-      />
+      <ReportActiveFiltersNotice lines={activeFilterLines} />
 
       <NewLeadsReportFilters
         today={today}

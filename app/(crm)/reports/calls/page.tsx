@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { CallsReportClassificationFilter } from "@/components/reports/calls-report-classification-filter";
 import { CallsReportDateRangeFields } from "@/components/reports/calls-report-date-range-fields";
-import { CallsReportScopeNotice } from "@/components/reports/calls-report-scope-notice";
+import { ReportActiveFiltersNotice } from "@/components/reports/report-active-filters-notice";
 import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
 import { listClientClassifications } from "@/lib/data/classifications";
 import { requireSessionUser } from "@/lib/auth-helpers";
@@ -116,23 +116,40 @@ export default async function CallsReportPage({
     ).length,
   };
 
+  const dateFilterActive = fromStr !== todayStr || toStr !== todayStr;
   const filterActive =
     scheduledFilter !== "all" ||
     salesKey !== "all" ||
-    Boolean(sp.from || sp.to) ||
+    dateFilterActive ||
     Boolean(adQ) ||
     selectedClassificationIds.length > 0;
 
-  const scheduledScopeLabel =
-    scheduledFilter === "yes"
-      ? "المحدد لهم موعد زيارة فقط"
-      : scheduledFilter === "no"
-        ? "غير المحدد لهم موعد فقط"
-        : "الكل (محدد وغير محدد لزيارة)";
-
-  const salesScopeLine = activeSalesName
-    ? `فلتر السيلز: عرض عملاء المندوب «${activeSalesName}» فقط.`
-    : "فلتر السيلز: كل المندوبين المسموح عرضهم لصلاحيتك الحالية.";
+  const activeFilterLines: string[] = [];
+  if (dateFilterActive) {
+    const dFrom = formatDateArabicLong(new Date(`${fromStr}T12:00:00`));
+    const dTo = formatDateArabicLong(new Date(`${toStr}T12:00:00`));
+    activeFilterLines.push(
+      fromStr === toStr
+        ? `نطاق تاريخ إنشاء البطاقة: ${dFrom}.`
+        : `نطاق تاريخ إنشاء البطاقة: من ${dFrom} إلى ${dTo}.`
+    );
+  }
+  if (scheduledFilter === "yes") {
+    activeFilterLines.push("المواعيد: المحدد لهم موعد زيارة فقط.");
+  } else if (scheduledFilter === "no") {
+    activeFilterLines.push("المواعيد: غير المحدد لهم موعد فقط.");
+  }
+  if (salesKey !== "all" && activeSalesName) {
+    activeFilterLines.push(`السيلز: «${activeSalesName}» فقط.`);
+  }
+  if (adQ) {
+    activeFilterLines.push(`اسم الإعلان يحتوي: «${adQ}».`);
+  }
+  if (selectedClassificationLabels.length > 0) {
+    activeFilterLines.push(
+      `تصنيف العميل: ${selectedClassificationLabels.join("، ")}.`
+    );
+  }
 
   const classificationPreserve =
     selectedClassificationIds.length > 0
@@ -146,14 +163,7 @@ export default async function CallsReportPage({
         title="عملاء جدد / المواعيد"
       />
 
-      <CallsReportScopeNotice
-        fromYmd={fromStr}
-        toYmd={toStr}
-        scheduledLabel={scheduledScopeLabel}
-        salesLine={salesScopeLine}
-        adQ={adQ}
-        classificationLabels={selectedClassificationLabels}
-      />
+      <ReportActiveFiltersNotice lines={activeFilterLines} />
 
       <SalesFilterLinks
         role={user.role}
