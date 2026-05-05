@@ -4,9 +4,11 @@ import { NewLeadsReportTable } from "@/components/reports/new-leads-report-table
 import { resolveSalesFilterDisplayName } from "@/lib/resolve-active-sales-name";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { todayInputDate } from "@/lib/date-arabic";
+import { NewLeadsReportScopeNotice } from "@/components/reports/new-leads-report-scope-notice";
 import {
   listNewLeadsForReport,
   listUsersForNewLeadReportFilter,
+  parseNewLeadReportClsTokens,
 } from "@/lib/data/new-leads-report";
 import { listClientClassifications } from "@/lib/data/classifications";
 
@@ -36,13 +38,22 @@ export default async function NewLeadsReportPage({
   const adQ = get("ad")?.trim() ?? "";
   const phoneQ = get("phone")?.trim() ?? "";
   const reach = get("reach")?.trim() ?? "all";
-  const category = get("category")?.trim() ?? "all";
+  const clsFromUrl = get("cls")?.trim() ?? "";
+  const categoryLegacy = get("category")?.trim();
+  let cls = clsFromUrl;
+  if (!cls && categoryLegacy && categoryLegacy !== "all") {
+    cls = categoryLegacy;
+  }
 
   const [users, classifications, activeSalesName] = await Promise.all([
     listUsersForNewLeadReportFilter(),
     listClientClassifications(),
     resolveSalesFilterDisplayName(salesUserId),
   ]);
+
+  const validClsIds = new Set(classifications.map((c) => c.id));
+  const { includeEmpty: clsIncludeEmpty, ids: clsSelectedIds } =
+    parseNewLeadReportClsTokens(cls, validClsIds);
 
   const { rows, stats } = await listNewLeadsForReport(
     {
@@ -52,10 +63,37 @@ export default async function NewLeadsReportPage({
       adQ,
       phoneQ,
       reach,
-      category,
+      cls,
     },
     { classifications }
   );
+
+  const salesScopeLine = activeSalesName
+    ? `من سجّل الليد: المستخدم «${activeSalesName}» فقط.`
+    : "من سجّل الليد: كل المستخدمين النشطين في النظام (ضمن صلاحية عرض التقرير).";
+
+  const classificationLines: string[] = [];
+  if (clsIncludeEmpty || clsSelectedIds.length > 0) {
+    if (clsIncludeEmpty && clsSelectedIds.length === 0) {
+      classificationLines.push(
+        "التصنيف: ليدات بدون بطاقة عميل، أو ببطاقة «قيد العمل» بلا تصنيف من قائمة الإدارة."
+      );
+    } else if (!clsIncludeEmpty && clsSelectedIds.length > 0) {
+      const labels = clsSelectedIds
+        .map((id) => classifications.find((c) => c.id === id)?.label)
+        .filter((x): x is string => Boolean(x));
+      classificationLines.push(
+        `التصنيف: ليدات مرتبطة ببطاقة «قيد العمل» ضمن أحد التصنيفات: ${labels.join("، ")}.`
+      );
+    } else {
+      const labels = clsSelectedIds
+        .map((id) => classifications.find((c) => c.id === id)?.label)
+        .filter((x): x is string => Boolean(x));
+      classificationLines.push(
+        `التصنيف (دمج OR): ليد بلا بطاقة/بلا تصنيف إداري، أو بطاقته «قيد العمل» ضمن: ${labels.join("، ")}.`
+      );
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-8">
@@ -63,6 +101,16 @@ export default async function NewLeadsReportPage({
         fullWidthBar
         title="تقرير Leads جديدة"
         subtitle="عرض Leads الجديدة المسجّلة من صفحة «Leads جديدة» مع الحالة والتصنيف والربط بإضافة عميل."
+      />
+
+      <NewLeadsReportScopeNotice
+        fromYmd={fromYmd}
+        toYmd={toYmd}
+        salesLine={salesScopeLine}
+        adQ={adQ}
+        phoneQ={phoneQ}
+        reach={reach}
+        classificationLines={classificationLines}
       />
 
       <NewLeadsReportFilters
@@ -73,7 +121,9 @@ export default async function NewLeadsReportPage({
         adQ={adQ}
         phoneQ={phoneQ}
         reach={reach}
-        category={category}
+        clsQuery={cls}
+        defaultIncludeEmpty={clsIncludeEmpty}
+        defaultSelectedClsIds={clsSelectedIds}
         users={users}
         activeSalesName={activeSalesName}
         resultCount={rows.length}

@@ -54,8 +54,30 @@ export type NewLeadReportFilters = {
   adQ: string;
   phoneQ: string;
   reach: string;
-  category: string;
+  /** فواصل: معرفات ‎ClientClassification‎ و/أو ‎__empty__‎ لبطاقات بلا تصنيف */
+  cls: string;
 };
+
+/** قيمة خاصة ضمن ‎cls‎ (مع ‎id‎‌ت متعددة) — مطابقة خيار «بدون تصنيف» القديم */
+export const NEW_LEADS_REPORT_CLS_EMPTY = "__empty__";
+
+export function parseNewLeadReportClsTokens(
+  clsRaw: string,
+  validClassIds: Set<string>
+): { includeEmpty: boolean; ids: string[] } {
+  const tokens = clsRaw.trim()
+    ? clsRaw.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+  const includeEmpty = tokens.includes(NEW_LEADS_REPORT_CLS_EMPTY);
+  const ids = [
+    ...new Set(
+      tokens.filter(
+        (t) => t !== NEW_LEADS_REPORT_CLS_EMPTY && validClassIds.has(t)
+      )
+    ),
+  ];
+  return { includeEmpty, ids };
+}
 
 /** قيمة GET ‎reach‎ — «لم يتم الوصول» دون ما عُيّن زر Expired (أخضر) */
 export const NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED =
@@ -149,11 +171,15 @@ export async function listNewLeadsForReport(
   filters: NewLeadReportFilters,
   opts?: { classifications?: ClassificationRow[] }
 ): Promise<{ rows: NewLeadReportRow[]; stats: NewLeadReportStats }> {
-  const { fromYmd, toYmd, salesUserId, adQ, phoneQ, reach, category } = filters;
+  const { fromYmd, toYmd, salesUserId, adQ, phoneQ, reach, cls } = filters;
 
   const classifications =
     opts?.classifications ?? (await listClientClassifications());
   const validClassIds = new Set(classifications.map((c) => c.id));
+  const { includeEmpty, ids: classificationIds } = parseNewLeadReportClsTokens(
+    cls,
+    validClassIds
+  );
 
   const andParts: Prisma.NewLeadWhereInput[] = [
     { entryYmd: { gte: fromYmd, lte: toYmd } },
@@ -181,7 +207,8 @@ export async function listNewLeadsForReport(
   } else if (reach === "REACHED") {
     andParts.push({ reachStatus: "REACHED" });
   }
-  if (category === "__empty__") {
+
+  if (includeEmpty && classificationIds.length === 0) {
     andParts.push({
       OR: [
         { clientId: null },
@@ -195,14 +222,36 @@ export async function listNewLeadsForReport(
         },
       ],
     });
-  } else if (category && category !== "all" && validClassIds.has(category)) {
+  } else if (!includeEmpty && classificationIds.length > 0) {
     andParts.push({
       client: {
         is: {
           status: { notIn: [ClientStatus.WON, ClientStatus.LOST] },
-          classificationId: category,
+          classificationId: { in: classificationIds },
         },
       },
+    });
+  } else if (includeEmpty && classificationIds.length > 0) {
+    andParts.push({
+      OR: [
+        { clientId: null },
+        {
+          client: {
+            is: {
+              status: { notIn: [ClientStatus.WON, ClientStatus.LOST] },
+              classificationId: null,
+            },
+          },
+        },
+        {
+          client: {
+            is: {
+              status: { notIn: [ClientStatus.WON, ClientStatus.LOST] },
+              classificationId: { in: classificationIds },
+            },
+          },
+        },
+      ],
     });
   }
 

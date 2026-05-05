@@ -16,8 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CallsReportClassificationFilter } from "@/components/reports/calls-report-classification-filter";
 import { CallsReportDateRangeFields } from "@/components/reports/calls-report-date-range-fields";
+import { CallsReportScopeNotice } from "@/components/reports/calls-report-scope-notice";
 import { MAX_CLIENT_ROWS_FOR_UI } from "@/lib/constants/client-query-limits";
+import { listClientClassifications } from "@/lib/data/classifications";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
 import { prisma } from "@/lib/prisma";
@@ -35,6 +38,8 @@ export default async function CallsReportPage({
     to?: string;
     scheduled?: string;
     sales?: string;
+    ad?: string;
+    cls?: string;
   }>;
 }) {
   const user = await requireSessionUser();
@@ -55,22 +60,42 @@ export default async function CallsReportPage({
   });
 
   const scheduledFilter = sp.scheduled ?? "all";
+  const adQ = sp.ad?.trim() ?? "";
+  const clsRaw = sp.cls?.trim() ?? "";
 
-  const [clients, activeSalesName] = await Promise.all([
-    prisma.client.findMany({
-      where: {
-        ...scope,
-        createdAt: { gte: from, lte: to },
-      },
-      include: {
-        assignedUser: { select: { name: true } },
-        classification: { select: { label: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: MAX_CLIENT_ROWS_FOR_UI,
-    }),
+  const [classifications, activeSalesName] = await Promise.all([
+    listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),
   ]);
+
+  const validClassificationIds = new Set(classifications.map((c) => c.id));
+  const selectedClassificationIds = clsRaw
+    ? clsRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter((id) => validClassificationIds.has(id))
+    : [];
+
+  const clients = await prisma.client.findMany({
+    where: {
+      ...scope,
+      createdAt: { gte: from, lte: to },
+      ...(adQ ? { sourceAdName: { contains: adQ } } : {}),
+      ...(selectedClassificationIds.length > 0
+        ? { classificationId: { in: selectedClassificationIds } }
+        : {}),
+    },
+    include: {
+      assignedUser: { select: { name: true } },
+      classification: { select: { label: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: MAX_CLIENT_ROWS_FOR_UI,
+  });
+
+  const selectedClassificationLabels = classifications
+    .filter((c) => selectedClassificationIds.includes(c.id))
+    .map((c) => c.label);
 
   const filtered = clients.filter((c) => {
     const hasVisit = Boolean(c.visitAppointmentDate);
@@ -94,13 +119,40 @@ export default async function CallsReportPage({
   const filterActive =
     scheduledFilter !== "all" ||
     salesKey !== "all" ||
-    Boolean(sp.from || sp.to);
+    Boolean(sp.from || sp.to) ||
+    Boolean(adQ) ||
+    selectedClassificationIds.length > 0;
+
+  const scheduledScopeLabel =
+    scheduledFilter === "yes"
+      ? "المحدد لهم موعد زيارة فقط"
+      : scheduledFilter === "no"
+        ? "غير المحدد لهم موعد فقط"
+        : "الكل (محدد وغير محدد لزيارة)";
+
+  const salesScopeLine = activeSalesName
+    ? `فلتر السيلز: عرض عملاء المندوب «${activeSalesName}» فقط.`
+    : "فلتر السيلز: كل المندوبين المسموح عرضهم لصلاحيتك الحالية.";
+
+  const classificationPreserve =
+    selectedClassificationIds.length > 0
+      ? selectedClassificationIds.slice().sort().join(",")
+      : undefined;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-8">
       <PageHeader
         fullWidthBar
         title="عملاء جدد / المواعيد"
+      />
+
+      <CallsReportScopeNotice
+        fromYmd={fromStr}
+        toYmd={toStr}
+        scheduledLabel={scheduledScopeLabel}
+        salesLine={salesScopeLine}
+        adQ={adQ}
+        classificationLabels={selectedClassificationLabels}
       />
 
       <SalesFilterLinks
@@ -110,12 +162,33 @@ export default async function CallsReportPage({
           ...(scheduledFilter !== "all" ? { scheduled: scheduledFilter } : {}),
           ...(sp.from ? { from: sp.from } : {}),
           ...(sp.to ? { to: sp.to } : {}),
+          ...(adQ ? { ad: adQ } : {}),
+          ...(classificationPreserve ? { cls: classificationPreserve } : {}),
         }}
         currentSales={salesKey}
       />
 
-      <form className="flex flex-wrap gap-3 rounded-xl border border-border/60 p-4 text-sm" method="get">
+      <form
+        className="flex flex-wrap items-end gap-3 rounded-xl border border-border/60 p-4 text-sm"
+        method="get"
+      >
         <CallsReportDateRangeFields defaultFrom={fromStr} defaultTo={toStr} />
+        <label className="flex min-w-[180px] flex-1 flex-col gap-1">
+          بحث في اسم الإعلان
+          <input
+            name="ad"
+            type="search"
+            defaultValue={adQ}
+            dir="rtl"
+            placeholder="جزء من اسم الإعلان…"
+            className="rounded border border-input bg-background px-2 py-1.5"
+            autoComplete="off"
+          />
+        </label>
+        <CallsReportClassificationFilter
+          classifications={classifications}
+          defaultSelectedIds={selectedClassificationIds}
+        />
         <label className="flex flex-col gap-1">
           الفلتر
           <select
@@ -156,6 +229,8 @@ export default async function CallsReportPage({
             to: toStr,
             scheduled: scheduledFilter,
             sales: salesKey,
+            ad: adQ || undefined,
+            cls: classificationPreserve,
           })}
         />
       </div>
@@ -172,6 +247,7 @@ export default async function CallsReportPage({
               <TableHead>السيلز</TableHead>
               <TableHead>العميل</TableHead>
               <TableHead>التليفون</TableHead>
+              <TableHead>اسم الإعلان</TableHead>
               <TableHead>تصنيف العميل</TableHead>
               <TableHead>الشركة</TableHead>
               <TableHead>تاريخ الإدخال</TableHead>
@@ -192,6 +268,9 @@ export default async function CallsReportPage({
                 </TableCell>
                 <TableCell dir="ltr" className="text-xs whitespace-nowrap">
                   {c.phone?.trim() ? c.phone : "—"}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate text-xs" title={c.sourceAdName ?? undefined}>
+                  {c.sourceAdName?.trim() ? c.sourceAdName : "—"}
                 </TableCell>
                 <TableCell className="text-xs">
                   {c.classification?.label ?? "—"}

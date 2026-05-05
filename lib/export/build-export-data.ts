@@ -431,6 +431,14 @@ export async function buildExportPayload(
     const to = endOfDay(new Date(toStr));
     const salesKey = sp.get("sales")?.trim() ?? "all";
     const scheduledFilter = sp.get("scheduled")?.trim() ?? "all";
+    const adQ = sp.get("ad")?.trim() ?? "";
+    const clsRaw = sp.get("cls")?.trim() ?? "";
+    const classificationIds = clsRaw
+      ? clsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
 
     const scope = clientScopeWhere({
       role: user.role,
@@ -439,7 +447,14 @@ export async function buildExportPayload(
     });
 
     const clients = await prisma.client.findMany({
-      where: { ...scope, createdAt: { gte: from, lte: to } },
+      where: {
+        ...scope,
+        createdAt: { gte: from, lte: to },
+        ...(adQ ? { sourceAdName: { contains: adQ } } : {}),
+        ...(classificationIds.length > 0
+          ? { classificationId: { in: classificationIds } }
+          : {}),
+      },
       include: {
         assignedUser: true,
       },
@@ -459,6 +474,7 @@ export async function buildExportPayload(
     const rows = filtered.map((c) => ({
       سيلز: c.assignedUser ? userDisplayName(c.assignedUser) : "",
       العميل: c.name,
+      "اسم الإعلان": c.sourceAdName?.trim() ?? "",
       الشركة: c.company?.trim() ?? "",
       تاريخ_الإدخال: formatExportDateOnly(c.createdAt),
       النشاط: c.activity ?? "",

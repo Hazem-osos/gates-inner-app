@@ -129,6 +129,8 @@ export function callsReportExportExcelHref(args: {
   dateMode?: "created" | "initial";
   scheduled?: string;
   sales?: string;
+  ad?: string;
+  cls?: string;
 }): string {
   const u = new URLSearchParams();
   u.set("kind", "report-calls");
@@ -139,5 +141,9 @@ export function callsReportExportExcelHref(args: {
     u.set("scheduled", args.scheduled);
   }
   if (args.sales && args.sales !== "all") u.set("sales", args.sales);
+  const ad = args.ad?.trim();
+  if (ad) u.set("ad", ad);
+  const cls = args.cls?.trim();
+  if (cls) u.set("cls", cls);
   return `/api/export/excel?${u.toString()}`;
 }

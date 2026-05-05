@@ -20,8 +20,11 @@ import { ArabicDateField } from "@/components/ui/arabic-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { NewLeadsReportClassificationFilter } from "@/components/reports/new-leads-report-classification-filter";
 import type { ClassificationRow } from "@/lib/data/classifications";
-import { NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED } from "@/lib/data/new-leads-report";
+import {
+  NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED,
+} from "@/lib/data/new-leads-report";
 
 const PATH = "/reports/new-leads-report";
 
@@ -32,7 +35,7 @@ function commonSearchParts(opts: {
   adQ: string;
   phoneQ: string;
   reach: string;
-  category: string;
+  cls: string;
 }): Record<string, string> {
   const q: Record<string, string> = {
     from: opts.fromYmd,
@@ -41,7 +44,7 @@ function commonSearchParts(opts: {
   if (opts.adQ.trim()) q.ad = opts.adQ.trim();
   if (opts.phoneQ.trim()) q.phone = opts.phoneQ.trim();
   if (opts.reach !== "all") q.reach = opts.reach;
-  if (opts.category !== "all") q.category = opts.category;
+  if (opts.cls.trim()) q.cls = opts.cls.trim();
   return q;
 }
 
@@ -113,7 +116,9 @@ export function NewLeadsReportFilters({
   adQ,
   phoneQ,
   reach,
-  category,
+  clsQuery,
+  defaultIncludeEmpty,
+  defaultSelectedClsIds,
   users,
   activeSalesName,
   resultCount,
@@ -126,7 +131,9 @@ export function NewLeadsReportFilters({
   adQ: string;
   phoneQ: string;
   reach: string;
-  category: string;
+  clsQuery: string;
+  defaultIncludeEmpty: boolean;
+  defaultSelectedClsIds: string[];
   users: { id: string; name: string }[];
   activeSalesName: string | null;
   resultCount: number;
@@ -147,7 +154,7 @@ export function NewLeadsReportFilters({
     adQ,
     phoneQ,
     reach,
-    category,
+    cls: clsQuery,
   });
 
   const isDefaultRange = fromYmd === today && toYmd === today;
@@ -169,13 +176,14 @@ export function NewLeadsReportFilters({
     });
   }
   if (reach === "REACHED") chips.push({ label: "الحالة: تم الوصول" });
-  if (category === "__empty__") {
-    chips.push({ label: "التصنيف: بدون تصنيف (قائمة الإدارة) أو غير مرتبط" });
-  } else if (category !== "all") {
-    const cls = classifications.find((c) => c.id === category);
-    if (cls) {
-      chips.push({ label: `التصنيف: ${cls.label}` });
-    }
+  if (defaultIncludeEmpty) {
+    chips.push({
+      label: "التصنيف: بدون تصنيف (قائمة الإدارة) أو غير مرتبط",
+    });
+  }
+  for (const id of defaultSelectedClsIds) {
+    const clsRow = classifications.find((c) => c.id === id);
+    if (clsRow) chips.push({ label: `التصنيف: ${clsRow.label}` });
   }
 
   const filterExtrasActive = chips.length > 0;
@@ -188,7 +196,7 @@ export function NewLeadsReportFilters({
     adQ,
     phoneQ,
     reach,
-    category,
+    cls: clsQuery,
   });
 
   return (
@@ -204,8 +212,9 @@ export function NewLeadsReportFilters({
           <CardTitle>فلترة نتائج Leads جديدة</CardTitle>
           <CardDescription>
             الفترة والبحث — ثم اضغط «تطبيق». اختصار «اليوم» يضبط التاريخ على
-            اليوم مع الإبقاء على باقي الخيارات. حقل «التصنيف» يعرض تصنيفات
-            العملاء المعرّفة من الإدارة (بطاقة مرتبطة).
+            اليوم مع الإبقاء على باقي الخيارات. يمكن اختيار أكثر من تصنيف
+            لبطاقة العميل المرتبطة (قيد العمل)، أو خيار «بدون تصنيف»، مع دمج
+            OR عند الجمع بينهما.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
@@ -287,26 +296,11 @@ export function NewLeadsReportFilters({
                   <option value="REACHED">تم الوصول</option>
                 </select>
               </Label>
-              <Label className="flex flex-col gap-1.5 font-normal sm:col-span-2 lg:col-span-1">
-                <span className="text-xs text-muted-foreground">
-                  التصنيف (بطاقة العميل)
-                </span>
-                <select
-                  name="category"
-                  defaultValue={category}
-                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-                >
-                  <option value="all">الكل</option>
-                  <option value="__empty__">
-                    بدون تصنيف من القائمة / غير مرتبط بعميل
-                  </option>
-                  {classifications.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </Label>
+              <NewLeadsReportClassificationFilter
+                classifications={classifications}
+                defaultIncludeEmpty={defaultIncludeEmpty}
+                defaultSelectedIds={defaultSelectedClsIds}
+              />
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-4">
