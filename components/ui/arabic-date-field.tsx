@@ -88,8 +88,8 @@ export function ArabicDateField({
         {arabicSummary ? (
           <p
             className={cn(
-              "px-0.5 text-center leading-tight text-muted-foreground",
-              compact ? "text-[10px]" : "text-[11px] md:text-xs"
+              "px-0.5 text-center font-bold leading-snug text-foreground",
+              compact ? "text-xs" : "text-sm"
             )}
             dir="rtl"
           >
