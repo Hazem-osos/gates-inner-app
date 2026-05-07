@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { formatDateArabicLong } from "@/lib/date-arabic";
 import type { ReportBFollowSlot } from "@/lib/report-b-table-helpers";
-import { parseIsoDate } from "@/lib/report-b-utils";
+import { parseIsoDate, startOfLocalCalendarDay, startOfToday } from "@/lib/report-b-utils";
 
 type ApiItem = {
   id: string;
@@ -78,6 +78,40 @@ function buildEntries(
   return out;
 }
 
+/** عدد المتابعات + الفرق بالأيام بين أقدم تاريخ متابعة ويوم اليوم (تقويم محلي). */
+function computeFollowUpSummary(
+  slots: ReportBFollowSlot[],
+  apiItems: ApiItem[]
+): { count: number; daysSinceFirst: number | null } {
+  const calendarDayStarts: number[] = [];
+  let count = 0;
+
+  for (const s of slots) {
+    const note = (s.note ?? "").trim();
+    const dateStr = (s.date ?? "").trim();
+    if (!note && !dateStr) continue;
+    count++;
+    const d = parseIsoDate(dateStr || null);
+    if (d) calendarDayStarts.push(startOfLocalCalendarDay(d).getTime());
+  }
+
+  for (const it of apiItems) {
+    count++;
+    const d = new Date(it.interactionAt);
+    if (!Number.isNaN(d.getTime())) {
+      calendarDayStarts.push(startOfLocalCalendarDay(d).getTime());
+    }
+  }
+
+  if (count === 0) return { count: 0, daysSinceFirst: null };
+  if (calendarDayStarts.length === 0) return { count, daysSinceFirst: null };
+
+  const earliest = Math.min(...calendarDayStarts);
+  const todayT = startOfToday().getTime();
+  const rawDays = Math.round((todayT - earliest) / 86_400_000);
+  return { count, daysSinceFirst: Math.max(0, rawDays) };
+}
+
 type Props = {
   clientId: string;
   /** اسم المسؤول (عمود التقرير) */
@@ -103,6 +137,7 @@ export function ReportAllFollowUpsSummaryButton({
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setApiItems(null);
     try {
       const res = await fetch(`/api/clients/${clientId}/follow-ups-log`, {
         credentials: "same-origin",
@@ -129,12 +164,21 @@ export function ReportAllFollowUpsSummaryButton({
   }, [clientId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setApiItems(null);
+      setError(null);
+      return;
+    }
     void load();
   }, [open, load]);
 
   const entries = useMemo(
     () => buildEntries(slots, apiItems ?? []),
+    [slots, apiItems]
+  );
+
+  const summary = useMemo(
+    () => computeFollowUpSummary(slots, apiItems ?? []),
     [slots, apiItems]
   );
 
@@ -161,7 +205,7 @@ export function ReportAllFollowUpsSummaryButton({
         title={clientName.trim() || "—"}
         description={
           <span dir="rtl">
-            متابع —{" "}
+            متابعات —{" "}
             <bdi dir="auto" className="text-foreground">
               {(company ?? "").trim() || "—"}
             </bdi>
@@ -173,35 +217,66 @@ export function ReportAllFollowUpsSummaryButton({
           <p className="text-muted-foreground">جاري التحميل…</p>
         ) : error ? (
           <p className="text-destructive">{error}</p>
-        ) : entries.length === 0 ? (
-          <p className="text-muted-foreground">
-            لا توجد متابعات بأعمدة التقرير ولا في سجل المتابعات المسجّلة لهذا
-            العميل.
-          </p>
         ) : (
-          <ul className="space-y-0">
-            {entries.map((ent, i) => (
-              <Fragment key={ent.key}>
-                {i > 0 ? (
-                  <Separator className="my-4 bg-border/70" />
+          <>
+            <div
+              className="mb-4 flex flex-col gap-1 rounded-lg border border-red-200/80 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+              dir="rtl"
+            >
+              <p className="tabular-nums">
+                عدد المتابعات:{" "}
+                <span dir="ltr" className="inline-block">
+                  {summary.count}
+                </span>
+              </p>
+              <p className="tabular-nums">
+                عدد الأيام:{" "}
+                <span dir="ltr" className="inline-block">
+                  {summary.daysSinceFirst !== null
+                    ? summary.daysSinceFirst
+                    : "—"}
+                </span>
+                {summary.daysSinceFirst !== null ? (
+                  <span className="ms-1 text-xs font-normal opacity-90">
+                    (من أقدم تاريخ متابعة إلى اليوم)
+                  </span>
                 ) : null}
-                <li className="space-y-1.5">
-                  <p
-                    className="text-xs font-semibold text-muted-foreground"
-                    dir="ltr"
-                  >
-                    {ent.dateLine}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/90">
-                    {ent.sourceLabel}
-                  </p>
-                  <p className="whitespace-pre-wrap wrap-break-word text-foreground" dir="auto">
-                    {ent.body}
-                  </p>
-                </li>
-              </Fragment>
-            ))}
-          </ul>
+              </p>
+            </div>
+            {entries.length === 0 ? (
+              <p className="text-muted-foreground">
+                لا توجد متابعات بأعمدة التقرير ولا في سجل المتابعات المسجّلة
+                لهذا العميل.
+              </p>
+            ) : (
+              <ul className="space-y-0">
+                {entries.map((ent, i) => (
+                  <Fragment key={ent.key}>
+                    {i > 0 ? (
+                      <Separator className="my-4 bg-border/70" />
+                    ) : null}
+                    <li className="space-y-1.5">
+                      <p
+                        className="text-xs font-semibold text-muted-foreground"
+                        dir="ltr"
+                      >
+                        {ent.dateLine}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/90">
+                        {ent.sourceLabel}
+                      </p>
+                      <p
+                        className="wrap-break-word whitespace-pre-wrap text-foreground"
+                        dir="auto"
+                      >
+                        {ent.body}
+                      </p>
+                    </li>
+                  </Fragment>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </SimpleDialog>
     </>
