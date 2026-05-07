@@ -80,7 +80,10 @@ function buildEntries(
 
 type Props = {
   clientId: string;
+  /** اسم المسؤول (عمود التقرير) */
   clientName: string;
+  /** اسم الشركة */
+  company: string | null;
   slots: ReportBFollowSlot[];
   disabled?: boolean;
 };
@@ -88,6 +91,7 @@ type Props = {
 export function ReportAllFollowUpsSummaryButton({
   clientId,
   clientName,
+  company,
   slots,
   disabled,
 }: Props) {
@@ -140,7 +144,7 @@ export function ReportAllFollowUpsSummaryButton({
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 w-full min-w-0 shrink-0 px-1.5 text-[11px] font-semibold leading-tight"
+        className="h-8 w-full min-w-0 shrink-0 border-[#153a5f] bg-[#1e3a5f] px-1.5 text-[11px] font-semibold leading-tight text-white shadow-sm hover:bg-[#162f50] hover:text-white focus-visible:ring-[#1e3a5f] disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
         disabled={disabled}
         title="عرض أعمدة المتابعة في التقرير إلى جانب المتابعات المسجّلة من بطاقة العميل"
         onClick={(e) => {
@@ -154,7 +158,15 @@ export function ReportAllFollowUpsSummaryButton({
       <SimpleDialog
         open={open}
         onOpenChange={setOpen}
-        title={`متابعات — ${clientName.trim() || "عميل"}`}
+        title={clientName.trim() || "—"}
+        description={
+          <span dir="rtl">
+            متابع —{" "}
+            <bdi dir="auto" className="text-foreground">
+              {(company ?? "").trim() || "—"}
+            </bdi>
+          </span>
+        }
         contentClassName="max-w-xl"
       >
         {loading ? (

@@ -37,7 +37,8 @@ export type ViolationKind =
   | "days_over"
   | "follow_count"
   | "neglected"
-  | "no_answer";
+  | "no_answer"
+  | "follow_up_far";
 
 export type SortTriState = null | "asc" | "desc";
 
@@ -196,6 +197,30 @@ export function passesFollowCount(row: ReportBFilterRow, minCount: number): bool
   const slots = normalizeSlotsSimple(row.followUpSlots);
   const n = slots.filter((s) => (s.note ?? "").trim().length > 0).length;
   return n >= minCount;
+}
+
+/** أقل عدد أيام لتاريخ «متابعة تالية» لاحق عن اليوم — فلتر «متابعات بعيدة المدى» */
+export const REPORT_FOLLOW_UP_FAR_AHEAD_MIN_DAYS = 15;
+
+/**
+ * عمود «متابعة تالية» فقط: تاريخ صالح، يومُه التقويمي بعد اليوم، والفرق بالأيام ≥ minDaysAhead.
+ * فراغ أو تاريخ قبل اليوم أو غير صالح → لا يظهر في الفلتر.
+ */
+export function passesFollowUpFarAhead(
+  row: ReportBFilterRow,
+  minDaysAhead: number
+): boolean {
+  const raw = (row.nextFollowUpAt ?? "").trim();
+  if (!raw) return false;
+  const nf = parseIsoDate(raw);
+  if (!nf) return false;
+  const today = startOfToday();
+  const nfDay = startOfLocalCalendarDay(nf);
+  if (nfDay.getTime() < today.getTime()) return false;
+  const diffDays = Math.round(
+    (nfDay.getTime() - today.getTime()) / 86_400_000
+  );
+  return diffDays >= minDaysAhead;
 }
 
 /**

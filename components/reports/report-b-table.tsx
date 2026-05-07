@@ -46,7 +46,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ReportBTableBodyRow } from "@/components/reports/report-b-table-body-row";
 import type { ClassificationRow } from "@/lib/data/classifications";
 import {
@@ -60,6 +65,7 @@ import {
   passesActuallyVisited,
   passesDaysOver,
   passesFollowCount,
+  passesFollowUpFarAhead,
   passesNeglected,
   passesNoAnswerFilter,
   passesVisitOverdue,
@@ -69,6 +75,7 @@ import {
   sortRows,
   validateNextFollowUpAtForRowSave,
   type SortTriState,
+  REPORT_FOLLOW_UP_FAR_AHEAD_MIN_DAYS,
   type ViolationKind,
 } from "@/lib/report-b-utils";
 import { classificationResolvesToBPath } from "@/lib/pipeline-choice";
@@ -525,6 +532,8 @@ export function ReportBTable({
       }
       if (violation === "neglected") return passesNeglected(r);
       if (violation === "no_answer") return passesNoAnswerFilter(r.followUpSlots);
+      if (violation === "follow_up_far")
+        return passesFollowUpFarAhead(r, REPORT_FOLLOW_UP_FAR_AHEAD_MIN_DAYS);
       return true;
     });
     if (!visitOverdueOnly) return list;
@@ -654,6 +663,8 @@ export function ReportBTable({
       return "يعرض العملاء الذين في عمود «متابعة تالية» لا تاريخ، أو تاريخ غير صالح، أو تاريخ قبل اليوم (وفق التوقيت المحلي). من في العمود يوم اليوم أو لاحقاً لا يظهر هنا.";
     if (violation === "no_answer")
       return "يعرض العملاء المسجَّل في متابعاتهم عدم الرد";
+    if (violation === "follow_up_far")
+      return `يعرض التقرير فقط العملاء الذين «متابعة تالية» لهم بعد اليوم بفارق ${REPORT_FOLLOW_UP_FAR_AHEAD_MIN_DAYS} يوماً على الأقل (تقويم محلي). بدون تاريخ أو بتاريخ اليوم أو بتاريخ سابق لا يُعرضون — نفس أسلوب الفلاتر الأخرى في هذا الصندوق.`;
     return null;
   }
 
@@ -1026,98 +1037,182 @@ export function ReportBTable({
                   </p>
                 </div>
               </div>
+              <TooltipProvider delayDuration={180}>
               <div className="flex flex-wrap items-center gap-2 p-3 sm:gap-2.5">
-                <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={violChip(violation === "days_over")}
-                    onClick={() => {
-                      setViolation((x) =>
-                        x === "days_over" ? null : "days_over"
-                      );
-                      setDaysActive(true);
-                    }}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-flex cursor-default items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className={violChip(violation === "days_over")}
+                        onClick={() => {
+                          setViolation((x) =>
+                            x === "days_over" ? null : "days_over"
+                          );
+                          setDaysActive(true);
+                        }}
+                      >
+                        تجاوز عدد أيام
+                      </Button>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
+                        disabled={!daysActive}
+                        value={daysInput}
+                        onChange={(e) => setDaysInput(e.target.value)}
+                        dir="ltr"
+                        aria-label="عدد الأيام للتجاوز"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
                   >
-                    تجاوز عدد أيام
-                  </Button>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
-                    disabled={!daysActive}
-                    value={daysInput}
-                    onChange={(e) => setDaysInput(e.target.value)}
-                    dir="ltr"
-                    aria-label="عدد الأيام للتجاوز"
-                  />
-                </div>
-                <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={violChip(violation === "follow_count")}
-                    onClick={() => {
-                      setViolation((x) =>
-                        x === "follow_count" ? null : "follow_count"
-                      );
-                      setFollowActive(true);
-                    }}
+                    يعرض العملاء الذين مرّ على تاريخ الاتصال الأول لديهم عدد
+                    الأيام المُدخل في المربع أو أكثر. اضغط الزر لتفعيل الفلتر ثم
+                    أدخل الرقم وشاهد شريط البيان أسفل الصندوق.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-flex cursor-default items-center gap-1.5 rounded-xl border border-border/60 bg-muted/25 px-2 py-1 shadow-sm dark:bg-muted/20">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className={violChip(violation === "follow_count")}
+                        onClick={() => {
+                          setViolation((x) =>
+                            x === "follow_count" ? null : "follow_count"
+                          );
+                          setFollowActive(true);
+                        }}
+                      >
+                        تجاوز عدد متابعات
+                      </Button>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
+                        disabled={!followActive}
+                        value={followInput}
+                        onChange={(e) => setFollowInput(e.target.value)}
+                        dir="ltr"
+                        aria-label="عدد المتابعات للتجاوز"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
                   >
-                    تجاوز عدد متابعات
-                  </Button>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="h-9 w-14 rounded-lg border-border/70 bg-background px-1 text-center text-sm font-medium tabular-nums shadow-inner disabled:opacity-45"
-                    disabled={!followActive}
-                    value={followInput}
-                    onChange={(e) => setFollowInput(e.target.value)}
-                    dir="ltr"
-                    aria-label="عدد المتابعات للتجاوز"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={violChip(violation === "neglected")}
-                  title="عمود «متابعة تالية» فاضٍ، أو تاريخ غير صالح، أو تاريخ قبل اليوم. الخانات الإضافية لا تلغي الفلتر."
-                  onClick={() =>
-                    setViolation((v) =>
-                      v === "neglected" ? null : "neglected"
-                    )
-                  }
-                >
-                  عملاء مهملين
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={violChip(violation === "no_answer")}
-                  onClick={() =>
-                    setViolation((v) =>
-                      v === "no_answer" ? null : "no_answer"
-                    )
-                  }
-                >
-                  عملاء لا ترد
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 shrink-0 rounded-xl border-dashed px-3 text-sm text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
-                  onClick={() => {
-                    setViolation(null);
-                    setDaysInput("");
-                    setFollowInput("");
-                    setDaysActive(false);
-                    setFollowActive(false);
-                    setVisitOverdueOnly(false);
-                  }}
-                >
-                  إلغاء كل الفلاتر
-                </Button>
+                    يعرض العملاء الذين يملكون في أعمدة سجل المتابعات (نصوص خانات
+                    المتابعة 1، 2، …) عدداً لا يقلّ عن الرقم المُدخل. اضغط الزر
+                    ثم أدخل الرقم.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={violChip(violation === "neglected")}
+                      onClick={() =>
+                        setViolation((v) =>
+                          v === "neglected" ? null : "neglected"
+                        )
+                      }
+                    >
+                      عملاء مهملين
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
+                  >
+                    عمود «متابعة تالية» فارغ، أو تاريخ غير صالح، أو تاريخ قبل
+                    اليوم (تقويم محلي). اليوم أو أي تاريخ لاحق لا يُعرض هنا.
+                    خانات المتابعة الإضافية في الجدول لا تُحتسب في هذا الفلتر.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={violChip(violation === "no_answer")}
+                      onClick={() =>
+                        setViolation((v) =>
+                          v === "no_answer" ? null : "no_answer"
+                        )
+                      }
+                    >
+                      عملاء لا ترد
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
+                  >
+                    يعرض العملاء إذا وُجدت في نصوص المتابعات عبارات من نوع «لم
+                    يرد» أو «لا يرد» وما شابه (بلا حساسية لحالة الأحرف).
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={violChip(violation === "follow_up_far")}
+                      onClick={() =>
+                        setViolation((v) =>
+                          v === "follow_up_far" ? null : "follow_up_far"
+                        )
+                      }
+                    >
+                      متابعات بعيدة المدى
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
+                  >
+                    يعرض العملاء الذين تاريخ «متابعة تالية» لهم بعد اليوم بـ{" "}
+                    {REPORT_FOLLOW_UP_FAR_AHEAD_MIN_DAYS} يوماً على الأقل (فرق
+                    أيام بالتقويم المحلي). عمود المتابعة التالية فقط؛ الفارغ وما
+                    قبل اليوم يُستبعد.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-9 shrink-0 rounded-xl border-dashed px-3 text-sm text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
+                      onClick={() => {
+                        setViolation(null);
+                        setDaysInput("");
+                        setFollowInput("");
+                        setDaysActive(false);
+                        setFollowActive(false);
+                        setVisitOverdueOnly(false);
+                      }}
+                    >
+                      إلغاء كل الفلاتر
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-sm text-sm leading-relaxed"
+                  >
+                    يلغي فلتر التجاوزات النشط ويُفرّغ مربعات الأرقام، ويزيل فلتر
+                    «تجاوز ميعاد الزيارة» من شريط الأدوات إن كان مفعّلاً.
+                  </TooltipContent>
+                </Tooltip>
               </div>
+              </TooltipProvider>
             </div>
         </div>
         {(violationMessage() ||
@@ -1188,6 +1283,9 @@ export function ReportBTable({
                   </>
                 ) : null}
                 <TableHead className="min-w-[200px]">متابعة تالية</TableHead>
+                <TableHead className="min-w-[7.5rem] whitespace-normal text-center leading-tight">
+                  ملخص كل المتابعات
+                </TableHead>
                 <TableHead className="min-w-[140px]">توصيات الإدارة</TableHead>
                 <TableHead className="min-w-[140px]">تاريخ التوصية</TableHead>
                 <TableHead className="min-w-[90px]">سيلز</TableHead>
@@ -1218,9 +1316,6 @@ export function ReportBTable({
                 <TableHead className="w-14">QQ</TableHead>
                 <TableHead className="min-w-[130px] whitespace-normal text-start leading-tight">
                   ملخص ما تم في الزيارة
-                </TableHead>
-                <TableHead className="min-w-[7.5rem] whitespace-normal text-center leading-tight">
-                  ملخص كل المتابعات
                 </TableHead>
                 {Array.from({ length: maxFollowCols }, (_, i) => (
                   <Fragment key={`fh-${i}`}>

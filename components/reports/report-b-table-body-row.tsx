@@ -652,6 +652,15 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         />
       </ReportFieldTooltip>
     </TableCell>
+    <TableCell className="align-top">
+      <ReportAllFollowUpsSummaryButton
+        clientId={r.id}
+        clientName={displayRow.name}
+        company={displayRow.company}
+        slots={slots}
+        disabled={isSaving}
+      />
+    </TableCell>
     <TableCell>
       <ReportFieldTooltip
         tooltip={fullCellTooltip(
@@ -1131,14 +1140,6 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           }
         />
       </ReportFieldTooltip>
-    </TableCell>
-    <TableCell className="align-top">
-      <ReportAllFollowUpsSummaryButton
-        clientId={r.id}
-        clientName={displayRow.name}
-        slots={slots}
-        disabled={isSaving}
-      />
     </TableCell>
     {Array.from({ length: maxFollowCols }, (_, i) => {
       const slot = slots[i];

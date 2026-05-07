@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  /** سطر أو أكثر تحت العنوان (اختياري) */
+  description?: ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   /** توسيع عرض لوحة الحوار (مثل جداول المعاينة) */
@@ -24,6 +26,7 @@ export function SimpleDialog({
   open,
   onOpenChange,
   title,
+  description,
   children,
   footer,
   contentClassName,
@@ -56,6 +59,7 @@ export function SimpleDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="simple-dialog-title"
+      aria-describedby={description ? "simple-dialog-description" : undefined}
       onMouseDown={(e) => {
         if (
           closeOnBackdrop &&
@@ -72,9 +76,23 @@ export function SimpleDialog({
         )}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id="simple-dialog-title" className="mb-3 text-lg font-semibold">
+        <h2
+          id="simple-dialog-title"
+          className={cn(
+            "text-lg font-semibold",
+            description ? "mb-1" : "mb-3"
+          )}
+        >
           {title}
         </h2>
+        {description ? (
+          <div
+            id="simple-dialog-description"
+            className="mb-3 text-sm font-medium text-muted-foreground"
+          >
+            {description}
+          </div>
+        ) : null}
         <div className="text-sm">{children}</div>
         {footer ? (
           <div className="mt-4 flex justify-end gap-2">{footer}</div>
