@@ -126,7 +126,7 @@ model Client {
   /// متابعات ديناميكية: مصفوفة JSON [{ "order": number, "note": string, "date": string ISO }]
   followUpSlots Json @default("[]") @db.Json
 
-  /// الموقف النهائي (تقارير)
+  /// ملخص ما تم في الزيارة — عمود التقارير (B / Not B)
   finalStatusNote String? @db.Text
 
   customFields Json @default("{}") @db.Json

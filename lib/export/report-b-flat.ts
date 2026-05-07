@@ -89,7 +89,7 @@ const REPORT_B_EXPORT_HEADER_AR_BASE: Record<
   callSummary: "ملخص مكالمة",
   currentSituation: "الموقف",
   salesNotes: "ملاحظات سيلز",
-  finalStatusNote: "موقف نهائي",
+  finalStatusNote: "ملخص ما تم في الزيارة",
   clientWarmingText: "أدوات Warming",
   adPlatform: "منصة",
   sourceAdName: "إعلان",
@@ -447,7 +447,14 @@ export function excelRowToReportClientPatch(
   assignStr(patch, "salesNotes", row, ["salesNotes", "ملاحظات_سيلز", "ملاحظات سيلز", REPORT_B_EXPORT_HEADER_AR_BASE.salesNotes], {
     allowEmpty: true,
   });
-  assignStr(patch, "finalStatusNote", row, ["finalStatusNote", "موقف_نهائي", "موقف نهائي", REPORT_B_EXPORT_HEADER_AR_BASE.finalStatusNote], {
+  assignStr(patch, "finalStatusNote", row, [
+    "finalStatusNote",
+    "موقف_نهائي",
+    "موقف نهائي",
+    "ملخص_ما_تم_في_الزيارة",
+    "ملخص ما تم في الزيارة",
+    REPORT_B_EXPORT_HEADER_AR_BASE.finalStatusNote,
+  ], {
     allowEmpty: true,
   });
   assignStr(patch, "clientWarmingText", row, ["clientWarmingText", REPORT_B_EXPORT_HEADER_AR_BASE.clientWarmingText], {

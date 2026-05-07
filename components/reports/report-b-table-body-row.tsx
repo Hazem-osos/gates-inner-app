@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { ReportAllFollowUpsSummaryButton } from "@/components/reports/report-all-follow-ups-summary";
 import { ReportBStatusPopoverBlock } from "@/components/reports/report-b-status-popover-block";
 import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
 import type { ClassificationRow } from "@/lib/data/classifications";
@@ -1130,6 +1131,14 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           }
         />
       </ReportFieldTooltip>
+    </TableCell>
+    <TableCell className="align-top">
+      <ReportAllFollowUpsSummaryButton
+        clientId={r.id}
+        clientName={displayRow.name}
+        slots={slots}
+        disabled={isSaving}
+      />
     </TableCell>
     {Array.from({ length: maxFollowCols }, (_, i) => {
       const slot = slots[i];

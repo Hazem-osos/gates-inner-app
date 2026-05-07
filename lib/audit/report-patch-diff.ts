@@ -130,7 +130,7 @@ export function buildArabicAuditLinesFromPatch(
     patch.finalStatusNote !== undefined &&
     !trimEq(patch.finalStatusNote, client.finalStatusNote)
   ) {
-    lines.push("تعديل الموقف النهائي");
+    lines.push("تعديل ملخص ما تم في الزيارة");
   }
   if (
     patch.clientWarmingText !== undefined &&

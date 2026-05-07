@@ -1216,7 +1216,12 @@ export function ReportBTable({
                 <TableHead className="min-w-[130px]">تاريخ زيارة</TableHead>
                 <TableHead className="min-w-[9rem]">موظف عرض</TableHead>
                 <TableHead className="w-14">QQ</TableHead>
-                <TableHead className="min-w-[120px]">موقف نهائي</TableHead>
+                <TableHead className="min-w-[130px] whitespace-normal text-start leading-tight">
+                  ملخص ما تم في الزيارة
+                </TableHead>
+                <TableHead className="min-w-[7.5rem] whitespace-normal text-center leading-tight">
+                  ملخص كل المتابعات
+                </TableHead>
                 {Array.from({ length: maxFollowCols }, (_, i) => (
                   <Fragment key={`fh-${i}`}>
                     <TableHead className="min-w-[11rem]">متابعة {i + 1}</TableHead>
