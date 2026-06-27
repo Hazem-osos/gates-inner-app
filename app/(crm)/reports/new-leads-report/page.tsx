@@ -12,7 +12,11 @@ import {
   parseNewLeadReportClsTokens,
 } from "@/lib/data/new-leads-report";
 import { listClientClassifications } from "@/lib/data/classifications";
+import {
+  listReportRowStylesForNewLeads,
+} from "@/lib/data/report-row-styles";
 import { newLeadsReportExportExcelHref } from "@/lib/export-excel-href";
+import { REPORT_NEW_LEADS_ROW_STYLE_KEY } from "@/lib/report-row-style-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +73,11 @@ export default async function NewLeadsReportPage({
     },
     { classifications }
   );
+
+  const rowStyles = await listReportRowStylesForNewLeads({
+    reportKey: REPORT_NEW_LEADS_ROW_STYLE_KEY,
+    newLeadIds: rows.map((r) => r.id),
+  });
 
   const dateFilterActive = fromYmd !== today || toYmd !== today;
 
@@ -161,7 +170,7 @@ export default async function NewLeadsReportPage({
         })}
       />
 
-      <NewLeadsReportTable rows={rows} stats={stats} />
+      <NewLeadsReportTable rows={rows} stats={stats} rowStyles={rowStyles} />
     </div>
   );
 }

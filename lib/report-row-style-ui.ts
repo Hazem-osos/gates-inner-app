@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 
-export type ReportRowStyleTableType = "b" | "not-b" | "closed";
+export type ReportRowStyleTableType = "b" | "not-b" | "closed" | "new-leads";
+
+export const REPORT_NEW_LEADS_ROW_STYLE_KEY = "report-new-leads";
 
 /** مفتاح ‎ReportRowStyle.reportKey‎ حسب نوع الجدول */
 export function reportStyleDbKeyFromTableType(
@@ -8,6 +10,7 @@ export function reportStyleDbKeyFromTableType(
 ): string {
   if (t === "b") return "report-b";
   if (t === "not-b") return "report-not-b";
+  if (t === "new-leads") return REPORT_NEW_LEADS_ROW_STYLE_KEY;
   return "report-closed";
 }
 
@@ -17,6 +20,7 @@ export function reportStyleApiTypeFromTableType(
 ): string {
   if (t === "b") return "b";
   if (t === "not-b") return "not-b";
+  if (t === "new-leads") return "new-leads";
   return "closed";
 }
 

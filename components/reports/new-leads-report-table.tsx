@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, UserX, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { NewLeadReachStatus } from "@prisma/client";
 
@@ -23,11 +23,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ReportRowColorControls,
+  ReportRowTintFilterBar,
+} from "@/components/reports/report-row-color-controls";
 import type {
   NewLeadReportRow,
   NewLeadReportStats,
 } from "@/lib/data/new-leads-report";
 import { formatDateTimeArabic } from "@/lib/date-arabic";
+import {
+  normalizeReportRowStyleColor,
+  reportRowTintStyle,
+  type ReportRowStyleColorKey,
+} from "@/lib/report-row-style-ui";
 import { cn } from "@/lib/utils";
 
 function statusBadge(reach: NewLeadReachStatus) {
@@ -161,12 +170,24 @@ function NewLeadDescriptionCell({
 export function NewLeadsReportTable({
   rows,
   stats,
+  rowStyles = {},
 }: {
   rows: NewLeadReportRow[];
   stats: NewLeadReportStats;
+  rowStyles?: Record<string, { color: string; legendNote: string }>;
 }) {
   const router = useRouter();
   const [pendingLeadId, setPendingLeadId] = useState<string | null>(null);
+  const [rowTintFilter, setRowTintFilter] =
+    useState<ReportRowStyleColorKey | null>(null);
+
+  const visibleRows = useMemo(() => {
+    if (rowTintFilter === null) return rows;
+    return rows.filter((r) => {
+      const c = normalizeReportRowStyleColor(rowStyles[r.id]?.color);
+      return c === rowTintFilter;
+    });
+  }, [rows, rowTintFilter, rowStyles]);
 
   const run = useCallback(
     async (
@@ -305,6 +326,11 @@ export function NewLeadsReportTable({
         </ul>
       </div>
 
+      <ReportRowTintFilterBar
+        rowTintFilter={rowTintFilter}
+        onRowTintFilterChange={setRowTintFilter}
+      />
+
       <div className="rounded-xl border border-border/80 shadow-sm">
         <Table
           containerClassName={cn(
@@ -314,6 +340,9 @@ export function NewLeadsReportTable({
         >
           <TableHeader>
             <TableRow className="[&_th]:pointer-events-none [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-background [&_th]:shadow-[0_1px_0_0_hsl(var(--border))]">
+              <TableHead className="sticky right-0 z-20 min-w-[7.5rem] bg-background whitespace-normal text-center shadow-[0_1px_0_0_hsl(var(--border))]">
+                لون الصف
+              </TableHead>
               <TableHead className="min-w-[12rem] whitespace-nowrap">
                 تاريخ التسجيل
               </TableHead>
@@ -332,17 +361,19 @@ export function NewLeadsReportTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
-                  لا توجد Leads جديدة ضمن الفترة والفلاتر.
+                  {rows.length === 0
+                    ? "لا توجد Leads جديدة ضمن الفترة والفلاتر."
+                    : "لا صفوف بهذا اللون — غيّر فلتر «لون الصف» أو ألِّن صفوفاً من الجدول."}
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((r) => {
+              visibleRows.map((r) => {
                 const hasClient = Boolean(r.clientId);
                 const rowPending = pendingLeadId === r.id;
                 const isBadClient = r.leadCategory === "Z";
@@ -355,9 +386,29 @@ export function NewLeadsReportTable({
                   : rowPending
                     ? "جاري التنفيذ…"
                     : undefined;
+                const rowStyle = rowStyles[r.id];
+                const hasRowTint = Boolean(
+                  normalizeReportRowStyleColor(rowStyle?.color)
+                );
 
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow
+                    key={r.id}
+                    className="align-top transition-shadow duration-200"
+                    style={reportRowTintStyle(rowStyle?.color)}
+                  >
+                    <TableCell
+                      className={cn(
+                        "sticky right-0 z-10 border-s border-border/55 align-top dark:border-border/40",
+                        hasRowTint ? "bg-inherit" : "bg-background"
+                      )}
+                    >
+                      <ReportRowColorControls
+                        apiBasePath={`/api/new-leads/${r.id}`}
+                        rowStyle={rowStyle}
+                        disabled={rowPending}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm tabular-nums text-muted-foreground">
                       {formatDateTimeArabic(new Date(r.createdAt))}
                     </TableCell>

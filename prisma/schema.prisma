@@ -327,16 +327,21 @@ model ReportRowStyle {
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  reportKey String // e.g. report-b
-  clientId  String
-  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reportKey String // e.g. report-b | report-new-leads
+  clientId  String?
+  client    Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  newLeadId String?
+  newLead   NewLead? @relation(fields: [newLeadId], references: [id], onDelete: Cascade)
 
   colorKey   String // e.g. red | yellow | blue (قديم: green يُعرض كأزرق)
   legendNote String?
 
   @@unique([reportKey, clientId])
+  @@unique([reportKey, newLeadId])
   @@index([reportKey])
   @@index([userId])
+  @@index([newLeadId])
 }
 
 model ClientStatusChange {
@@ -422,6 +427,8 @@ model NewLead {
 
   createdById String
   createdBy   User     @relation("NewLeadCreatedBy", fields: [createdById], references: [id])
+
+  reportRowStyles ReportRowStyle[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
