@@ -26,6 +26,7 @@ import {
 import {
   ReportRowColorControls,
   ReportRowTintFilterBar,
+  type ReportRowTintFilter,
 } from "@/components/reports/report-row-color-controls";
 import type {
   NewLeadReportRow,
@@ -35,7 +36,6 @@ import { formatDateTimeArabic } from "@/lib/date-arabic";
 import {
   normalizeReportRowStyleColor,
   reportRowTintStyle,
-  type ReportRowStyleColorKey,
 } from "@/lib/report-row-style-ui";
 import { cn } from "@/lib/utils";
 
@@ -178,11 +178,15 @@ export function NewLeadsReportTable({
 }) {
   const router = useRouter();
   const [pendingLeadId, setPendingLeadId] = useState<string | null>(null);
-  const [rowTintFilter, setRowTintFilter] =
-    useState<ReportRowStyleColorKey | null>(null);
+  const [rowTintFilter, setRowTintFilter] = useState<ReportRowTintFilter>(null);
 
   const visibleRows = useMemo(() => {
     if (rowTintFilter === null) return rows;
+    if (rowTintFilter === "none") {
+      return rows.filter(
+        (r) => !normalizeReportRowStyleColor(rowStyles[r.id]?.color)
+      );
+    }
     return rows.filter((r) => {
       const c = normalizeReportRowStyleColor(rowStyles[r.id]?.color);
       return c === rowTintFilter;
@@ -369,7 +373,9 @@ export function NewLeadsReportTable({
                 >
                   {rows.length === 0
                     ? "لا توجد Leads جديدة ضمن الفترة والفلاتر."
-                    : "لا صفوف بهذا اللون — غيّر فلتر «لون الصف» أو ألِّن صفوفاً من الجدول."}
+                    : rowTintFilter === "none"
+                      ? "لا صفوف بدون تلوين — غيّر فلتر «لون الصف»."
+                      : "لا صفوف بهذا اللون — غيّر فلتر «لون الصف» أو ألِّن صفوفاً من الجدول."}
                 </TableCell>
               </TableRow>
             ) : (

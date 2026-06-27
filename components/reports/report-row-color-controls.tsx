@@ -128,12 +128,14 @@ export function ReportRowColorControls({
   );
 }
 
+export type ReportRowTintFilter = ReportRowStyleColorKey | "none" | null;
+
 export function ReportRowTintFilterBar({
   rowTintFilter,
   onRowTintFilterChange,
 }: {
-  rowTintFilter: ReportRowStyleColorKey | null;
-  onRowTintFilterChange: (v: ReportRowStyleColorKey | null) => void;
+  rowTintFilter: ReportRowTintFilter;
+  onRowTintFilterChange: (v: ReportRowTintFilter) => void;
 }) {
   return (
     <div
@@ -156,6 +158,23 @@ export function ReportRowTintFilterBar({
         onClick={() => onRowTintFilterChange(null)}
       >
         الكل
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={rowTintFilter === "none" ? "secondary" : "outline"}
+        className={cn(
+          "h-8 rounded-lg px-2.5 text-xs",
+          rowTintFilter === "none" &&
+            "border border-border/80 bg-secondary font-semibold"
+        )}
+        aria-pressed={rowTintFilter === "none"}
+        title="صفوف بدون تلوين"
+        onClick={() =>
+          onRowTintFilterChange(rowTintFilter === "none" ? null : "none")
+        }
+      >
+        بدون لون
       </Button>
       {REPORT_ROW_STYLE_COLORS.map((key) => {
         const active = rowTintFilter === key;
