@@ -8,6 +8,7 @@ import {
   SalesFilterActiveMessage,
 } from "@/components/reports/sales-filter-records-status";
 import { ReportRecordsCount } from "@/components/reports/report-records-count";
+import { ExportToolbar } from "@/components/export/export-toolbar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -123,6 +124,7 @@ export function NewLeadsReportFilters({
   activeSalesName,
   resultCount,
   classifications,
+  excelHref,
 }: {
   today: string;
   fromYmd: string;
@@ -138,6 +140,7 @@ export function NewLeadsReportFilters({
   activeSalesName: string | null;
   resultCount: number;
   classifications: ClassificationRow[];
+  excelHref: string;
 }) {
   const [fromField, setFromField] = useState(fromYmd);
   const [toField, setToField] = useState(toYmd);
@@ -353,6 +356,10 @@ export function NewLeadsReportFilters({
           count={resultCount}
           className="text-sm font-medium text-foreground"
         />
+
+        <div className="flex w-full justify-center sm:justify-end">
+          <ExportToolbar excelHref={excelHref} className="justify-end" />
+        </div>
       </div>
     </div>
   );

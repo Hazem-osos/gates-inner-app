@@ -20,6 +20,7 @@ export type NewLeadReportRow = {
   clientId: string | null;
   /** نص تصنيف بطاقة العميل المرتبطة — يُعرض في الجدول فقط عند وجود `clientId` */
   clientClassificationLabel: string | null;
+  reportDescription: string | null;
 };
 
 /** إجمالي لكل تصنيف عميل من الإدارة — يتزامن مع أسماء التصنيفات في قاعدة البيانات */
@@ -285,6 +286,7 @@ export async function listNewLeadsForReport(
     leadCategory: normalizeCat(r.leadCategory),
     clientId: r.clientId,
     clientClassificationLabel: clientClassificationDisplayText(r.client),
+    reportDescription: r.reportDescription?.trim() || null,
   }));
 
   const stats = buildNewLeadReportStats(rawRows, classifications);

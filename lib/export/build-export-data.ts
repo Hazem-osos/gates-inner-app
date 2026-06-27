@@ -23,7 +23,9 @@ import {
   resolveRecommendationsDateSearchParams,
   ymdRangeToBounds,
 } from "@/lib/recommendations-report-search";
+import { listClientClassifications } from "@/lib/data/classifications";
 import { transferredReportWhere } from "@/lib/data/client-transfers-report";
+import { listNewLeadsForReport } from "@/lib/data/new-leads-report";
 import { prisma } from "@/lib/prisma";
 import { clientScopeWhere } from "@/lib/report-scope";
 import { buildClientsImportTemplateEmptyRow } from "@/lib/import/clients-flat-import-fields";
@@ -421,6 +423,41 @@ export async function buildExportPayload(
               : [{ رسالة: "لا تأخير" }],
         },
       ],
+    };
+  }
+
+  if (kind === "report-new-leads") {
+    const YMD = /^\d{4}-\d{2}-\d{2}$/;
+    const today = todayInputDate();
+    const fromStr = sp.get("from")?.trim();
+    const toStr = sp.get("to")?.trim();
+    const fromYmd = fromStr && YMD.test(fromStr) ? fromStr : today;
+    const toYmd = toStr && YMD.test(toStr) ? toStr : today;
+    const salesUserId = sp.get("sales")?.trim() ?? "all";
+    const adQ = sp.get("ad")?.trim() ?? "";
+    const phoneQ = sp.get("phone")?.trim() ?? "";
+    const reach = sp.get("reach")?.trim() ?? "all";
+    const cls = sp.get("cls")?.trim() ?? "";
+    const classifications = await listClientClassifications();
+    const { rows } = await listNewLeadsForReport(
+      { fromYmd, toYmd, salesUserId, adQ, phoneQ, reach, cls },
+      { classifications }
+    );
+    const exportRows = rows.map((r) => ({
+      تاريخ_التسجيل: formatExportDateOnly(new Date(r.createdAt)),
+      يوم_الإدخال: r.entryYmd,
+      الهاتف: r.phone,
+      السيلز: r.salesName,
+      الإعلان: r.adText,
+      الحالة: r.reachStatus === "REACHED" ? "تم الوصول" : "لم يتم الوصول",
+      تصنيف_البطاقة: r.clientClassificationLabel ?? "",
+      Description: r.reportDescription ?? "",
+      مرتبط_بعميل: r.clientId ? "نعم" : "لا",
+    }));
+    return {
+      filename: "new-leads-report.xlsx",
+      documentTitle: "تقرير Leads جديدة",
+      sheets: [{ sheetName: "Leads_جديدة", rows: exportRows }],
     };
   }
 

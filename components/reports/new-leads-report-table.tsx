@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, UserX, RotateCcw } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { NewLeadReachStatus } from "@prisma/client";
 
@@ -11,8 +11,10 @@ import {
   clearNewLeadBadOrExpiredAction,
   markNewLeadBadClientAction,
   markNewLeadExpiredAction,
+  updateNewLeadReportDescriptionAction,
 } from "@/app/actions/new-leads";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -89,6 +91,72 @@ const newLeadSuccessControlClass = cn(
 const summaryLeadActionStatLiClass = cn(
   "col-span-1 flex flex-wrap items-center gap-2 rounded-lg border border-green-600/45 bg-green-50/90 px-3 py-2.5 text-base text-green-900 shadow-sm dark:border-green-600/40 dark:bg-green-950/40 dark:text-green-100 sm:col-span-2 lg:col-span-3"
 );
+
+function NewLeadDescriptionCell({
+  leadId,
+  initialText,
+  disabled,
+}: {
+  leadId: string;
+  initialText: string;
+  disabled?: boolean;
+}) {
+  const router = useRouter();
+  const [text, setText] = useState(initialText);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setText(initialText);
+  }, [initialText, leadId]);
+
+  const dirty = text !== initialText;
+
+  async function save() {
+    if (disabled || saving || !dirty) return;
+    setSaving(true);
+    try {
+      const res = await updateNewLeadReportDescriptionAction({
+        leadId,
+        reportDescription: text,
+      });
+      if (!res.ok) {
+        toast.error(res.message ?? "تعذر حفظ الوصف.");
+        return;
+      }
+      toast.success("تم حفظ الوصف.");
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      toast.error("تعذر الاتصال بالخادم.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex min-w-[11rem] max-w-[22rem] flex-col gap-1.5">
+      <Textarea
+        dir="rtl"
+        rows={2}
+        disabled={disabled || saving}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Description…"
+        className="min-h-12 max-h-40 resize-y text-sm leading-snug"
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant={dirty ? "default" : "secondary"}
+        className="h-7 w-full text-xs"
+        disabled={disabled || saving || !dirty}
+        onClick={() => void save()}
+      >
+        {saving ? "جاري الحفظ…" : "حفظ الوصف"}
+      </Button>
+    </div>
+  );
+}
 
 export function NewLeadsReportTable({
   rows,
@@ -252,6 +320,9 @@ export function NewLeadsReportTable({
               <TableHead className="min-w-[9rem]">رقم الهاتف</TableHead>
               <TableHead className="min-w-[8rem]">اسم السيلز</TableHead>
               <TableHead className="min-w-[10rem]">اسم الإعلان</TableHead>
+              <TableHead className="min-w-[12rem] whitespace-normal">
+                Description
+              </TableHead>
               <TableHead className="min-w-[8rem]">الحالة</TableHead>
               <TableHead className="min-w-[6rem]">التصنيف</TableHead>
               <TableHead className="min-w-[14rem]">إجراءات</TableHead>
@@ -264,7 +335,7 @@ export function NewLeadsReportTable({
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   لا توجد Leads جديدة ضمن الفترة والفلاتر.
@@ -297,6 +368,13 @@ export function NewLeadsReportTable({
                       {r.salesName}
                     </TableCell>
                     <TableCell className="text-sm">{r.adText}</TableCell>
+                    <TableCell className="align-top">
+                      <NewLeadDescriptionCell
+                        leadId={r.id}
+                        initialText={r.reportDescription ?? ""}
+                        disabled={rowPending}
+                      />
+                    </TableCell>
                     <TableCell>{statusBadge(r.reachStatus)}</TableCell>
                     <TableCell className="text-sm text-foreground">
                       {r.clientId

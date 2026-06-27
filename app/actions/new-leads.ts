@@ -131,6 +131,56 @@ export async function updateNewLeadAction(input: {
   }
 }
 
+const MAX_REPORT_DESCRIPTION = 8000;
+
+export async function updateNewLeadReportDescriptionAction(input: {
+  leadId: string;
+  reportDescription: string;
+}): Promise<NewLeadActionResult> {
+  const session = await getSessionUser();
+  if (!session) return { ok: false, message: "غير مصرح." };
+
+  if (!(await resolveSessionDbUserId(session))) {
+    return {
+      ok: false,
+      message:
+        "لم يُعثر على حسابك في النظام. سجّل الخروج ثم الدخول مرة أخرى.",
+    };
+  }
+
+  const leadId = input.leadId.trim();
+  if (!leadId) {
+    return { ok: false, message: "معرّف الليد غير صالح." };
+  }
+
+  const reportDescription = input.reportDescription.trim();
+  if (reportDescription.length > MAX_REPORT_DESCRIPTION) {
+    return { ok: false, message: "الوصف طويل جداً." };
+  }
+
+  try {
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM NewLead WHERE id = ${leadId} LIMIT 1
+    `;
+    if (rows.length === 0) return { ok: false, message: "الليد غير موجود." };
+
+    const affected = await prisma.$executeRaw`
+      UPDATE NewLead
+      SET reportDescription = ${reportDescription || null}, updatedAt = NOW()
+      WHERE id = ${leadId}
+    `;
+    if (Number(affected) < 1) {
+      return { ok: false, message: "تعذر حفظ الوصف." };
+    }
+
+    revalidatePath("/reports/new-leads-report");
+    return { ok: true };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, message: "تعذر حفظ الوصف." };
+  }
+}
+
 export async function markNewLeadBadClientAction(
   leadId: string
 ): Promise<NewLeadActionResult> {

@@ -12,6 +12,7 @@ import {
   parseNewLeadReportClsTokens,
 } from "@/lib/data/new-leads-report";
 import { listClientClassifications } from "@/lib/data/classifications";
+import { newLeadsReportExportExcelHref } from "@/lib/export-excel-href";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,15 @@ export default async function NewLeadsReportPage({
         activeSalesName={activeSalesName}
         resultCount={rows.length}
         classifications={classifications}
+        excelHref={newLeadsReportExportExcelHref({
+          from: fromYmd,
+          to: toYmd,
+          sales: salesUserId,
+          ad: adQ || undefined,
+          phone: phoneQ || undefined,
+          reach,
+          cls: cls || undefined,
+        })}
       />
 
       <NewLeadsReportTable rows={rows} stats={stats} />

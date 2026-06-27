@@ -414,6 +414,8 @@ model NewLead {
   reachStatus  NewLeadReachStatus @default(NOT_REACHED)
   /// تصنيف التقرير: B | C | Z | EXPIRED — فارغ افتراضياً
   leadCategory String?            @db.VarChar(32)
+  /// ملاحظة حرة في «تقرير Leads جديدة»
+  reportDescription String?       @db.Text
 
   clientId String?
   client   Client? @relation("ClientFromNewLead", fields: [clientId], references: [id], onDelete: SetNull)

@@ -147,3 +147,28 @@ export function callsReportExportExcelHref(args: {
   if (cls) u.set("cls", cls);
   return `/api/export/excel?${u.toString()}`;
 }
+
+/** تقرير Leads جديدة — نفس فلاتر الصفحة */
+export function newLeadsReportExportExcelHref(args: {
+  from?: string;
+  to?: string;
+  sales?: string;
+  ad?: string;
+  phone?: string;
+  reach?: string;
+  cls?: string;
+}): string {
+  const u = new URLSearchParams();
+  u.set("kind", "report-new-leads");
+  if (args.from?.trim()) u.set("from", args.from.trim());
+  if (args.to?.trim()) u.set("to", args.to.trim());
+  if (args.sales && args.sales !== "all") u.set("sales", args.sales);
+  const ad = args.ad?.trim();
+  if (ad) u.set("ad", ad);
+  const phone = args.phone?.trim();
+  if (phone) u.set("phone", phone);
+  if (args.reach && args.reach !== "all") u.set("reach", args.reach);
+  const cls = args.cls?.trim();
+  if (cls) u.set("cls", cls);
+  return `/api/export/excel?${u.toString()}`;
+}
