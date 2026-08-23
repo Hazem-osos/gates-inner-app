@@ -76,6 +76,10 @@ type ReportListArgs = {
    * يُفضّل لصفحتي تقرير B / Not B.
    */
   noRowLimit?: boolean;
+  /** تقرير Not B: يقصر النتائج على تصنيف واحد (classificationId أو notBClassification) */
+  classificationKey?: string;
+  /** تقرير تم البيع: يقصر النتائج على عملاء لهم saleDate ضمن هذا النطاق */
+  saleDateRange?: { from?: Date | null; to?: Date | null };
 };
 
 function buildReportClientsListQuery(
@@ -101,19 +105,39 @@ function buildReportClientsListQuery(
     salesUserId: args.salesUserId,
   });
 
+  const andConditions: Prisma.ClientWhereInput[] = [];
+  if (args.q?.trim()) {
+    andConditions.push({
+      OR: [
+        { name: { contains: args.q.trim() } },
+        { company: { contains: args.q.trim() } },
+        { phone: { contains: args.q.trim() } },
+        { phone2: { contains: args.q.trim() } },
+      ],
+    });
+  }
+  if (args.classificationKey) {
+    andConditions.push({
+      OR: [
+        { classificationId: args.classificationKey },
+        { notBClassification: args.classificationKey },
+      ],
+    });
+  }
+  if (args.saleDateRange) {
+    andConditions.push({
+      saleDate: {
+        not: null,
+        ...(args.saleDateRange.from ? { gte: args.saleDateRange.from } : {}),
+        ...(args.saleDateRange.to ? { lte: args.saleDateRange.to } : {}),
+      },
+    });
+  }
+
   const where: Prisma.ClientWhereInput = {
     ...scope,
     status: { in: statuses },
-    ...(args.q?.trim()
-      ? {
-          OR: [
-            { name: { contains: args.q.trim() } },
-            { company: { contains: args.q.trim() } },
-            { phone: { contains: args.q.trim() } },
-            { phone2: { contains: args.q.trim() } },
-          ],
-        }
-      : {}),
+    ...(andConditions.length > 0 ? { AND: andConditions } : {}),
   };
 
   const orderBy: Prisma.ClientOrderByWithRelationInput[] = [];
@@ -148,10 +172,7 @@ export async function listClientsForReport(args: ReportListArgs) {
 
   return prisma.client.findMany({
     where,
-    include: {
-      assignedUser: { select: { id: true, name: true, deletedAt: true } },
-      classification: { select: { id: true, label: true, color: true, isBRow: true } },
-    },
+    select: clientReportExportSelect,
     orderBy,
     ...(take !== undefined ? { take } : {}),
   });

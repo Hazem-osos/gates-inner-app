@@ -39,6 +39,8 @@ export default async function ReportNotBPage({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
+  const classKey = sp.class?.trim();
+
   const [clients, classifications, activeSalesName] = await Promise.all([
     listClientsForReport({
       role: user.role,
@@ -49,26 +51,17 @@ export default async function ReportNotBPage({
       sort,
       sortDir: dir,
       noRowLimit: true,
+      classificationKey: classKey && classKey !== "all" ? classKey : undefined,
     }),
     listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),
   ]);
 
-  const classKey = sp.class?.trim();
-  const filtered =
-    classKey && classKey !== "all"
-      ? clients.filter(
-          (c) =>
-            c.classificationId === classKey ||
-            c.notBClassification === classKey
-        )
-      : clients;
-
-  const rows: ReportBRow[] = filtered.map(clientEntityToReportBRow);
+  const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
 
   const rowStyles = await listReportRowStylesForClients({
     reportKey: reportStyleDbKeyFromTableType("not-b"),
-    clientIds: filtered.map((c) => c.id),
+    clientIds: clients.map((c) => c.id),
   });
 
   const classFilter =

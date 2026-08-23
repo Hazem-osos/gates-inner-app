@@ -65,7 +65,10 @@ export default async function ReportWonPage({
   const salesKey = sp.sales ?? "all";
   const { sort, dir } = parseReportSortParams(sp);
 
-  const [clientsRaw, classifications, activeSalesName] = await Promise.all([
+  const from = safeStartOfDayFromYmd(sp.from);
+  const to = safeEndOfDayFromYmd(sp.to);
+
+  const [clients, classifications, activeSalesName] = await Promise.all([
     listClientsForReport({
       role: user.role,
       userId: user.id,
@@ -75,19 +78,11 @@ export default async function ReportWonPage({
       sort,
       sortDir: dir,
       noRowLimit: true,
+      saleDateRange: { from, to },
     }),
     listClientClassifications(),
     resolveActiveSalesName(user.role, salesKey),
   ]);
-
-  const from = safeStartOfDayFromYmd(sp.from);
-  const to = safeEndOfDayFromYmd(sp.to);
-  const clients = clientsRaw.filter((c) => {
-    if (!c.saleDate) return false;
-    if (from && c.saleDate < from) return false;
-    if (to && c.saleDate > to) return false;
-    return true;
-  });
 
   const rows: ReportBRow[] = clients.map(clientEntityToReportBRow);
 

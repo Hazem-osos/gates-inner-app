@@ -167,6 +167,10 @@ model Client {
   @@index([closedLostAt])
   /// فرز إداري: آخر دخول أولاً/طلبات حديثة
   @@index([createdAt])
+  /// تقرير «تم البيع»: فلترة status = WON + نطاق saleDate
+  @@index([status, saleDate])
+  /// فلترة نافذة تاريخ التوصية على العميل (تقرير التوصيات)
+  @@index([managementRecommendationDate])
 }
 
 model Interaction {
@@ -220,6 +224,8 @@ model ManagementRecommendation {
   @@index([clientId, createdAt])
   /// تتبع حسب مُوصي الإدارة
   @@index([authorId, createdAt])
+  /// نافذة تاريخ التوصية (تقرير التوصيات)
+  @@index([recommendationDate])
 }
 
 enum AlertType {

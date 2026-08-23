@@ -84,8 +84,31 @@ export default async function CallsReportPage({
       ...(selectedClassificationIds.length > 0
         ? { classificationId: { in: selectedClassificationIds } }
         : {}),
+      ...(scheduledFilter === "yes"
+        ? {
+            OR: [
+              { visitAppointmentScheduled: true },
+              { visitAppointmentDate: { not: null } },
+            ],
+          }
+        : scheduledFilter === "no"
+          ? {
+              visitAppointmentScheduled: false,
+              visitAppointmentDate: null,
+            }
+          : {}),
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      sourceAdName: true,
+      company: true,
+      createdAt: true,
+      activity: true,
+      address: true,
+      visitAppointmentDate: true,
+      visitAppointmentScheduled: true,
       assignedUser: { select: { name: true } },
       classification: { select: { label: true } },
     },
@@ -97,14 +120,7 @@ export default async function CallsReportPage({
     .filter((c) => selectedClassificationIds.includes(c.id))
     .map((c) => c.label);
 
-  const filtered = clients.filter((c) => {
-    const hasVisit = Boolean(c.visitAppointmentDate);
-    const scheduledRow =
-      c.visitAppointmentScheduled || hasVisit ? true : false;
-    if (scheduledFilter === "yes") return scheduledRow;
-    if (scheduledFilter === "no") return !scheduledRow;
-    return true;
-  });
+  const filtered = clients;
 
   const stats = {
     total: filtered.length,

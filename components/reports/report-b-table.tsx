@@ -298,7 +298,17 @@ export function ReportBTable({
     };
 
     const cleanRetries = runWithRetries();
-    const ro = new ResizeObserver(() => {
+    /**
+     * لا نُعيد المحاذاة إلا عند تغيّر **عرض** الحاوية فعلياً (تغيّر عدد الأعمدة/حجم النافذة).
+     * تغيّر الارتفاع فقط (مثل تكبّر خانة متابعة عند التركيز/الكتابة) لا يجب أن يُرجع
+     * المستخدم لعمود الإجراءات وهو يكتب في عمود آخر.
+     */
+    let lastWidth = el.getBoundingClientRect().width;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextWidth = entry?.contentRect.width ?? lastWidth;
+      if (Math.abs(nextWidth - lastWidth) < 1) return;
+      lastWidth = nextWidth;
       alignTableToActionColumn();
     });
     ro.observe(el);
@@ -691,8 +701,9 @@ export function ReportBTable({
     );
   }
 
-  const notBClassifications = classifications.filter(
-    (c) => !classificationResolvesToBPath(c)
+  const notBClassifications = useMemo(
+    () => classifications.filter((c) => !classificationResolvesToBPath(c)),
+    [classifications]
   );
 
   return (

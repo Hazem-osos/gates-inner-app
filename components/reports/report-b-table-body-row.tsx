@@ -34,7 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { ReportAllFollowUpsSummaryButton } from "@/components/reports/report-all-follow-ups-summary";
@@ -74,78 +73,6 @@ function dateCellTooltip(iso: string | null | undefined): string {
   return ymd || "— فارغ —";
 }
 
-/** خلية متابعة: بدل الكتابة المباشرة، الضغط يفتح نافذة كتابة بسيطة وزر حفظ */
-function FollowUpNoteCell({
-  value,
-  disabled,
-  label,
-  onSave,
-}: {
-  value: string;
-  disabled: boolean;
-  label: string;
-  onSave: (next: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  return (
-    <>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => {
-          setDraft(value);
-          setOpen(true);
-        }}
-        title={fullCellTooltip(value)}
-        className={cn(
-          reportBTextarea,
-          "flex w-full items-start whitespace-pre-wrap break-words text-start disabled:cursor-not-allowed disabled:opacity-60"
-        )}
-      >
-        {value.trim() ? (
-          value
-        ) : (
-          <span className="text-muted-foreground">— اضغط للكتابة —</span>
-        )}
-      </button>
-      <SimpleDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={label}
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setOpen(false)}
-            >
-              إلغاء
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                onSave(draft);
-                setOpen(false);
-              }}
-            >
-              حفظ
-            </Button>
-          </>
-        }
-      >
-        <Textarea
-          rows={6}
-          autoFocus
-          className="w-full"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-      </SimpleDialog>
-    </>
-  );
-}
 
 type AppRouterInstance = {
   push: (href: string) => void;
@@ -1226,29 +1153,34 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                 : undefined
             }
           >
-            <FollowUpNoteCell
-              label={`متابعة ${i + 1}`}
-              disabled={isSaving}
-              value={slot?.note ?? ""}
-              onSave={(note) => {
-                const next = [...slots];
-                while (next.length <= i) {
-                  next.push({
-                    order: next.length + 1,
-                    note: "",
-                    date: "",
+            <ReportFieldTooltip
+              tooltip={fullCellTooltip(slot?.note)}
+            >
+              <Textarea
+                rows={2}
+                className={reportBTextarea}
+                disabled={isSaving}
+                value={slot?.note ?? ""}
+                onChange={(e) => {
+                  const next = [...slots];
+                  while (next.length <= i) {
+                    next.push({
+                      order: next.length + 1,
+                      note: "",
+                      date: "",
+                    });
+                  }
+                  next[i] = {
+                    ...next[i],
+                    order: i + 1,
+                    note: e.target.value,
+                  };
+                  patchFieldDebounced({
+                    followUpSlots: followSlotsToJson(next),
                   });
-                }
-                next[i] = {
-                  ...next[i],
-                  order: i + 1,
-                  note,
-                };
-                patchFieldImmediate({
-                  followUpSlots: followSlotsToJson(next),
-                });
-              }}
-            />
+                }}
+              />
+            </ReportFieldTooltip>
           </TableCell>
           <TableCell>
             <ReportFieldTooltip
