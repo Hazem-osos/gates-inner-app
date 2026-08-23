@@ -438,3 +438,141 @@ model NewLead {
   @@index([clientId])
   @@index([reachStatus, entryYmd])
 }
+
+// ——— Helpdesk / الدعم الفني ———
+
+enum SupportRole {
+  ADMIN
+  AGENT
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum NotificationRecipientType {
+  ADMIN
+  AGENT
+  CUSTOMER
+}
+
+model SupportUser {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         SupportRole @default(AGENT)
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  assignedCustomers Customer[]              @relation("CustomerAssignedAgent")
+  ticketsAssigned   Ticket[]                @relation("TicketAssignedAgent")
+  resolutions       TicketResolutionAudit[]
+
+  @@index([role, isActive])
+}
+
+model Customer {
+  id                    String    @id @default(cuid())
+  companyName           String
+  contactName           String
+  email                 String    @unique
+  passwordHash          String
+  licenseStartDate      DateTime  @db.Date
+  licenseEndDate        DateTime  @db.Date
+  hasUsedCourtesyTicket Boolean   @default(false)
+  assignedAgentId       String?
+  assignedAgent         SupportUser? @relation("CustomerAssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tickets  Ticket[]
+  feedback TicketFeedback[]
+
+  @@index([licenseEndDate])
+  @@index([assignedAgentId])
+}
+
+model Ticket {
+  id                 String         @id @default(cuid())
+  ticketNumber       String         @unique
+  subject            String         @db.VarChar(255)
+  description        String         @db.Text
+  priority           TicketPriority @default(MEDIUM)
+  status             TicketStatus   @default(OPEN)
+  isVoiceTranscribed Boolean        @default(false)
+  isCourtesyTicket   Boolean        @default(false)
+  customerId         String
+  customer           Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedAgentId    String?
+  assignedAgent      SupportUser?   @relation("TicketAssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  resolution TicketResolutionAudit?
+  feedback   TicketFeedback?
+
+  @@index([customerId, status])
+  @@index([assignedAgentId, status])
+  @@index([status, createdAt])
+}
+
+model TicketResolutionAudit {
+  id                String      @id @default(cuid())
+  ticketId          String      @unique
+  ticket            Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agentId           String
+  agent             SupportUser @relation(fields: [agentId], references: [id])
+  resolutionDetails String      @db.Text
+  closedAt          DateTime    @default(now())
+
+  @@index([agentId, closedAt])
+}
+
+model TicketFeedback {
+  id         String   @id @default(cuid())
+  ticketId   String   @unique
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+}
+
+model Notification {
+  id            String                    @id @default(cuid())
+  recipientType NotificationRecipientType
+  recipientId   String
+  title         String                    @db.VarChar(255)
+  message       String                    @db.Text
+  ticketId      String?
+  isRead        Boolean                   @default(false)
+  createdAt     DateTime                  @default(now())
+
+  @@index([recipientType, recipientId, isRead])
+  @@index([createdAt])
+}
+
+model CannedMessage {
+  id        String   @id @default(cuid())
+  title     String   @db.VarChar(120)
+  content   String   @db.Text
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

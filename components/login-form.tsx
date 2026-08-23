@@ -25,7 +25,7 @@ export function LoginForm({
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = await signIn("credentials", {
+    const res = await signIn("crm-credentials", {
       email,
       password,
       redirect: false,

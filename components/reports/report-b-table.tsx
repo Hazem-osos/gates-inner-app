@@ -1292,6 +1292,7 @@ export function ReportBTable({
                 <TableHead className="min-w-[10rem] whitespace-normal text-start leading-tight">
                   شركة
                 </TableHead>
+                <TableHead className="min-w-[110px]">هاتف</TableHead>
                 <TableHead className="w-12">أيام</TableHead>
                 <TableHead className="min-w-[100px]">اتصال</TableHead>
                 <TableHead className="min-w-[9rem] whitespace-normal text-start leading-tight">
@@ -1300,7 +1301,6 @@ export function ReportBTable({
                 <TableHead className="min-w-[9rem]">نشاط</TableHead>
                 <TableHead className="min-w-[9rem]">وظيفة</TableHead>
                 <TableHead className="min-w-[120px]">عنوان</TableHead>
-                <TableHead className="min-w-[110px]">هاتف</TableHead>
                 <TableHead className="min-w-[72px]">عرض سعر</TableHead>
                 <TableHead className="min-w-[120px]">تفصيل السعر</TableHead>
                 <TableHead className="min-w-[10rem] max-w-[13rem] whitespace-normal text-start leading-tight">

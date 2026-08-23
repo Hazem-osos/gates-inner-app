@@ -46,6 +46,7 @@ export type RecommendationReportRow = {
   clientId: string;
   clientName: string;
   company: string | null;
+  phone: string | null;
   salesName: string | null;
   body: string;
   recommendationDateIso: string | null;
@@ -72,6 +73,9 @@ export function RecommendationsReportTable({
             <TableHead className="w-[5.5rem] max-w-[6rem] min-w-[4rem]">
               الشركة
             </TableHead>
+            <TableHead className="w-[7rem] max-w-[7.5rem] min-w-[6rem]">
+              رقم العميل
+            </TableHead>
             <TableHead>موظف السيلز</TableHead>
             <TableHead className="min-w-[200px]">التوصية</TableHead>
             <TableHead className="min-w-[11rem]">تاريخ التوصية</TableHead>
@@ -84,7 +88,7 @@ export function RecommendationsReportTable({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
                 لا توجد توصيات. تظهر هنا التوصيات المسجّلة من بطاقة العميل أو من عمود «توصيات
                 الإدارة» في تقرير B بعد الحفظ.
               </TableCell>
@@ -166,6 +170,12 @@ function RecommendationEditableRow({ r }: { r: RecommendationReportRow }) {
         ) : (
           "—"
         )}
+      </TableCell>
+      <TableCell
+        dir="ltr"
+        className="max-w-[7.5rem] p-2 align-top text-sm text-muted-foreground"
+      >
+        {r.phone?.trim() ? r.phone : "—"}
       </TableCell>
       <TableCell className="text-sm">{r.salesName ?? "—"}</TableCell>
       <TableCell>

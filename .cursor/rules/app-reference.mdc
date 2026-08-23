@@ -1,0 +1,142 @@
+---
+description: Full reference for CRM-GATES app — consult before asking about structure, routes, models, auth, or conventions.
+alwaysApply: true
+---
+
+# CRM-GATES — App Reference
+
+An **Arabic-first internal CRM / sales ops** system. UI is RTL (Cairo font, `lang="ar"`, `dir="rtl"`). All copy/nav labels are in Arabic.
+
+---
+
+## Tech Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | **Next.js 16.2.4** — App Router, `next dev --webpack` |
+| React | 19.2.4 |
+| Database | **MySQL** via **Prisma 6.19** |
+| Auth | **NextAuth v5** (credentials + JWT, 30-day sessions) |
+| UI | **Tailwind CSS 4** + **shadcn-style** primitives (`components/ui/`) |
+| Forms | `react-hook-form` + `zod` |
+| Other | `bcryptjs`, `date-fns`, `xlsx`, `sonner`, `framer-motion`, `lucide-react` |
+
+> Always read `node_modules/next/dist/docs/` before writing Next.js code — this version has breaking changes.
+
+---
+
+## Directory Map
+
+```
+app/                  # App Router — pages, layouts, API routes, server actions
+  (crm)/              # Authenticated shell — layout checks requireSessionUser()
+    dashboard/
+    clients/          # list, [id], new, import, transferred
+    warming/
+    reports/          # b, not-b, closed, won, recommendations, calls, warming, transferred
+    settings/         # field-labels, users, backup
+    admin/            # custom-fields, core-labels
+  login/ register/    # outside (crm) group
+  api/                # Route handlers (auth, import, export, backup, etc.)
+  actions/            # Server actions ("use server")
+
+components/
+  layout/             # header-system, crm-nav, crm-shortcuts-ribbon, page-header
+  clients/            # add/edit form, interactions, warming, pipeline, transfer dialogs
+  reports/            # Report-B table, sales filters, warming/recommendations tables
+  dashboard/          # shortcuts, mark-alert
+  settings/           # classifications, users/passwords, backup manager
+  admin/              # custom fields, core labels
+  import/ export/     # Excel flows and export UI
+  ui/                 # Shared primitives (button, card, table, dialog, …)
+  providers/          # session-provider.tsx (NextAuth SessionProvider)
+
+lib/
+  prisma.ts           # Prisma singleton (global in dev)
+  auth-helpers.ts     # getSessionUser, requireSessionUser, isAdmin, isManagerOrAdmin
+  data/               # Query helpers (dashboard, clients, reports, custom fields, …)
+  import/             # Excel import + normalize-arabic-text.ts
+  export/             # Excel/PDF export helpers
+  mappers/            # Data mapping utilities
+  audit/              # AuditLog helpers
+  report-b-*.ts       # Report-B specific logic
+  report-scope.ts
+  validations/        # Zod schemas (e.g. add-client.ts)
+  db/                 # MySQL direct helpers (parse URL, client defaults, backup)
+
+prisma/
+  schema.prisma       # Source of truth for all models
+  seed.ts
+
+auth.ts               # NextAuth config (credentials, JWT callbacks, roles)
+middleware.ts         # Protects /dashboard /clients /admin /reports /warming
+types/next-auth.d.ts  # Session extensions (id, role: UserRole)
+scripts/              # DB utilities, imports, wipes, seeds
+```
+
+---
+
+## Key Data Models (prisma/schema.prisma)
+
+- **`User`** — roles: `ADMIN | MANAGER | SALES`, soft-delete via `deletedAt`, `passwordHash`
+- **`Client`** — status: `B | NOT_B | WON | LOST`, `followUpSlots`, `customFields` JSON, linked to `ClientClassification` + `assignedUser`
+- **`Interaction`**, **`ManagementRecommendation`**, **`Alert`**, **`WarmingToolSent`**
+- **`ClientTransfer`**, **`ClientStatusChange`**, **`AuditLog`**
+- **`ReportRowStyle`** — per-user row colors on reports
+- **`CustomFieldDefinition`** + **`CoreFieldLabel`** — admin-configurable fields/labels
+
+---
+
+## Auth & Sessions
+
+- **Config**: `auth.ts` — Credentials provider, bcrypt compare, rejects inactive/deleted users
+- **Middleware**: `middleware.ts` — redirects unauthenticated away from CRM routes; redirects authenticated away from `/login` and `/register`
+- **Layout guard**: `app/(crm)/layout.tsx` calls `requireSessionUser()` — covers `/settings` (not in middleware)
+- **Helpers**: `lib/auth-helpers.ts` — `getSessionUser`, `requireSessionUser`, `resolveSessionDbUserId`, `isAdmin`, `isManagerOrAdmin`
+- **Open registration**: gated by `ALLOW_OPEN_REGISTRATION === "true"` env flag
+
+---
+
+## State Management
+
+- **No Redux/Zustand** — server state via RSC + `lib/data/*` + Prisma
+- **Mutations**: Server Actions + `revalidatePath`
+- **Forms**: `react-hook-form` + `zod`
+- **Toasts**: `sonner`
+- **Session (client)**: NextAuth `SessionProvider`
+- **Local UI**: small React `createContext` inside heavy forms
+
+---
+
+## API Routes (`app/api/`)
+
+| Route | Purpose |
+|-------|---------|
+| `auth/[...nextauth]` | NextAuth handler |
+| `import/clients`, `clients-xlsx`, `clients-mapped`, `report-xlsx`, `mapped-rows` | Excel import flows |
+| `export/excel`, `export/pdf` | Export handlers |
+| `sales-for-filter` | Sales user list for report filters |
+| `recommendations/from-client-report`, `recommendations/[id]` | Management recommendations |
+| `clients/[id]/row-style` | Per-user report row color |
+| `warming/[clientId]` | Warming tool state |
+| `audit-log` | Audit log queries |
+| `backup/export`, `backup/import` | DB backup (admin only) |
+
+---
+
+## Server Actions (`app/actions/`)
+
+`clients.ts`, `client-update.ts`, `delete-client.ts`, `transfer-client.ts`, `interactions.ts`, `recommendations.ts`, `report-client-patch.ts`, `report-b-transitions.ts`, `warming-actions.ts`, `alerts.ts`, `auth.ts`, `admin-user-lifecycle.ts`, `admin-user-password.ts`, `admin-fields.ts`, `classifications-admin.ts`, `register-user.ts`
+
+All actions check `getSessionUser()` / role as needed before mutating.
+
+---
+
+## Conventions
+
+- **Data access layer**: always use `lib/data/*` for queries, not bare Prisma calls in pages.
+- **Role gating in nav**: `adminOnly` / `managerPlus` flags in `crm-nav.tsx` and `lib/layout/crm-header-config.ts`.
+- **`force-dynamic`**: set on `(crm)/layout.tsx`, dashboard, and register to prevent stale data.
+- **Arabic normalization**: `lib/import/normalize-arabic-text.ts` used during Excel imports.
+- **Prisma singleton**: import from `lib/prisma.ts`, never instantiate `PrismaClient` directly.
+- **`resolveSessionDbUserId`**: use instead of raw `session.user.id` to handle reseed ID drift.

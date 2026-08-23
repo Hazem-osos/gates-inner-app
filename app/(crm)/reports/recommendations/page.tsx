@@ -127,6 +127,7 @@ export default async function RecommendationsReportPage({
       id: true,
       name: true,
       company: true,
+      phone: true,
       updatedAt: true,
       managementRecommendationText: true,
       managementRecommendationDate: true,
@@ -139,6 +140,7 @@ export default async function RecommendationsReportPage({
     clientId: r.clientId,
     clientName: r.client?.name ?? "—",
     company: r.client?.company ?? null,
+    phone: r.client?.phone ?? null,
     salesName: (() => {
       const u = r.targetUser ?? r.client?.assignedUser;
       return u ? userDisplayName(u) : null;
@@ -172,6 +174,7 @@ export default async function RecommendationsReportPage({
       clientId: c.id,
       clientName: c.name,
       company: c.company ?? null,
+      phone: c.phone ?? null,
       salesName: c.assignedUser
         ? userDisplayName(c.assignedUser)
         : null,

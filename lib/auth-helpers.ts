@@ -15,6 +15,8 @@ export type SessionUser = {
 export async function getSessionUser(): Promise<SessionUser | null> {
   const s = await auth();
   if (!s?.user?.id) return null;
+  const portal = (s.user as { portal?: string }).portal ?? "crm";
+  if (portal !== "crm") return null;
   return {
     id: s.user.id,
     email: s.user.email ?? "",
