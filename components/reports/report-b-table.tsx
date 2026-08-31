@@ -239,7 +239,7 @@ export function ReportBTable({
    * حاوية ‎dir=ltr‎ + جدول واسع ‎min-w-[3200px]‎:
    * ‎scrollLeft: 0‎ = يظهر جانب **بداية** شريط التمرير (يسار المربع الواسع = أوّل أعمدة الـDOM).
    * ‎scrollLeft: max‎ = يظهر جانب **نهاية** شريط التمرير = غالباً عمود «إجراءات» (يمين) — الافتراضي بعد ‎F5/refresh.
-   * بعد التحميل ‎scrollWidth‎ قد يتأخّر؛ نستخدم ‎ResizeObserver‎ + إعادات قصيرة.
+   * بعد التحميل ‎scrollWidth‎ قد يتأخّر؛ نستخدم إعادات قصيرة (‎rAF‎/‎setTimeout‎) بعد التحميل.
    */
   const scrollReportBHorizontal = useCallback(
     (direction: -1 | 1) => {
@@ -299,22 +299,17 @@ export function ReportBTable({
 
     const cleanRetries = runWithRetries();
     /**
-     * لا نُعيد المحاذاة إلا عند تغيّر **عرض** الحاوية فعلياً (تغيّر عدد الأعمدة/حجم النافذة).
-     * تغيّر الارتفاع فقط (مثل تكبّر خانة متابعة عند التركيز/الكتابة) لا يجب أن يُرجع
-     * المستخدم لعمود الإجراءات وهو يكتب في عمود آخر.
+     * إعادة المحاذاة فقط عند تغيّر **حجم نافذة المتصفح** فعلياً (المستخدم يسحب حدود
+     * النافذة). لا نستخدم ‎ResizeObserver‎ على حاوية التمرير نفسها: أي تغيّر بارتفاع
+     * أي خلية في أي عمود (تركيز/كتابة/تكبّر تلقائي، حتى لو أظهر أو أخفى شريط تمرير
+     * رأسي) يُغيّر عرض الحاوية بضع بكسلات فيُحسَب خطأً كتغيّر «حقيقي» — وهو ما كان
+     * يُرجع المستخدم لعمود الإجراءات وهو يضغط لينسخ نصاً من أي خلية.
      */
-    let lastWidth = el.getBoundingClientRect().width;
-    const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      const nextWidth = entry?.contentRect.width ?? lastWidth;
-      if (Math.abs(nextWidth - lastWidth) < 1) return;
-      lastWidth = nextWidth;
-      alignTableToActionColumn();
-    });
-    ro.observe(el);
+    const onWindowResize = () => alignTableToActionColumn();
+    window.addEventListener("resize", onWindowResize);
     return () => {
       cleanRetries();
-      ro.disconnect();
+      window.removeEventListener("resize", onWindowResize);
     };
   }, [getReportBScrollContainer, rowDataSignature, toolbar, rowStyleReportType]);
 
