@@ -39,8 +39,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ReportAllFollowUpsSummaryButton } from "@/components/reports/report-all-follow-ups-summary";
 import { ReportBStatusPopoverBlock } from "@/components/reports/report-b-status-popover-block";
 import { ReportFieldTooltip } from "@/components/reports/report-field-tooltip";
+import { ReportOptionalTimeField } from "@/components/reports/report-optional-time-field";
 import type { ClassificationRow } from "@/lib/data/classifications";
-import { formatDateArabicLong, todayInputDate } from "@/lib/date-arabic";
+import {
+  formatDateArabicLong,
+  formatDateTimeArabic,
+  todayInputDate,
+} from "@/lib/date-arabic";
 import { sanitizeDisplayLabel } from "@/lib/display-text";
 import {
   normalizeReportRowStyleColor,
@@ -50,10 +55,11 @@ import {
 } from "@/lib/report-row-style-ui";
 import { daysElapsedSinceContact } from "@/lib/days-elapsed";
 import {
-  dateInputToIso,
+  dateWithOptionalTimeToIso,
   followSlotsToJson,
   fullCellTooltip,
   isoToDateInput,
+  isoToTimeInput,
   mergedCallAndSituation,
   nextFollowUpMeetsGate,
   normalizeFollowSlots,
@@ -68,7 +74,9 @@ import type { ReportBRow } from "./report-b-table";
 
 function dateCellTooltip(iso: string | null | undefined): string {
   const p = parseIsoDate(iso ?? null);
-  if (p) return formatDateArabicLong(p);
+  if (p) {
+    return isoToTimeInput(iso) ? formatDateTimeArabic(p) : formatDateArabicLong(p);
+  }
   const ymd = (isoToDateInput(iso ?? null) ?? "").trim();
   return ymd || "— فارغ —";
 }
@@ -638,7 +646,10 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           showClearButton={false}
           onValueChange={(ymd) => {
             const nextFollowUpAt = ymd
-              ? dateInputToIso(ymd) ?? ""
+              ? dateWithOptionalTimeToIso(
+                  ymd,
+                  isoToTimeInput(displayRow.nextFollowUpAt)
+                ) ?? ""
               : "";
             patchFieldImmediate({
               nextFollowUpAt,
@@ -652,6 +663,26 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           }}
         />
       </ReportFieldTooltip>
+    </TableCell>
+    <TableCell>
+      <ReportOptionalTimeField
+        valueHm={isoToTimeInput(displayRow.nextFollowUpAt)}
+        disabled={isSaving || !isoToDateInput(displayRow.nextFollowUpAt)}
+        title={
+          isoToDateInput(displayRow.nextFollowUpAt)
+            ? undefined
+            : "اختر تاريخ المتابعة أولاً — الساعة اختيارية"
+        }
+        onValueChange={(hm) => {
+          const ymd = isoToDateInput(displayRow.nextFollowUpAt);
+          if (!ymd) return;
+          const nextFollowUpAt = dateWithOptionalTimeToIso(ymd, hm) ?? "";
+          patchFieldImmediate({ nextFollowUpAt });
+          if (isGateClientRow && nextFollowUpMeetsGate(nextFollowUpAt)) {
+            onSetGateClientId(null);
+          }
+        }}
+      />
     </TableCell>
     <TableCell className="align-top">
       <ReportAllFollowUpsSummaryButton
@@ -692,12 +723,26 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           onValueChange={(ymd) =>
             patchFieldDebounced({
               managementRecommendationDate: ymd
-                ? dateInputToIso(ymd)
+                ? dateWithOptionalTimeToIso(
+                    ymd,
+                    isoToTimeInput(displayRow.managementRecommendationDate)
+                  )
                 : undefined,
             })
           }
         />
       </ReportFieldTooltip>
+    </TableCell>
+    <TableCell>
+      <ReportOptionalTimeField
+        valueHm={isoToTimeInput(displayRow.managementRecommendationDate)}
+        disabled={isSaving}
+        onValueChange={(hm) => {
+          const iso = dateWithOptionalTimeToIso(mgmtDateStr, hm);
+          if (!iso) return;
+          patchFieldDebounced({ managementRecommendationDate: iso });
+        }}
+      />
     </TableCell>
     <TableCell className="text-muted-foreground">
       {r.assignedUserName ?? "—"}
@@ -1055,12 +1100,33 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
           onValueChange={(ymd) =>
             patchFieldDebounced({
               visitAppointmentDate: ymd
-                ? dateInputToIso(ymd)
+                ? dateWithOptionalTimeToIso(
+                    ymd,
+                    isoToTimeInput(displayRow.visitAppointmentDate)
+                  )
                 : null,
             })
           }
         />
       </ReportFieldTooltip>
+    </TableCell>
+    <TableCell>
+      <ReportOptionalTimeField
+        valueHm={isoToTimeInput(displayRow.visitAppointmentDate)}
+        disabled={isSaving || !isoToDateInput(displayRow.visitAppointmentDate)}
+        title={
+          isoToDateInput(displayRow.visitAppointmentDate)
+            ? undefined
+            : "اختر تاريخ الزيارة أولاً — الساعة اختيارية"
+        }
+        onValueChange={(hm) => {
+          const ymd = isoToDateInput(displayRow.visitAppointmentDate);
+          if (!ymd) return;
+          patchFieldDebounced({
+            visitAppointmentDate: dateWithOptionalTimeToIso(ymd, hm),
+          });
+        }}
+      />
     </TableCell>
     <TableCell>
       <ReportFieldTooltip
@@ -1207,7 +1273,12 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                   next[i] = {
                     ...next[i],
                     order: i + 1,
-                    date: ymd ? dateInputToIso(ymd) ?? "" : "",
+                    date: ymd
+                      ? dateWithOptionalTimeToIso(
+                          ymd,
+                          isoToTimeInput(slot?.date)
+                        ) ?? ""
+                      : "",
                   };
                   patchFieldDebounced({
                     followUpSlots: followSlotsToJson(next),
@@ -1215,6 +1286,37 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
                 }}
               />
             </ReportFieldTooltip>
+          </TableCell>
+          <TableCell>
+            <ReportOptionalTimeField
+              valueHm={isoToTimeInput(slot?.date)}
+              disabled={isSaving || !isoToDateInput(slot?.date ?? null)}
+              title={
+                isoToDateInput(slot?.date ?? null)
+                  ? undefined
+                  : "اختر التاريخ أولاً — الساعة اختيارية"
+              }
+              onValueChange={(hm) => {
+                const ymd = isoToDateInput(slot?.date ?? null);
+                if (!ymd) return;
+                const next = [...slots];
+                while (next.length <= i) {
+                  next.push({
+                    order: next.length + 1,
+                    note: "",
+                    date: "",
+                  });
+                }
+                next[i] = {
+                  ...next[i],
+                  order: i + 1,
+                  date: dateWithOptionalTimeToIso(ymd, hm) ?? "",
+                };
+                patchFieldDebounced({
+                  followUpSlots: followSlotsToJson(next),
+                });
+              }}
+            />
           </TableCell>
         </Fragment>
       );

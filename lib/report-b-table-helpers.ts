@@ -101,3 +101,40 @@ export function dateInputToIso(date: string): string | null {
   const d = new Date(date + "T12:00:00");
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
+
+/**
+ * الساعة اختيارية. الحفظ القديم يثبّت الظهيرة المحلية (12:00:00) كـ«تاريخ فقط»،
+ * فتُعرض خانة الساعة فارغة. الظهر الصريح يُحفظ بثانية واحدة حتى لا يختلط بالوضع الافتراضي.
+ */
+export function isoToTimeInput(iso: string | null | undefined): string {
+  if (iso == null) return "";
+  const d = parseIsoDate(String(iso));
+  if (!d) return "";
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const s = d.getSeconds();
+  if (h === 12 && m === 0 && s === 0) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}`;
+}
+
+/** يدمج تاريخ ‎yyyy-MM-dd‎ مع ساعة اختيارية ‎HH:mm‎. الساعة الفارغة = تاريخ فقط (ظهيرة محلية). */
+export function dateWithOptionalTimeToIso(
+  ymd: string,
+  timeHm: string | null | undefined
+): string | null {
+  const date = ymd.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const hm = (timeHm ?? "").trim();
+  if (!hm) return dateInputToIso(date);
+  const match = /^(\d{2}):(\d{2})$/.exec(hm);
+  if (!match) return dateInputToIso(date);
+  const hh = Number(match[1]);
+  const mm = Number(match[2]);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh > 23 || mm > 59) {
+    return dateInputToIso(date);
+  }
+  const seconds = hh === 12 && mm === 0 ? "01" : "00";
+  const d = new Date(`${date}T${match[1]}:${match[2]}:${seconds}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}

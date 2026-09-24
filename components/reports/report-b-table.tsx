@@ -1289,11 +1289,23 @@ export function ReportBTable({
                   </>
                 ) : null}
                 <TableHead className="min-w-[200px]">متابعة تالية</TableHead>
+                <TableHead className="min-w-[7rem] whitespace-normal text-center leading-tight">
+                  الساعة
+                  <span className="block text-[10px] font-normal text-muted-foreground">
+                    اختياري
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[7.5rem] whitespace-normal text-center leading-tight">
                   ملخص كل المتابعات
                 </TableHead>
                 <TableHead className="min-w-[140px]">توصيات الإدارة</TableHead>
                 <TableHead className="min-w-[140px]">تاريخ التوصية</TableHead>
+                <TableHead className="min-w-[7rem] whitespace-normal text-center leading-tight">
+                  الساعة
+                  <span className="block text-[10px] font-normal text-muted-foreground">
+                    اختياري
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[90px]">سيلز</TableHead>
                 <TableHead className="min-w-[10rem] whitespace-normal text-start leading-tight">
                   شركة
@@ -1318,6 +1330,12 @@ export function ReportBTable({
                 <TableHead className="min-w-[9rem]">إعلان</TableHead>
                 <TableHead className="w-14">زيارة؟</TableHead>
                 <TableHead className="min-w-[130px]">تاريخ زيارة</TableHead>
+                <TableHead className="min-w-[7rem] whitespace-normal text-center leading-tight">
+                  الساعة
+                  <span className="block text-[10px] font-normal text-muted-foreground">
+                    اختياري
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[9rem]">موظف عرض</TableHead>
                 <TableHead className="w-14">QQ</TableHead>
                 <TableHead className="min-w-[130px] whitespace-normal text-start leading-tight">
@@ -1327,6 +1345,12 @@ export function ReportBTable({
                   <Fragment key={`fh-${i}`}>
                     <TableHead className="min-w-[11rem]">متابعة {i + 1}</TableHead>
                     <TableHead className="min-w-[10rem]">تاريخ {i + 1}</TableHead>
+                    <TableHead className="min-w-[7rem] whitespace-normal text-center leading-tight">
+                      ساعة {i + 1}
+                      <span className="block text-[10px] font-normal text-muted-foreground">
+                        اختياري
+                      </span>
+                    </TableHead>
                   </Fragment>
                 ))}
                 <TableHead className="min-w-[8.5rem] px-1 text-center align-middle">
