@@ -24,6 +24,8 @@ export type ArabicDateFieldProps = {
   showClearButton?: boolean;
   /** نص مساعد للوصولية عند عدم وجود تاريخ */
   emptyLabel?: string;
+  /** أقل تاريخ مسموح في منتقي التاريخ ‎yyyy-MM-dd‎ */
+  minYmd?: string;
 };
 
 function isValidYmd(v: string): boolean {
@@ -40,6 +42,7 @@ export function ArabicDateField({
   allowEmpty = true,
   showClearButton = true,
   emptyLabel = "اختر التاريخ",
+  minYmd,
 }: ArabicDateFieldProps) {
   const inputValue = isValidYmd(valueYmd) ? valueYmd.trim() : "";
 
@@ -76,6 +79,7 @@ export function ArabicDateField({
           type="date"
           disabled={disabled}
           value={inputValue}
+          min={minYmd?.trim() ? minYmd.trim() : undefined}
           onChange={onNativeChange}
           title={arabicSummary ?? undefined}
           aria-label={inputValue ? arabicSummary ?? emptyLabel : emptyLabel}

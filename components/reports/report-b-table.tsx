@@ -88,7 +88,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /** توست أوضح وأكبر خطاً عند رفض حفظ الصف (مثل تاريخ «المتابعة التالية» غير المسموح). */
-const reportRowSaveErrorToast = {
+export const reportRowSaveErrorToast = {
   duration: 12_000,
   classNames: {
     toast:

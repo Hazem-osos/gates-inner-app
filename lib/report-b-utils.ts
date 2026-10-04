@@ -145,7 +145,7 @@ export function validateNextFollowUpAtForRowSave(
         "التاريخ في «المتابعة التالية» غير صالح. صححه ثم اضغط «حفظ الصف» مرة أخرى.",
     };
   }
-  if (nf < startOfToday()) {
+  if (startOfLocalCalendarDay(nf).getTime() < startOfToday().getTime()) {
     return {
       ok: false,
       message:

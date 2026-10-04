@@ -10,7 +10,7 @@ import {
 } from "@/lib/audit/report-patch-diff";
 import { parseExcelDateCell } from "@/lib/import/excel-client-import";
 import { prisma } from "@/lib/prisma";
-import { startOfToday } from "@/lib/report-b-utils";
+import { startOfLocalCalendarDay, startOfToday } from "@/lib/report-b-utils";
 
 export type PatchResult = { ok: true } | { ok: false; message: string };
 
@@ -238,7 +238,7 @@ export async function patchClientReportFields(
       if (!n) return { ok: false, message: "تاريخ متابعة غير صالح." };
       if (
         !opts?.allowNextFollowUpInPast &&
-        n < startOfToday()
+        startOfLocalCalendarDay(n).getTime() < startOfToday().getTime()
       ) {
         return {
           ok: false,

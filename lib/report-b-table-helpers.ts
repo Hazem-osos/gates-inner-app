@@ -1,4 +1,8 @@
-import { parseIsoDate, startOfToday } from "@/lib/report-b-utils";
+import {
+  parseIsoDate,
+  startOfLocalCalendarDay,
+  startOfToday,
+} from "@/lib/report-b-utils";
 
 export type ReportBFollowSlot = { order: number; note: string; date: string };
 
@@ -83,7 +87,7 @@ export function splitCallAndSituation(combined: string): {
 export function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
   const d = parseIsoDate(iso);
   if (!d) return false;
-  return d >= startOfToday();
+  return startOfLocalCalendarDay(d).getTime() >= startOfToday().getTime();
 }
 
 export function isoToDateInput(iso: string | null): string {

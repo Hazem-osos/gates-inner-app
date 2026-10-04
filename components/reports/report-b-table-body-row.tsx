@@ -68,9 +68,9 @@ import {
   reportBTextarea,
   splitCallAndSituation,
 } from "@/lib/report-b-table-helpers";
-import { parseIsoDate } from "@/lib/report-b-utils";
+import { parseIsoDate, validateNextFollowUpAtForRowSave } from "@/lib/report-b-utils";
 import { cn } from "@/lib/utils";
-import type { ReportBRow } from "./report-b-table";
+import { reportRowSaveErrorToast, type ReportBRow } from "./report-b-table";
 
 function dateCellTooltip(iso: string | null | undefined): string {
   const p = parseIsoDate(iso ?? null);
@@ -208,6 +208,28 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       onField(r.id, next);
     },
     [r.id, onField]
+  );
+
+  const applyNextFollowUpAt = useCallback(
+    (nextFollowUpAt: string) => {
+      const raw = nextFollowUpAt.trim();
+      if (raw) {
+        const check = validateNextFollowUpAtForRowSave(raw);
+        if (!check.ok) {
+          toast.error(check.message, reportRowSaveErrorToast);
+          return;
+        }
+      }
+      patchFieldImmediate({ nextFollowUpAt });
+      if (isGateClientRow && nextFollowUpMeetsGate(nextFollowUpAt)) {
+        onSetGateClientId(null);
+      }
+    },
+    [
+      isGateClientRow,
+      onSetGateClientId,
+      patchFieldImmediate,
+    ]
   );
 
   const days = daysElapsedSinceContact(
@@ -640,26 +662,22 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
       >
         <ArabicDateField
           valueYmd={isoToDateInput(displayRow.nextFollowUpAt)}
+          minYmd={todayInputDate()}
           disabled={isSaving}
           className="min-w-[12rem]"
           buttonClassName={cn(reportBInput, "min-w-[12rem]")}
           showClearButton={false}
           onValueChange={(ymd) => {
-            const nextFollowUpAt = ymd
-              ? dateWithOptionalTimeToIso(
-                  ymd,
-                  isoToTimeInput(displayRow.nextFollowUpAt)
-                ) ?? ""
-              : "";
-            patchFieldImmediate({
-              nextFollowUpAt,
-            });
-            if (
-              isGateClientRow &&
-              nextFollowUpMeetsGate(nextFollowUpAt)
-            ) {
-              onSetGateClientId(null);
+            if (!ymd) {
+              applyNextFollowUpAt("");
+              return;
             }
+            const nextFollowUpAt =
+              dateWithOptionalTimeToIso(
+                ymd,
+                isoToTimeInput(displayRow.nextFollowUpAt)
+              ) ?? "";
+            applyNextFollowUpAt(nextFollowUpAt);
           }}
         />
       </ReportFieldTooltip>
@@ -676,11 +694,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
         onValueChange={(hm) => {
           const ymd = isoToDateInput(displayRow.nextFollowUpAt);
           if (!ymd) return;
-          const nextFollowUpAt = dateWithOptionalTimeToIso(ymd, hm) ?? "";
-          patchFieldImmediate({ nextFollowUpAt });
-          if (isGateClientRow && nextFollowUpMeetsGate(nextFollowUpAt)) {
-            onSetGateClientId(null);
-          }
+          applyNextFollowUpAt(dateWithOptionalTimeToIso(ymd, hm) ?? "");
         }}
       />
     </TableCell>
