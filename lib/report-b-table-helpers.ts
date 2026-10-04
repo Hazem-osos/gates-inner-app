@@ -1,8 +1,4 @@
-import {
-  parseIsoDate,
-  startOfLocalCalendarDay,
-  startOfToday,
-} from "@/lib/report-b-utils";
+import { parseIsoDate } from "@/lib/report-b-utils";
 
 export type ReportBFollowSlot = { order: number; note: string; date: string };
 
@@ -84,10 +80,11 @@ export function splitCallAndSituation(combined: string): {
   return { callSummary, currentSituation: rest.join(sep) };
 }
 
+/** يكفي وجود تاريخ متابعة صالح (أي يوم — ماضي أو لاحق). */
 export function nextFollowUpMeetsGate(iso: string | null | undefined): boolean {
-  const d = parseIsoDate(iso);
-  if (!d) return false;
-  return startOfLocalCalendarDay(d).getTime() >= startOfToday().getTime();
+  const raw = (iso ?? "").trim();
+  if (!raw) return false;
+  return parseIsoDate(raw) != null;
 }
 
 export function isoToDateInput(iso: string | null): string {

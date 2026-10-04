@@ -10,7 +10,6 @@ import {
 } from "@/lib/audit/report-patch-diff";
 import { parseExcelDateCell } from "@/lib/import/excel-client-import";
 import { prisma } from "@/lib/prisma";
-import { startOfLocalCalendarDay, startOfToday } from "@/lib/report-b-utils";
 
 export type PatchResult = { ok: true } | { ok: false; message: string };
 
@@ -145,8 +144,6 @@ export async function patchClientReportFields(
      * داخل الـ action قد لا يرى الكوكيز فيحصل تحديث 0 صف دون خطأ واضح.
      */
     importActor?: { dbUserId: string; role: UserRole };
-    /** للاستيراد/الترحيل: السماح بمتابعة تالية بتاريخ سابق (يتجاوز فحص «اليوم أو لاحقاً») */
-    allowNextFollowUpInPast?: boolean;
   }
 ): Promise<PatchResult> {
   let dbUserId: string;
@@ -236,16 +233,6 @@ export async function patchClientReportFields(
       }
       const n = parsePatchDateTime(t);
       if (!n) return { ok: false, message: "تاريخ متابعة غير صالح." };
-      if (
-        !opts?.allowNextFollowUpInPast &&
-        startOfLocalCalendarDay(n).getTime() < startOfToday().getTime()
-      ) {
-        return {
-          ok: false,
-          message:
-            "لا يمكن الحفظ: تاريخ «المتابعة التالية» يجب أن يكون اليوم أو تاريخاً لاحقاً (غير مسموح بحفظ تاريخ سابق).",
-        };
-      }
       data.nextFollowUpAt = n;
     }
 

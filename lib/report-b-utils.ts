@@ -128,10 +128,7 @@ export function parseIsoDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/**
- * يتحقق من «المتابعة التالية» قبل حفظ صف التقرير: إن وُجد تاريخ
- * يجب أن يكون بداية ذلك اليوم ≥ بداية اليوم الحالي (اليوم أو لاحقاً).
- */
+/** يتحقق من صحة تاريخ «المتابعة التالية» قبل حفظ صف التقرير (بدون تقييد الماضي/المستقبل). */
 export function validateNextFollowUpAtForRowSave(
   nextFollowUpAt: string | null | undefined
 ): { ok: true } | { ok: false; message: string } {
@@ -143,13 +140,6 @@ export function validateNextFollowUpAtForRowSave(
       ok: false,
       message:
         "التاريخ في «المتابعة التالية» غير صالح. صححه ثم اضغط «حفظ الصف» مرة أخرى.",
-    };
-  }
-  if (startOfLocalCalendarDay(nf).getTime() < startOfToday().getTime()) {
-    return {
-      ok: false,
-      message:
-        "لا يمكن الحفظ: تاريخ «المتابعة التالية» يجب أن يكون اليوم أو تاريخاً لاحقاً (غير مسموح بحفظ تاريخ سابق).",
     };
   }
   return { ok: true };
