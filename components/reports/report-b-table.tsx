@@ -68,6 +68,7 @@ import {
   passesFollowUpFarAhead,
   passesNeglected,
   passesNoAnswerFilter,
+  passesOverdueNextFollowUp,
   passesVisitOverdue,
   passesVisitScheduledOnly,
   rowHasFollowUpScheduledLocalToday,
@@ -162,6 +163,8 @@ type Props = {
   showSalesFilterRecordsStatus?: boolean;
   /** تلوين صفوف التقرير (مشترك للجميع — ‎ReportRowStyle‎ لكل عميل وتقرير) */
   rowStyles?: Record<string, { color: string; legendNote: string }>;
+  /** بعد إلغاء فلاتر الجدول — مثلاً إعادة تحميل Not B بدون بحث/تصنيف في الرابط */
+  clearPageFiltersHref?: string;
 };
 
 function patchFromReportBRow(row: ReportBRow): ReportClientPatchInput {
@@ -218,6 +221,7 @@ export function ReportBTable({
   showSortAndVisitToolbar = true,
   showSalesFilterRecordsStatus = true,
   rowStyles = {},
+  clearPageFiltersHref,
 }: Props) {
   const router = useRouter();
   const [local, setLocal] = useState<Record<string, Partial<ReportBRow>>>({});
@@ -357,6 +361,8 @@ export function ReportBTable({
   const [followUpTodayOnly, setFollowUpTodayOnly] = useState(false);
   /** سجل المتابعات الحديثة (الخانات) بتاريخ اليوم — دون اعتبار عمود «متابعة تالية» عند المطابقة */
   const [followUpSlotsTodayOnly, setFollowUpSlotsTodayOnly] = useState(false);
+  /** متابعة تالية بتاريخ قبل اليوم — الأقدم في القائمة أولاً */
+  const [overdueFollowUpOnly, setOverdueFollowUpOnly] = useState(false);
   const [violation, setViolation] = useState<ViolationKind>(null);
   const [daysInput, setDaysInput] = useState("");
   const [followInput, setFollowInput] = useState("");
@@ -523,6 +529,28 @@ export function ReportBTable({
     []
   );
 
+  const clearAllReportFilters = useCallback(() => {
+    setSearchQ("");
+    setRowTintFilter(null);
+    setFollowUpTodayOnly(false);
+    setFollowUpSlotsTodayOnly(false);
+    setOverdueFollowUpOnly(false);
+    setViolation(null);
+    setDaysInput("");
+    setFollowInput("");
+    setDaysActive(false);
+    setFollowActive(false);
+    setVisitExtra("none");
+    setSortDays(null);
+    setSortPrice(null);
+    setSortCall(null);
+    setSortFollowUp(null);
+    setVisitOverdueOnly(false);
+    if (clearPageFiltersHref) {
+      router.push(clearPageFiltersHref);
+    }
+  }, [clearPageFiltersHref, router]);
+
   const filteredByViolation = useMemo(() => {
     const list = mergedForFilters.filter((r) => {
       if (violation === "days_over") {
@@ -596,9 +624,17 @@ export function ReportBTable({
     rowStyles,
   ]);
 
+  const searchedAfterOverdueFollowUp = useMemo(() => {
+    if (!showRowTintFilter || !overdueFollowUpOnly) return searchedAfterTint;
+    return searchedAfterTint.filter((r) => passesOverdueNextFollowUp(r));
+  }, [searchedAfterTint, showRowTintFilter, overdueFollowUpOnly]);
+
   const visibleRows = useMemo(() => {
-    const base = searchedAfterTint.filter((r) => !hiddenIds.has(r.id));
+    const base = searchedAfterOverdueFollowUp.filter((r) => !hiddenIds.has(r.id));
     let out = base;
+    if (overdueFollowUpOnly) {
+      return sortRows(out, "nextFollowUpAt", "asc");
+    }
     const tri: [
       SortTriState,
       "days" | "quotePrice" | "initialCallDate" | "nextFollowUpAt",
@@ -616,12 +652,13 @@ export function ReportBTable({
     }
     return out;
   }, [
-    searchedAfterTint,
+    searchedAfterOverdueFollowUp,
     hiddenIds,
     sortDays,
     sortPrice,
     sortCall,
     sortFollowUp,
+    overdueFollowUpOnly,
   ]);
 
   const maxFollowCols = useMemo(() => {
@@ -828,7 +865,33 @@ export function ReportBTable({
               >
                 سجل متابعات حدثت اليوم
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={overdueFollowUpOnly ? "default" : "outline"}
+                className={cn(
+                  "h-8 max-w-[11rem] rounded-lg px-2.5 text-xs leading-snug font-medium whitespace-normal sm:max-w-none sm:whitespace-nowrap",
+                  overdueFollowUpOnly &&
+                    "border-orange-700 bg-orange-600 text-white shadow-sm hover:bg-orange-700"
+                )}
+                aria-pressed={overdueFollowUpOnly}
+                title="عمود «متابعة تالية» فقط: تاريخ صالح قبل اليوم — الأقدم في أعلى القائمة"
+                onClick={() => setOverdueFollowUpOnly((v) => !v)}
+              >
+                متابعات متأخرة
+              </Button>
             </div>
+          ) : null}
+          {!dashboardMode && toolbar === "full" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 rounded-lg border-dashed px-2.5 text-xs font-medium"
+              onClick={clearAllReportFilters}
+            >
+              إلغاء جميع الفلاتر
+            </Button>
           ) : null}
         </div>
         <Input
@@ -840,7 +903,7 @@ export function ReportBTable({
         />
         </div>
         {showRowTintFilter &&
-        (followUpTodayOnly || followUpSlotsTodayOnly) ? (
+        (followUpTodayOnly || followUpSlotsTodayOnly || overdueFollowUpOnly) ? (
           <div
             role="alert"
             className="flex flex-wrap items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-3 py-2.5 text-sm font-bold leading-snug text-destructive shadow-md dark:border-destructive dark:bg-destructive/18 dark:text-red-100"
@@ -850,11 +913,14 @@ export function ReportBTable({
               aria-hidden
             />
             <span className="min-w-0 text-center">
-              {followUpTodayOnly && followUpSlotsTodayOnly
-                ? "تنبيه فلتر نشط: «متابعة بتاريخ اليوم» و«سجل متابعات حدثت اليوم» معاً — النتائج بعد تقاطع الشرطين فقط."
-                : followUpTodayOnly
-                  ? "تنبيه فلتر نشط: يُعرض فقط من لديهم متابعة بتاريخ اليوم (العمود أو السجل)."
-                  : "تنبيه فلتر نشط: يُعرض فقط من لديهم في سجل المتابعات تاريخ اليوم (دون الاعتماد على عمود المتابعة التالية بنفس اليوم)."}
+              {[
+                followUpTodayOnly && "متابعة بتاريخ اليوم",
+                followUpSlotsTodayOnly && "سجل متابعات حدثت اليوم",
+                overdueFollowUpOnly && "متابعات متأخرة",
+              ]
+                .filter(Boolean)
+                .join(" + ")}
+              {" — النتائج بعد تقاطع الفلاتر النشطة فقط."}
             </span>
           </div>
         ) : null}
@@ -1197,24 +1263,18 @@ export function ReportBTable({
                       type="button"
                       variant="outline"
                       className="h-9 shrink-0 rounded-xl border-dashed px-3 text-sm text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
-                      onClick={() => {
-                        setViolation(null);
-                        setDaysInput("");
-                        setFollowInput("");
-                        setDaysActive(false);
-                        setFollowActive(false);
-                        setVisitOverdueOnly(false);
-                      }}
+                      onClick={clearAllReportFilters}
                     >
-                      إلغاء كل الفلاتر
+                      إلغاء جميع الفلاتر
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent
                     side="bottom"
                     className="max-w-sm text-sm leading-relaxed"
                   >
-                    يلغي فلتر التجاوزات النشط ويُفرّغ مربعات الأرقام، ويزيل فلتر
-                    «تجاوز ميعاد الزيارة» من شريط الأدوات إن كان مفعّلاً.
+                    يلغي كل فلاتر الصفحة: البحث، الألوان، المتابعات، التجاوزات،
+                    ترتيب الأعمدة، فلتر الزيارة، ومعاملات الرابط (بحث/تصنيف Not
+                    B) مع الإبقاء على فلتر السيلز إن وُجد.
                   </TooltipContent>
                 </Tooltip>
               </div>

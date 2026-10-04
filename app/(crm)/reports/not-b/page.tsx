@@ -161,6 +161,11 @@ export default async function ReportNotBPage({
         workLogUserRole={user.role}
         activeSalesName={activeSalesName}
         rowStyles={rowStyles}
+        clearPageFiltersHref={
+          salesKey !== "all"
+            ? `/reports/not-b?sales=${encodeURIComponent(salesKey)}`
+            : "/reports/not-b"
+        }
       />
     </div>
   );

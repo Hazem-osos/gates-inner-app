@@ -98,6 +98,11 @@ export default async function ReportBPage({
         workLogUserRole={user.role}
         activeSalesName={activeSalesName}
         rowStyles={rowStyles}
+        clearPageFiltersHref={
+          salesKey !== "all"
+            ? `/reports/b?sales=${encodeURIComponent(salesKey)}`
+            : "/reports/b"
+        }
       />
     </div>
   );

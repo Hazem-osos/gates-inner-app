@@ -227,6 +227,15 @@ export function passesNeglected(row: ReportBFilterRow): boolean {
   return day < startOfToday();
 }
 
+/** «متابعة تالية» بتاريخ تقويمي صالح قبل اليوم (متأخرة فعلاً — بدون الفارغ أو غير الصالح). */
+export function passesOverdueNextFollowUp(row: ReportBFilterRow): boolean {
+  const raw = (row.nextFollowUpAt ?? "").trim();
+  if (!raw) return false;
+  const nf = parseIsoDate(raw);
+  if (!nf) return false;
+  return startOfLocalCalendarDay(nf).getTime() < startOfToday().getTime();
+}
+
 export function passesVisitScheduledOnly(row: ReportBFilterRow): boolean {
   const v = row.visitAppointmentDate;
   if (v == null) return false;
