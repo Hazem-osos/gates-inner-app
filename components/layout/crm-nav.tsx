@@ -20,6 +20,8 @@ type NavLink = {
 
 const primaryLinks: NavLink[] = [
   { href: "/dashboard", label: "لوحة إرشادية" },
+  { href: "/dashboard/followups-today", label: "متابعات اليوم" },
+  { href: "/dashboard/followups-overdue", label: "متابعات متأخرة" },
   { href: "/clients", label: "العملاء" },
   { href: "/reports/new-leads", label: "Leads جديدة" },
   { href: "/clients/new", label: "إضافة عميل" },

@@ -1,12 +1,9 @@
+import Link from "next/link";
+
 import { ReportBTable } from "@/components/reports/report-b-table";
-import { listClientClassifications } from "@/lib/data/classifications";
-import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
-import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
-import {
-  isNextFollowUpLocalCalendarToday,
-  passesNeglected,
-} from "@/lib/report-b-utils";
+import { loadDashboardFollowupBoardData } from "@/lib/data/dashboard-followup-board";
 import type { SessionUser } from "@/lib/auth-helpers";
+import { Button } from "@/components/ui/button";
 
 export async function DashboardFollowupBlocks({
   user,
@@ -15,20 +12,8 @@ export async function DashboardFollowupBlocks({
   user: SessionUser;
   salesKey: string;
 }) {
-  const [followupClients, classifications] = await Promise.all([
-    listClientsForDashboardFollowups(user.role, user.id, {
-      salesUserId: salesKey,
-    }),
-    listClientClassifications(),
-  ]);
-
-  const rowsAll = followupClients.map(clientEntityToReportBRow);
-
-  const todayRows = rowsAll.filter((r) =>
-    isNextFollowUpLocalCalendarToday(r.nextFollowUpAt)
-  );
-
-  const overdueRows = rowsAll.filter((r) => passesNeglected(r));
+  const { todayRows, overdueRows, classifications } =
+    await loadDashboardFollowupBoardData(user.role, user.id, salesKey);
 
   const reportBTableSharedProps = {
     classifications,
@@ -47,6 +32,14 @@ export async function DashboardFollowupBlocks({
               {todayRows.length}
             </span>
           ) : null}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="ms-auto h-8 border-emerald-300/80 bg-background/80 text-emerald-950 hover:bg-emerald-100/80"
+          >
+            <Link href="/dashboard/followups-today">صفحة كاملة</Link>
+          </Button>
         </div>
         <div className="rounded-b-xl border border-t-0 border-border/80 bg-background p-2">
           {todayRows.length === 0 ? (
@@ -72,6 +65,14 @@ export async function DashboardFollowupBlocks({
               {overdueRows.length}
             </span>
           ) : null}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="ms-auto h-8 border-rose-300/80 bg-background/80 text-rose-950 hover:bg-rose-100/80"
+          >
+            <Link href="/dashboard/followups-overdue">صفحة كاملة</Link>
+          </Button>
         </div>
         <div className="rounded-b-xl border border-t-0 border-border/80 bg-background p-2">
           {overdueRows.length === 0 ? (

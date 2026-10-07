@@ -329,6 +329,8 @@ export async function patchClientReportFields(
 
     /** تجنّب إبطال كل مسارات التقارير عند كل حفظ — الصفحات الأكثر ارتباطاً ببيانات التقرير */
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/followups-today");
+    revalidatePath("/dashboard/followups-overdue");
     revalidatePath("/clients");
     revalidatePath(`/clients/${clientId}`);
     revalidatePath("/reports/b");

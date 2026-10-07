@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,
+  CalendarCheck,
   ClipboardList,
   Database,
   FileSpreadsheet,
@@ -16,6 +17,7 @@ import {
   UserPlus,
   Users,
   UserX,
+  AlarmClock,
 } from "lucide-react";
 
 import type { UserRole } from "@prisma/client";
@@ -34,6 +36,16 @@ export type CrmRibbonShortcut = {
 /** أيقونات الشريط السريع — يُصفى حسب الدور */
 export const CRM_RIBBON_SHORTCUTS: CrmRibbonShortcut[] = [
   { href: "/dashboard", label: "لوحة إرشادية", Icon: LayoutDashboard },
+  {
+    href: "/dashboard/followups-today",
+    label: "متابعات اليوم",
+    Icon: CalendarCheck,
+  },
+  {
+    href: "/dashboard/followups-overdue",
+    label: "متابعات متأخرة",
+    Icon: AlarmClock,
+  },
   { href: "/clients", label: "العملاء", Icon: Users },
   { href: "/reports/new-leads", label: "Leads جديدة", Icon: NotebookPen },
   { href: "/clients/new", label: "إضافة عميل", Icon: UserPlus },
