@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ReportBTable } from "@/components/reports/report-b-table";
+import { DashboardFollowupPreview } from "@/components/dashboard/dashboard-followup-preview";
 import { loadDashboardFollowupBoardData } from "@/lib/data/dashboard-followup-board";
 import type { SessionUser } from "@/lib/auth-helpers";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,12 +12,11 @@ export async function DashboardFollowupBlocks({
   user: SessionUser;
   salesKey: string;
 }) {
-  const { todayRows, overdueRows, classifications } =
-    await loadDashboardFollowupBoardData(user.role, user.id, salesKey);
-
-  const reportBTableSharedProps = {
-    classifications,
-  } as const;
+  const { todayRows, overdueRows } = await loadDashboardFollowupBoardData(
+    user.role,
+    user.id,
+    salesKey
+  );
 
   return (
     <>
@@ -50,12 +49,7 @@ export async function DashboardFollowupBlocks({
               لا توجد متابعات مجدولة اليوم.
             </p>
           ) : (
-            <ReportBTable
-              rows={todayRows}
-              {...reportBTableSharedProps}
-              auditReportKey="report-dashboard-followups"
-              toolbar="dashboard"
-            />
+            <DashboardFollowupPreview rows={todayRows} tone="today" />
           )}
         </div>
       </section>
@@ -84,12 +78,7 @@ export async function DashboardFollowupBlocks({
           {overdueRows.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">لا يوجد تأخير.</p>
           ) : (
-            <ReportBTable
-              rows={overdueRows}
-              {...reportBTableSharedProps}
-              auditReportKey="report-dashboard-followups"
-              toolbar="dashboard"
-            />
+            <DashboardFollowupPreview rows={overdueRows} tone="overdue" />
           )}
         </div>
       </section>

@@ -1,20 +1,16 @@
 import { ExportToolbar } from "@/components/export/export-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { REPORT_FILTER_EXPORTS_BAR_CLASS } from "@/components/reports/report-page-exports-toolbar";
-import {
-  ReportBTable,
-  type ReportBRow,
-} from "@/components/reports/report-b-table";
 import { SalesFilterLinks } from "@/components/reports/sales-filter-links";
 import type { SessionUser } from "@/lib/auth-helpers";
-import type { ClassificationRow } from "@/lib/data/classifications";
 import { dashboardFollowupsExportHref } from "@/lib/export-excel-href";
-import { resolveActiveSalesName } from "@/lib/resolve-active-sales-name";
 import { cn } from "@/lib/utils";
+
+import { DashboardFollowupDedicatedTableSuspense } from "./dashboard-followup-dedicated-table";
 
 export type DashboardFollowupDedicatedVariant = "today" | "overdue";
 
-const COPY: Record<
+export const DASHBOARD_FOLLOWUP_COPY: Record<
   DashboardFollowupDedicatedVariant,
   {
     title: string;
@@ -55,28 +51,22 @@ const COPY: Record<
   },
 };
 
-export async function DashboardFollowupDedicatedView({
+export function DashboardFollowupDedicatedView({
   variant,
   user,
   workLogUserId,
   salesKey,
-  rows,
-  classifications,
 }: {
   variant: DashboardFollowupDedicatedVariant;
   user: SessionUser;
   workLogUserId: string;
   salesKey: string;
-  rows: ReportBRow[];
-  classifications: ClassificationRow[];
 }) {
-  const copy = COPY[variant];
+  const copy = DASHBOARD_FOLLOWUP_COPY[variant];
   const pathname =
     variant === "today"
       ? "/dashboard/followups-today"
       : "/dashboard/followups-overdue";
-
-  const activeSalesName = await resolveActiveSalesName(user.role, salesKey);
 
   const subtitle =
     user.role === "SALES"
@@ -112,50 +102,12 @@ export async function DashboardFollowupDedicatedView({
         ) : null}
       </div>
 
-      <section className="space-y-2">
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 px-4 py-4 shadow-sm backdrop-blur-sm",
-            copy.headerClass
-          )}
-        >
-          <h2 className="text-xl font-semibold md:text-2xl">{copy.title}</h2>
-          {rows.length > 0 ? (
-            <span
-              className={cn(
-                "rounded-full px-3.5 py-1 text-xl font-bold tabular-nums ring-1",
-                copy.badgeClass
-              )}
-            >
-              {rows.length}
-            </span>
-          ) : null}
-        </div>
-        <div className="rounded-b-xl border border-t-0 border-border/80 bg-background p-2 shadow-sm">
-          {rows.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">
-              {copy.empty}
-            </p>
-          ) : (
-            <ReportBTable
-              rows={rows}
-              classifications={classifications}
-              auditReportKey={copy.auditReportKey}
-              toolbar="full"
-              workLogUserId={workLogUserId}
-              workLogUserRole={user.role}
-              activeSalesName={activeSalesName}
-              showViolationPanel={true}
-              showSortAndVisitToolbar={true}
-              clearPageFiltersHref={
-                salesKey !== "all"
-                  ? `${pathname}?sales=${encodeURIComponent(salesKey)}`
-                  : pathname
-              }
-            />
-          )}
-        </div>
-      </section>
+      <DashboardFollowupDedicatedTableSuspense
+        variant={variant}
+        user={user}
+        workLogUserId={workLogUserId}
+        salesKey={salesKey}
+      />
     </div>
   );
 }

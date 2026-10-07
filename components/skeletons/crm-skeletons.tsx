@@ -33,6 +33,37 @@ export function DashboardRecommendationsSkeleton() {
   );
 }
 
+export function DashboardFollowupSingleTableSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-t-xl border border-b-0 border-border/60 bg-muted/30 px-4 py-3.5">
+        <Skeleton className="h-7 w-40 rounded-md" />
+        <Skeleton className="h-8 w-12 rounded-full" />
+      </div>
+      <div className="space-y-2 rounded-b-xl border border-t-0 border-border/80 bg-background p-4">
+        <div className="flex gap-2 overflow-hidden">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className="h-8 min-w-[4.5rem] shrink-0 rounded-md"
+            />
+          ))}
+        </div>
+        {Array.from({ length: 5 }).map((_, row) => (
+          <div key={row} className="flex gap-2 border-t border-border/40 pt-3">
+            {Array.from({ length: 6 }).map((_, col) => (
+              <Skeleton
+                key={col}
+                className="h-10 min-w-[5rem] flex-1 rounded-md"
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardFollowupTablesSkeleton() {
   return (
     <div className="space-y-10">

@@ -1,7 +1,10 @@
 import type { UserRole } from "@prisma/client";
 
 import { listClientClassifications } from "@/lib/data/classifications";
-import { listClientsForDashboardFollowups } from "@/lib/data/dashboard-followups";
+import {
+  listClientsForDashboardOverdueFollowups,
+  listClientsForDashboardTodayFollowups,
+} from "@/lib/data/dashboard-followups";
 import { clientEntityToReportBRow } from "@/lib/mappers/client-to-report-b-row";
 import type { ReportBRow } from "@/components/reports/report-b-table";
 import type { ClassificationRow } from "@/lib/data/classifications";
@@ -21,20 +24,41 @@ export async function loadDashboardFollowupBoardData(
   userId: string,
   salesKey: string
 ): Promise<DashboardFollowupBoardData> {
-  const [followupClients, classifications] = await Promise.all([
-    listClientsForDashboardFollowups(role, userId, {
-      salesUserId: salesKey,
-    }),
+  const [todayRows, overdueRows, classifications] = await Promise.all([
+    loadDashboardTodayRows(role, userId, salesKey),
+    loadDashboardOverdueRows(role, userId, salesKey),
     listClientClassifications(),
   ]);
 
-  const rowsAll = followupClients.map(clientEntityToReportBRow);
+  return { classifications, todayRows, overdueRows };
+}
 
-  return {
-    classifications,
-    todayRows: rowsAll.filter((r) =>
-      isNextFollowUpLocalCalendarToday(r.nextFollowUpAt)
-    ),
-    overdueRows: rowsAll.filter((r) => passesNeglected(r)),
-  };
+export async function loadDashboardTodayRows(
+  role: UserRole,
+  userId: string,
+  salesKey: string
+): Promise<ReportBRow[]> {
+  const clients = await listClientsForDashboardTodayFollowups(
+    role,
+    userId,
+    salesKey
+  );
+  return clients
+    .map(clientEntityToReportBRow)
+    .filter((r) => isNextFollowUpLocalCalendarToday(r.nextFollowUpAt));
+}
+
+export async function loadDashboardOverdueRows(
+  role: UserRole,
+  userId: string,
+  salesKey: string
+): Promise<ReportBRow[]> {
+  const clients = await listClientsForDashboardOverdueFollowups(
+    role,
+    userId,
+    salesKey
+  );
+  return clients
+    .map(clientEntityToReportBRow)
+    .filter((r) => passesNeglected(r));
 }
