@@ -7,7 +7,13 @@ const nextConfig: NextConfig = {
   // Prevent Turbopack/Webpack from touching Prisma’s native query engine (avoids corrupt dylib / dlopen errors)
   serverExternalPackages: ["@prisma/client", "prisma"],
   experimental: {
-    optimizePackageImports: ["lucide-react", "date-fns"],
+    optimizePackageImports: [
+      "lucide-react",
+      "date-fns",
+      "framer-motion",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tooltip",
+    ],
   },
 };
 

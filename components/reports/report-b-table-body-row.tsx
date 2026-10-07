@@ -326,7 +326,7 @@ function ReportBTableBodyRowInner(p: ReportBTableBodyRowProps) {
   <TableRow
     data-gate-row={isGateClientRow ? r.id : undefined}
     data-focused-row={isFocused ? "true" : undefined}
-    className="cursor-pointer align-top transition-shadow duration-200 [content-visibility:auto]"
+    className="cursor-pointer align-top transition-shadow duration-200 [content-visibility:auto] [contain-intrinsic-size:auto_96px]"
     style={rowHighlightStyle}
     onPointerDownCapture={() => onSetFocusedRowId(r.id)}
     onClick={(e) => {
