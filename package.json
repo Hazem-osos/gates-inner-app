@@ -16,6 +16,7 @@
     "lint": "eslint",
     "db:encode-password": "npx tsx scripts/encode-mysql-password.ts",
     "db:dump": "npx tsx scripts/dump-mysql-from-env.ts",
+    "partner:metrics": "npx tsx scripts/partner-metrics-snapshot.ts",
     "import:excel": "npx tsx scripts/import-hazem-excel.ts",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
