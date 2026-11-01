@@ -84,6 +84,12 @@ export function parseNewLeadReportClsTokens(
 export const NEW_LEADS_REPORT_REACH_NOT_REACHED_EXCL_EXPIRED =
   "NOT_REACHED_EXCL_EXPIRED";
 
+/** بداية اليوم (00:00 بالتوقيت المحلي) لتاريخ YYYY-MM-DD، مع إزاحة أيام اختيارية */
+function localDayStart(ymd: string, addDays = 0): Date {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y!, m! - 1, d! + addDays, 0, 0, 0, 0);
+}
+
 function normalizeCat(v: string | null | undefined): string | null {
   if (v == null || v === "") return null;
   return v.trim().toUpperCase();
@@ -182,8 +188,14 @@ export async function listNewLeadsForReport(
     validClassIds
   );
 
+  // فلتر من/إلى يطبَّق على عمود «تاريخ التسجيل» (createdAt) — بالتوقيت المحلي مثل العرض
   const andParts: Prisma.NewLeadWhereInput[] = [
-    { entryYmd: { gte: fromYmd, lte: toYmd } },
+    {
+      createdAt: {
+        gte: localDayStart(fromYmd),
+        lt: localDayStart(toYmd, 1),
+      },
+    },
   ];
 
   if (salesUserId && salesUserId !== "all") {

@@ -87,8 +87,8 @@ export default async function NewLeadsReportPage({
     const dTo = formatDateArabicLong(new Date(`${toYmd}T12:00:00`));
     activeFilterLines.push(
       fromYmd === toYmd
-        ? `تاريخ يوم الليد على اللوحة: ${dFrom}.`
-        : `تاريخ يوم الليد: من ${dFrom} إلى ${dTo}.`
+        ? `تاريخ التسجيل: ${dFrom}.`
+        : `تاريخ التسجيل: من ${dFrom} إلى ${dTo}.`
     );
   }
   if (salesUserId !== "all" && activeSalesName) {
